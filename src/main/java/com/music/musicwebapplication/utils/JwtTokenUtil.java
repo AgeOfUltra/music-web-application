@@ -15,7 +15,7 @@ public class JwtTokenUtil {
     private static final long EXPIRY_DATE = 1000*60*30;
 
 //    @Value("${jwt.security.secret-key}")
-    private final String secretString = "Very-secret-key-unlock-0r-hack-the-application-f0r-tim3-taken@90908762312";
+    private final String secretString = "*************************************<Own secret key>******************************";
 
     private final SecretKey key = Keys.hmacShaKeyFor(secretString.getBytes());
 

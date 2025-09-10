@@ -67,10 +67,12 @@ public class SongController {
     @PreAuthorize("hasAuthority('MUSIC_READ')")
     @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
+        log.info("Initiated the song Stream Request for file name : {}",name);
         ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);
 
         StreamingResponseBody responseBody = outputStream -> {
             try(InputStream inputStream = objectStream){
+                log.info("Streaming started ..");
                 byte[] buffer = new byte[4096];
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer))!= -1){

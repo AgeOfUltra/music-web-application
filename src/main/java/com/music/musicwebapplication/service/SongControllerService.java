@@ -2,6 +2,7 @@ package com.music.musicwebapplication.service;
 
 import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
+import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
@@ -122,12 +124,16 @@ public class SongControllerService {
 
     public ResponseInputStream<GetObjectResponse> getSongStream(String objectKey){
 
+        Optional<Song> song = repo.findSongByFileName(objectKey);
+        if(song.isEmpty()){
+            log.info("Song not found in DB with name {}",objectKey);
+           throw new SongNotFoundException("Song not found");
+        }
         //object key is same as file name
         GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
                 .build();
-
         return client.getObject(getObjectRequest);
 
     }
