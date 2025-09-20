@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -35,11 +36,24 @@ public class AppSecurity {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity https) throws Exception {
         https.csrf(csrf-> csrf
-                        .ignoringRequestMatchers("/h2-console/**","/api/music/**"))
+                        .ignoringRequestMatchers("/h2-console/**",
+                                "/api/music/**",
+                                "/app/music/**"
+                        ))
                 .headers(header-> header
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/h2-console/**","/api/music/**").permitAll())
+                        .requestMatchers(
+                                "/h2-console/**",
+                                "/api/music/**",
+                                "/app/music/ws/**",
+                                "/app/music/login",
+                                "app/music/authenticate",
+                                "/app/music/register")
+                        .permitAll()
+                        .requestMatchers("/app/music/chat/**").authenticated()
+                        .anyRequest().authenticated())
 
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
 

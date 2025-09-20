@@ -33,19 +33,44 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
         String token = null;
         String username = null;
 
-        if(authorization !=null && authorization.startsWith("Bearer ")){
+        // First, try to get token from Authorization header
+        if(authorization != null && authorization.startsWith("Bearer ")){
             token = authorization.substring(7);
+        }
+
+        // If no token in header, check for JWT cookie
+        if(token == null) {
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+            if(cookies != null) {
+                for(jakarta.servlet.http.Cookie cookie : cookies) {
+                    if("jwtToken".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Extract username from token
+        if(token != null) {
             username = jwtTokenUtil.getUserNameFromToken(token);
         }
 
-        if(username !=null && SecurityContextHolder.getContext().getAuthentication()==null){
-            UserDetails userDetails = service.loadUserByUsername(username);
-            if(jwtTokenUtil.validateToken(username,userDetails.getUsername(),token)){
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
-                authenticationToken.setDetails(new WebAuthenticationDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        // Authenticate user if token is valid
+        if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
+            try {
+                UserDetails userDetails = service.loadUserByUsername(username);
+                if(jwtTokenUtil.validateToken(username, userDetails.getUsername(), token)){
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
+            } catch (Exception e) {
+                // Invalid token or user not found - continue without authentication
+                System.out.println("JWT authentication failed: " + e.getMessage());
             }
         }
-        filterChain.doFilter(request,response);
+        filterChain.doFilter(request, response);
     }
 }
