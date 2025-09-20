@@ -67,6 +67,7 @@
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
+            transition: background-color 0.3s;
         }
 
         button:hover {
@@ -106,6 +107,162 @@
         .links a:hover {
             text-decoration: underline;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal h3 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 20px;
+        }
+
+        .room-option {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #fafafa;
+        }
+
+        .room-option:hover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+
+        .room-option.selected {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        .room-option h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .room-option p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .custom-room-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
+
+        .custom-room-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .popular-rooms {
+            margin-top: 20px;
+        }
+
+        .popular-rooms h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .room-tag {
+            display: inline-block;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 5px 12px;
+            margin: 3px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .room-tag:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .room-validation {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -133,8 +290,58 @@
     </div>
 </div>
 
+<!-- Room Selection Modal -->
+<div id="roomModal" class="modal">
+    <div class="modal-content">
+        <h3>Choose a Chat Room</h3>
+
+        <div class="room-option" onclick="selectRoomOption('join')">
+            <h4>🚪 Join Existing Room</h4>
+            <p>Enter a room ID to join an existing chat room</p>
+        </div>
+
+        <div class="room-option" onclick="selectRoomOption('create')">
+            <h4>🎵 Create New Room</h4>
+            <p>Create a new room with a custom name</p>
+        </div>
+
+        <div class="room-option" onclick="selectRoomOption('general')">
+            <h4>🌟 General Room</h4>
+            <p>Join the default general chat room</p>
+        </div>
+
+        <div id="customRoomSection" style="display: none; margin-top: 20px;">
+            <input type="text"
+                   id="customRoomInput"
+                   class="custom-room-input"
+                   placeholder="Enter room name (e.g., rock-music-fans, jazz-lovers)">
+            <div id="roomValidation" class="room-validation">
+                Room name should be 3-20 characters, letters, numbers, and hyphens only
+            </div>
+
+            <div class="popular-rooms">
+                <h4>💡 Popular Room Ideas:</h4>
+                <span class="room-tag" onclick="setRoomName('rock-lovers')">rock-lovers</span>
+                <span class="room-tag" onclick="setRoomName('pop-hits')">pop-hits</span>
+                <span class="room-tag" onclick="setRoomName('jazz-cafe')">jazz-cafe</span>
+                <span class="room-tag" onclick="setRoomName('indie-vibes')">indie-vibes</span>
+                <span class="room-tag" onclick="setRoomName('classical-music')">classical-music</span>
+                <span class="room-tag" onclick="setRoomName('hip-hop-zone')">hip-hop-zone</span>
+            </div>
+        </div>
+
+        <div class="modal-buttons">
+            <button type="button" class="btn-secondary" onclick="closeRoomModal()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="proceedToRoom()" id="proceedBtn">Join Room</button>
+        </div>
+    </div>
+</div>
+
 <script th:inline="javascript">
     /*<![CDATA[*/
+    let selectedRoomOption = '';
+    let loginData = null;
+
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -167,20 +374,14 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Store JWT token in localStorage and cookie
-                localStorage.setItem('jwtToken', data.token);
-                localStorage.setItem('username', data.username);
-
-                // Set JWT token in cookie for server-side authentication
-                document.cookie = `jwtToken=${data.token}; path=/; max-age=86400; SameSite=Strict`;
+                // Store login data temporarily
+                loginData = data;
 
                 messageDiv.className = 'success-message';
-                messageDiv.textContent = 'Login successful! Redirecting...';
+                messageDiv.textContent = 'Login successful! Choose your room...';
 
-                // Redirect to chat room
-                setTimeout(() => {
-                    window.location.href = '/app/music/chat?roomId=general';
-                }, 1500);
+                // Show room selection modal
+                showRoomModal();
             } else {
                 messageDiv.className = 'error-message';
                 messageDiv.textContent = data.error || 'Login failed';
@@ -193,6 +394,150 @@
             messageDiv.textContent = 'An error occurred. Please try again.';
             loginBtn.disabled = false;
             loginBtn.textContent = 'Login';
+        }
+    });
+
+    function showRoomModal() {
+        document.getElementById('roomModal').style.display = 'block';
+        // Reset form
+        selectedRoomOption = '';
+        document.getElementById('customRoomSection').style.display = 'none';
+        document.getElementById('customRoomInput').value = '';
+        clearRoomSelection();
+    }
+
+    function closeRoomModal() {
+        document.getElementById('roomModal').style.display = 'none';
+        // Re-enable login button
+        document.getElementById('loginBtn').disabled = false;
+        document.getElementById('loginBtn').textContent = 'Login';
+        document.getElementById('message').textContent = '';
+        loginData = null;
+    }
+
+    function selectRoomOption(option) {
+        selectedRoomOption = option;
+        clearRoomSelection();
+
+        // Add selected class to clicked option
+        event.target.closest('.room-option').classList.add('selected');
+
+        // Show/hide custom room input
+        const customSection = document.getElementById('customRoomSection');
+        if (option === 'join' || option === 'create') {
+            customSection.style.display = 'block';
+            document.getElementById('customRoomInput').placeholder =
+                option === 'join' ? 'Enter existing room ID' : 'Enter new room name';
+            document.getElementById('customRoomInput').focus();
+        } else {
+            customSection.style.display = 'none';
+        }
+
+        // Update proceed button text
+        const proceedBtn = document.getElementById('proceedBtn');
+        switch(option) {
+            case 'join':
+                proceedBtn.textContent = 'Join Room';
+                break;
+            case 'create':
+                proceedBtn.textContent = 'Create Room';
+                break;
+            case 'general':
+                proceedBtn.textContent = 'Join General';
+                break;
+        }
+    }
+
+    function clearRoomSelection() {
+        document.querySelectorAll('.room-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+    }
+
+    function setRoomName(roomName) {
+        document.getElementById('customRoomInput').value = roomName;
+        validateRoomName();
+    }
+
+    function validateRoomName() {
+        const roomInput = document.getElementById('customRoomInput');
+        const validation = document.getElementById('roomValidation');
+        const roomName = roomInput.value.trim();
+
+        // Room name validation: 3-20 characters, alphanumeric and hyphens
+        const isValid = /^[a-zA-Z0-9-]{3,20}$/.test(roomName);
+
+        if (roomName.length > 0 && !isValid) {
+            validation.style.display = 'block';
+            roomInput.style.borderColor = '#dc3545';
+            return false;
+        } else {
+            validation.style.display = 'none';
+            roomInput.style.borderColor = '#007bff';
+            return true;
+        }
+    }
+
+    // Add real-time validation
+    document.getElementById('customRoomInput').addEventListener('input', validateRoomName);
+
+    function proceedToRoom() {
+        if (!loginData) return;
+
+        let roomId = 'general';
+
+        if (selectedRoomOption === 'general') {
+            roomId = 'general';
+        } else if (selectedRoomOption === 'join' || selectedRoomOption === 'create') {
+            const customRoom = document.getElementById('customRoomInput').value.trim();
+
+            if (!customRoom) {
+                alert('Please enter a room name');
+                return;
+            }
+
+            if (!validateRoomName()) {
+                alert('Please enter a valid room name');
+                return;
+            }
+
+            roomId = customRoom.toLowerCase();
+        } else {
+            alert('Please select a room option');
+            return;
+        }
+
+        // Store JWT token and username
+        localStorage.setItem('jwtToken', loginData.token);
+        localStorage.setItem('username', loginData.username);
+
+        // Set JWT token in cookie for server-side authentication
+        document.cookie = `jwtToken=${loginData.token}; path=/; max-age=86400; SameSite=Strict`;
+
+        // Close modal and show success message
+        closeRoomModal();
+        const messageDiv = document.getElementById('message');
+        messageDiv.className = 'success-message';
+        messageDiv.textContent = `Joining room "${roomId}"...`;
+
+        // Redirect to chat room with selected room ID
+        setTimeout(() => {
+            window.location.href = `/app/music/chat?roomId=${encodeURIComponent(roomId)}`;
+        }, 1500);
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('roomModal');
+        if (event.target === modal) {
+            closeRoomModal();
+        }
+    });
+
+    // Handle Enter key in custom room input
+    document.getElementById('customRoomInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            proceedToRoom();
         }
     });
     /*]]>*/

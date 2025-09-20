@@ -10,149 +10,250 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .chat-layout {
+            display: grid;
+            grid-template-columns: 1fr 240px;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .chat-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .user-sidebar {
+                order: -1;
+            }
         }
 
         .chat-container {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            padding: 25px;
         }
 
         .chat-header {
             border-bottom: 2px solid #eee;
             margin-bottom: 20px;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
         }
 
         .chat-header h2 {
             margin: 0;
-            color: #333;
+            color: #2c3e50;
+            font-size: 24px;
         }
 
         .user-info {
-            color: #666;
+            color: #7f8c8d;
             font-size: 14px;
-            margin-top: 5px;
+            margin-top: 8px;
         }
 
         #messageArea {
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
             height: 400px;
             overflow-y: auto;
-            padding: 15px;
-            background-color: #fafafa;
+            padding: 20px;
+            background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
             margin-bottom: 20px;
         }
 
         .message {
-            margin-bottom: 10px;
-            padding: 8px 12px;
-            border-radius: 5px;
-            animation: fadeIn 0.3s ease-in;
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            animation: fadeIn 0.4s ease-in;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .message.join {
-            background-color: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
             text-align: center;
             font-style: italic;
-            border-left: 4px solid #28a745;
+            border-left: 5px solid #28a745;
         }
 
         .message.leave {
-            background-color: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
             color: #721c24;
             text-align: center;
             font-style: italic;
-            border-left: 4px solid #dc3545;
+            border-left: 5px solid #dc3545;
         }
 
         .message.chat {
-            background-color: #e3f2fd;
-            color: #1565c0;
-            border-left: 4px solid #2196f3;
+            color: #2c3e50;
+            border-left: 4px solid var(--user-color, #3498db);
         }
 
         .message-sender {
             font-weight: bold;
-            margin-bottom: 3px;
+            margin-bottom: 6px;
+            color: var(--user-color, #3498db);
+            display: flex;
+            align-items: center;
+        }
+
+        .user-avatar {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            margin-right: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .message-timestamp {
             font-size: 11px;
-            color: #888;
-            margin-left: 10px;
+            color: #95a5a6;
+            margin-left: auto;
+            font-weight: normal;
         }
 
         .input-group {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
         }
 
         #messageInput {
             flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
             font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
 
         button {
-            padding: 10px 20px;
-            background-color: #007bff;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.3s;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
         }
 
         button:hover {
-            background-color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
         }
 
         #logoutBtn {
-            background-color: #dc3545;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
         }
 
         #logoutBtn:hover {
-            background-color: #c82333 !important;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
         }
 
         button:disabled {
-            background-color: #ccc;
+            background: #bdc3c7;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .status {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
             margin-left: 10px;
+            font-weight: 600;
         }
 
         .status.connected {
-            background-color: #d4edda;
-            color: #155724;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
         }
 
         .status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .user-sidebar {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .user-sidebar h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        .online-count {
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: all 0.3s;
+        }
+
+        .user-item:hover {
+            background: #e9ecef;
+            transform: translateX(3px);
+        }
+
+        .user-item .username {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
         }
 
         .notification-toast {
@@ -160,48 +261,76 @@
             top: 20px;
             right: 20px;
             padding: 15px 20px;
-            border-radius: 5px;
+            border-radius: 10px;
             color: white;
             font-weight: bold;
             z-index: 1000;
             animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .notification-toast.success {
-            background-color: #28a745;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
         }
 
         .notification-toast.error {
-            background-color: #dc3545;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
         }
 
         .notification-toast.info {
-            background-color: #17a2b8;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
         }
 
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        /* Scrollbar styling */
+        #messageArea::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #messageArea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #messageArea::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 10px;
+        }
+
+        #messageArea::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
+        }
     </style>
 </head>
 <body>
-<div class="chat-container">
-    <div class="chat-header">
-        <h2>Music Chat Room <span id="roomIdDisplay" th:text="'#' + ${roomId}"></span></h2>
-        <div class="user-info">
-            Logged in as: <strong th:text="${username}"></strong>
-            <span id="connectionStatus" class="status disconnected">Disconnected</span>
+<div class="chat-layout">
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Music Chat Room <span id="roomIdDisplay" th:text="'#' + ${roomId}"></span></h2>
+            <div class="user-info">
+                Logged in as: <strong th:text="${username}"></strong>
+                <span id="connectionStatus" class="status disconnected">Disconnected</span>
+            </div>
+        </div>
+
+        <div id="messageArea"></div>
+
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type your message..." disabled />
+            <button onclick="sendMessage()" disabled id="sendBtn">Send</button>
+            <button onclick="toggleConnection()" id="connectBtn">Connect</button>
+            <button onclick="logout()" id="logoutBtn">Logout</button>
         </div>
     </div>
 
-    <div id="messageArea"></div>
-
-    <div class="input-group">
-        <input type="text" id="messageInput" placeholder="Type your message..." disabled />
-        <button onclick="sendMessage()" disabled id="sendBtn">Send</button>
-        <button onclick="toggleConnection()" id="connectBtn">Connect</button>
-        <button onclick="logout()" id="logoutBtn">Logout</button>
+    <div class="user-sidebar">
+        <h3>Online Users</h3>
+        <div class="online-count" id="onlineCount">0 users online</div>
+        <div id="userList"></div>
     </div>
 </div>
 
@@ -212,6 +341,91 @@
     const roomId = /*[[${roomId}]]*/ 'general';
     let connected = false;
     let isLoggingOut = false;
+
+    // User color management
+    const userColors = new Map();
+    const activeUsers = new Set();
+
+    // Generate a consistent light color based on username
+    function getUserColor(username) {
+        if (userColors.has(username)) {
+            return userColors.get(username);
+        }
+
+        // Create hash from username
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+
+        // Generate HSL color with good readability
+        const hue = Math.abs(hash) % 360;
+        const saturation = 50 + (Math.abs(hash) % 25); // 50-75%
+        const lightness = 88 + (Math.abs(hash) % 8);   // 88-96% (very light)
+
+        const backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        const borderColor = `hsl(${hue}, ${Math.min(saturation + 15, 70)}%, ${Math.max(lightness - 35, 45)}%)`;
+
+        const colorInfo = {
+            background: backgroundColor,
+            border: borderColor,
+            hue: hue
+        };
+
+        userColors.set(username, colorInfo);
+        return colorInfo;
+    }
+
+    // Get user avatar color (darker version for better contrast)
+    function getUserAvatarColor(username) {
+        const colorInfo = getUserColor(username);
+        return `hsl(${colorInfo.hue}, 65%, 55%)`; // Darker for avatar
+    }
+
+    // Get user initials
+    function getUserInitials(username) {
+        if (username.length === 1) {
+            return username.toUpperCase();
+        }
+        return username.substring(0, 2).toUpperCase();
+    }
+
+    // User management
+    function addUserToList(username) {
+        activeUsers.add(username);
+        updateUserList();
+    }
+
+    function removeUserFromList(username) {
+        activeUsers.delete(username);
+        updateUserList();
+    }
+
+    function updateUserList() {
+        const userList = document.getElementById('userList');
+        const onlineCount = document.getElementById('onlineCount');
+
+        userList.innerHTML = '';
+        const userCount = activeUsers.size;
+        onlineCount.textContent = `${userCount} user${userCount !== 1 ? 's' : ''} online`;
+
+        Array.from(activeUsers).sort().forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.className = 'user-item';
+
+            const avatarColor = getUserAvatarColor(user);
+            const initials = getUserInitials(user);
+            const isCurrentUser = user === username;
+
+            userItem.innerHTML = `
+                <span class="user-avatar" style="background-color: ${avatarColor}">${initials}</span>
+                <span class="username">${user}${isCurrentUser ? ' (You)' : ''}</span>
+            `;
+
+            userList.appendChild(userItem);
+        });
+    }
 
     // Get JWT token from localStorage (assumes it was stored after login)
     function getJwtToken() {
@@ -235,7 +449,7 @@
 
         setTimeout(() => {
             toast.remove();
-        }, 3000);
+        }, 3500);
     }
 
     // Enhanced logout function with proper leave notification
@@ -325,6 +539,9 @@
                     roomId: roomId
                 })
             );
+
+            // Add current user to the list
+            addUserToList(username);
         }, function(error) {
             console.error('Connection error:', error);
             showNotification('Failed to connect. Please check your authentication.', 'error');
@@ -400,6 +617,13 @@
             messageElement.innerHTML = message.content +
                 '<span class="message-timestamp">' + timestamp + '</span>';
 
+            // Update user list
+            if (message.type === 'JOIN') {
+                addUserToList(message.sender);
+            } else {
+                removeUserFromList(message.sender);
+            }
+
             // Show notification for user events
             if (message.sender !== username) {
                 if (message.type === 'JOIN') {
@@ -409,10 +633,21 @@
                 }
             }
         } else {
+            // Get user-specific colors
+            const userColorInfo = getUserColor(message.sender);
+            const avatarColor = getUserAvatarColor(message.sender);
+            const initials = getUserInitials(message.sender);
+
+            // Apply dynamic background and border colors
+            messageElement.style.backgroundColor = userColorInfo.background;
+            messageElement.style.setProperty('--user-color', userColorInfo.border);
+
             const senderElement = document.createElement('div');
             senderElement.className = 'message-sender';
-            senderElement.innerHTML = message.sender + ':' +
-                '<span class="message-timestamp">' + timestamp + '</span>';
+            senderElement.innerHTML =
+                `<span class="user-avatar" style="background-color: ${avatarColor}">${initials}</span>` +
+                `<span>${message.sender}:</span>` +
+                `<span class="message-timestamp">${timestamp}</span>`;
 
             const contentElement = document.createElement('div');
             contentElement.textContent = message.content;
