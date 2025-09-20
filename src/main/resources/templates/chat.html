@@ -54,6 +54,12 @@
             margin-bottom: 10px;
             padding: 8px 12px;
             border-radius: 5px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .message.join {
@@ -61,6 +67,7 @@
             color: #155724;
             text-align: center;
             font-style: italic;
+            border-left: 4px solid #28a745;
         }
 
         .message.leave {
@@ -68,16 +75,24 @@
             color: #721c24;
             text-align: center;
             font-style: italic;
+            border-left: 4px solid #dc3545;
         }
 
         .message.chat {
             background-color: #e3f2fd;
             color: #1565c0;
+            border-left: 4px solid #2196f3;
         }
 
         .message-sender {
             font-weight: bold;
             margin-bottom: 3px;
+        }
+
+        .message-timestamp {
+            font-size: 11px;
+            color: #888;
+            margin-left: 10px;
         }
 
         .input-group {
@@ -102,10 +117,15 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
+            transition: background-color 0.3s;
         }
 
         button:hover {
             background-color: #0056b3;
+        }
+
+        #logoutBtn {
+            background-color: #dc3545;
         }
 
         #logoutBtn:hover {
@@ -134,6 +154,35 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification-toast.success {
+            background-color: #28a745;
+        }
+
+        .notification-toast.error {
+            background-color: #dc3545;
+        }
+
+        .notification-toast.info {
+            background-color: #17a2b8;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -152,7 +201,7 @@
         <input type="text" id="messageInput" placeholder="Type your message..." disabled />
         <button onclick="sendMessage()" disabled id="sendBtn">Send</button>
         <button onclick="toggleConnection()" id="connectBtn">Connect</button>
-        <button onclick="logout()" id="logoutBtn" style="background-color: #dc3545;">Logout</button>
+        <button onclick="logout()" id="logoutBtn">Logout</button>
     </div>
 </div>
 
@@ -162,6 +211,7 @@
     const username = /*[[${username}]]*/ '';
     const roomId = /*[[${roomId}]]*/ 'general';
     let connected = false;
+    let isLoggingOut = false;
 
     // Get JWT token from localStorage (assumes it was stored after login)
     function getJwtToken() {
@@ -176,13 +226,56 @@
         document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Strict';
     }
 
-    // Logout function
+    // Show notification toast
+    function showNotification(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `notification-toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Enhanced logout function with proper leave notification
     function logout() {
-        if (connected) {
-            disconnect();
+        isLoggingOut = true;
+
+        if (connected && stompClient) {
+            // Send explicit leave message before disconnecting
+            const leaveMessage = {
+                sender: username,
+                content: username + ' left the chat',
+                type: 'LEAVE',
+                roomId: roomId
+            };
+
+            try {
+                stompClient.send('/app/music/chat/' + roomId + '/addUser', {}, JSON.stringify(leaveMessage));
+
+                // Wait a moment for the message to be sent, then disconnect
+                setTimeout(() => {
+                    disconnect();
+                    clearAuthData();
+                    showNotification('Logged out successfully', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/app/music/login';
+                    }, 1000);
+                }, 500);
+            } catch (error) {
+                console.error('Error sending leave message:', error);
+                disconnect();
+                clearAuthData();
+                window.location.href = '/app/music/login';
+            }
+        } else {
+            clearAuthData();
+            showNotification('Logged out successfully', 'success');
+            setTimeout(() => {
+                window.location.href = '/app/music/login';
+            }, 1000);
         }
-        clearAuthData();
-        window.location.href = '/app/music/login';
     }
 
     function toggleConnection() {
@@ -197,8 +290,10 @@
         const token = getJwtToken();
 
         if (!token) {
-            alert('No authentication token found. Please login again.');
-            window.location.href = '/app/music/login';
+            showNotification('No authentication token found. Please login again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/app/music/login';
+            }, 2000);
             return;
         }
 
@@ -214,6 +309,7 @@
             console.log('Connected: ' + frame);
             connected = true;
             updateConnectionStatus(true);
+            showNotification('Connected to chat room', 'success');
 
             // Subscribe to the room's topic
             stompClient.subscribe('/topic/chat/' + roomId, function(message) {
@@ -231,9 +327,11 @@
             );
         }, function(error) {
             console.error('Connection error:', error);
-            alert('Failed to connect. Please check your authentication.');
+            showNotification('Failed to connect. Please check your authentication.', 'error');
             clearAuthData();
-            window.location.href = '/app/music/login';
+            setTimeout(() => {
+                window.location.href = '/app/music/login';
+            }, 2000);
             connected = false;
             updateConnectionStatus(false);
         });
@@ -245,6 +343,9 @@
                 console.log("Disconnected");
                 connected = false;
                 updateConnectionStatus(false);
+                if (!isLoggingOut) {
+                    showNotification('Disconnected from chat', 'info');
+                }
             });
         }
     }
@@ -292,12 +393,26 @@
         const messageElement = document.createElement('div');
         messageElement.className = 'message ' + message.type.toLowerCase();
 
+        // Add timestamp
+        const timestamp = new Date().toLocaleTimeString();
+
         if (message.type === 'JOIN' || message.type === 'LEAVE') {
-            messageElement.textContent = message.content;
+            messageElement.innerHTML = message.content +
+                '<span class="message-timestamp">' + timestamp + '</span>';
+
+            // Show notification for user events
+            if (message.sender !== username) {
+                if (message.type === 'JOIN') {
+                    showNotification(message.sender + ' joined the chat', 'success');
+                } else if (message.type === 'LEAVE') {
+                    showNotification(message.sender + ' left the chat', 'info');
+                }
+            }
         } else {
             const senderElement = document.createElement('div');
             senderElement.className = 'message-sender';
-            senderElement.textContent = message.sender + ':';
+            senderElement.innerHTML = message.sender + ':' +
+                '<span class="message-timestamp">' + timestamp + '</span>';
 
             const contentElement = document.createElement('div');
             contentElement.textContent = message.content;
@@ -322,19 +437,48 @@
     window.onload = function() {
         const token = getJwtToken();
         if (!token) {
-            alert('No authentication token found. Please login first.');
-            window.location.href = '/app/music/login';
+            showNotification('No authentication token found. Please login first.', 'error');
+            setTimeout(() => {
+                window.location.href = '/app/music/login';
+            }, 2000);
             return;
         }
         connect();
     };
 
-    // Disconnect on page unload
-    window.onbeforeunload = function() {
-        if (connected) {
+    // Enhanced page unload handling
+    window.addEventListener('beforeunload', function(e) {
+        if (connected && !isLoggingOut) {
+            // Send leave message before page closes
+            if (stompClient) {
+                const leaveMessage = {
+                    sender: username,
+                    content: username + ' left the chat',
+                    type: 'LEAVE',
+                    roomId: roomId
+                };
+
+                // Use sendBeacon for reliable message sending on page unload
+                const messageData = JSON.stringify(leaveMessage);
+                navigator.sendBeacon('/app/music/chat/' + roomId + '/leave', messageData);
+            }
             disconnect();
         }
-    };
+    });
+
+    // Handle visibility change (tab switching, minimizing)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden' && connected) {
+            // User switched tabs or minimized - could indicate they're leaving
+            console.log('User switched away from tab');
+        } else if (document.visibilityState === 'visible' && !connected) {
+            // User returned to tab but not connected - try to reconnect
+            const token = getJwtToken();
+            if (token) {
+                connect();
+            }
+        }
+    });
     /*]]>*/
 </script>
 </body>

@@ -19,6 +19,7 @@ public class WebSocketEventListener {
     private final SimpMessagingTemplate messageTemplate;
 
     @EventListener
+    // here we are listening to SessionDisconnectEvent
     public void handleWebSocketDisconnect(SessionDisconnectEvent event){
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String username = (String) headerAccessor.getSessionAttributes().get("username");
@@ -28,6 +29,7 @@ public class WebSocketEventListener {
             var messageContext = ChatMessage.builder()
                     .type(MessageType.LEAVE)
                     .sender(username)
+                    .content(username + " left the chat")
                     .roomId(roomId)
                     .build();
 
