@@ -55,7 +55,6 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-                    // Get the authorization header
                     String authToken = accessor.getFirstNativeHeader("Authorization");
 
                     if (authToken != null && authToken.startsWith("Bearer ")) {
@@ -82,7 +81,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                         throw new IllegalArgumentException("Missing or invalid Authorization header");
                     }
                 }
-                // Handle SUBSCRIBE commands to capture room information
+
                 if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
                     String destination = accessor.getDestination();
                     if (destination != null && destination.startsWith("/topic/chat/")) {
@@ -100,7 +99,6 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
         });
     }
     private String extractRoomIdFromDestination(String destination) {
-        // Extract room ID from destination like "/topic/chat/rock-lovers"
         String prefix = "/topic/chat/";
         if (destination.startsWith(prefix)) {
             return destination.substring(prefix.length());

@@ -33,12 +33,12 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
         String token = null;
         String username = null;
 
-        // First, try to get token from Authorization header
+
         if(authorization != null && authorization.startsWith("Bearer ")){
             token = authorization.substring(7);
         }
 
-        // If no token in header, check for JWT cookie
+
         if(token == null) {
             jakarta.servlet.http.Cookie[] cookies = request.getCookies();
             if(cookies != null) {
@@ -51,12 +51,11 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
             }
         }
 
-        // Extract username from token
+
         if(token != null) {
             username = jwtTokenUtil.getUserNameFromToken(token);
         }
 
-        // Authenticate user if token is valid
         if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
             try {
                 UserDetails userDetails = service.loadUserByUsername(username);
@@ -68,7 +67,7 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
                 }
             } catch (Exception e) {
                 // Invalid token or user not found - continue without authentication
-                System.out.println("JWT authentication failed: " + e.getMessage());
+                logger.info("JWT authentication failed: " + e.getMessage());
             }
         }
         filterChain.doFilter(request, response);

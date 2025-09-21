@@ -6,7 +6,6 @@ import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.query.Page;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -23,14 +21,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-
-import javax.swing.text.html.Option;
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -74,7 +67,6 @@ public class SongControllerService {
             String s3key = uploadFile(file);
             log.info("Song uploaded successfully with key {}",s3key);
 
-//            String url = generateUrl(parseString(song.getFileName()));
             String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
@@ -107,10 +99,6 @@ public class SongControllerService {
     }
 
 
-//    private String parseString(String fileName){
-//        return  fileName.replace(" "," ");
-//    }
-
 
     protected Song updateSongInDb(SongDto song, String url){
         Song newSong = new Song();
@@ -137,7 +125,7 @@ public class SongControllerService {
             log.info("Song not found in DB with name {}",objectKey);
            throw new SongNotFoundException("Song not found");
         }
-        //object key is same as file name
+
         GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
@@ -147,7 +135,6 @@ public class SongControllerService {
     }
 
     public org.springframework.data.domain.Page<Song> getAllSongsName(int page, int size) {
-
         Pageable pageable = PageRequest.of(page,size, Sort.by("id").ascending());
         return  repo.findAll(pageable);
     }

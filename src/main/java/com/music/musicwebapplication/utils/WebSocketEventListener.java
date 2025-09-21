@@ -26,7 +26,6 @@ public class WebSocketEventListener {
         if (username != null) {
             log.info("User {} disconnected from room: {}", username, roomId != null ? roomId : "unknown");
 
-            // Use the specific room if available, otherwise use general
             String targetRoom = roomId != null ? roomId : "general";
 
             var messageContext = ChatMessage.builder()

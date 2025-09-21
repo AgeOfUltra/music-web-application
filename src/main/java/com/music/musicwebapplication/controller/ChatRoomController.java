@@ -19,7 +19,6 @@ public class ChatRoomController {
     @SendTo("/topic/chat/{roomId}")
     public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload ChatMessage message) {
         log.info("Message sent to room {}: {} by {}", roomId, message.getContent(), message.getSender());
-        // Ensure roomId is set in the message
         message.setRoomId(roomId);
         return message;
     }
@@ -30,13 +29,11 @@ public class ChatRoomController {
                                @Payload ChatMessage chatMessage,
                                SimpMessageHeaderAccessor headerAccessor) {
 
-        // Store user info in session attributes for disconnect handling
         Objects.requireNonNull(headerAccessor.getSessionAttributes()).put("username", chatMessage.getSender());
         headerAccessor.getSessionAttributes().put("roomId", roomId);
 
         log.info("User {} joined room: {}", chatMessage.getSender(), roomId);
 
-        // Ensure message has correct roomId
         chatMessage.setRoomId(roomId);
 
         return chatMessage;
@@ -45,12 +42,9 @@ public class ChatRoomController {
     @MessageMapping("/chat/{roomId}/removeUser")
     @SendTo("/topic/chat/{roomId}")
     public ChatMessage removeUser(@DestinationVariable String roomId,
-                                  @Payload ChatMessage chatMessage,
-                                  SimpMessageHeaderAccessor headerAccessor) {
+                                  @Payload ChatMessage chatMessage) {
 
         log.info("User {} left room: {}", chatMessage.getSender(), roomId);
-
-        // Ensure message has correct roomId
         chatMessage.setRoomId(roomId);
 
         return chatMessage;

@@ -15,11 +15,9 @@ public class ChatController {
     public String chatRoom(@RequestParam(required = false) String roomId,
                            Authentication authentication,
                            Model model) {
-        // Add user information to the model
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomId", roomId != null ? roomId : "general");
 
-        // This will return the chat.html template
         return "chat";
     }
 }
