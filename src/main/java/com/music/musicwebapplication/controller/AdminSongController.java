@@ -5,29 +5,22 @@ import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.service.SongControllerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-
-import java.io.InputStream;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/music")
-public class SongController {
+public class AdminSongController {
 
     private final SongControllerService songControllerService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    SongController(SongControllerService songControllerService, ObjectMapper objectMapper){
+    AdminSongController(SongControllerService songControllerService, ObjectMapper objectMapper){
         this.songControllerService = songControllerService;
         this.objectMapper = objectMapper;
     }
@@ -64,29 +57,7 @@ public class SongController {
         }
     }
 
-    @PreAuthorize("hasAuthority('MUSIC_READ')")
-    @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
-        log.info("Initiated the song Stream Request for file name : {}",name);
-        ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);
 
-        StreamingResponseBody responseBody = outputStream -> {
-            try(InputStream inputStream = objectStream){
-                log.info("Streaming started ..");
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer))!= -1){
-                    outputStream.write(buffer,0,bytesRead);
-                }
-            }finally {
-                objectStream.close();
-            }
-
-        };
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
-                .body(responseBody);
-    }
 }
 
 /* async version
