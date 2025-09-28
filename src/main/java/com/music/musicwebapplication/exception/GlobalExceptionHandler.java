@@ -15,4 +15,11 @@ public class GlobalExceptionHandler {
         ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(), HttpStatus.BAD_REQUEST.toString(),e.getMessage());
        return ResponseEntity.badRequest().body(error);
     }
+
+    @ExceptionHandler(RoomNotFoundException.class)
+    public ResponseEntity<?> roomControllerHandler(RoomNotFoundException e){
+        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),HttpStatus.BAD_REQUEST.toString(),e.getMessage());
+
+        return ResponseEntity.badRequest().body(error);
+    }
 }
