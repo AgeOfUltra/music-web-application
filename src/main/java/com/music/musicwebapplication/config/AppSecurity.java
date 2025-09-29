@@ -46,11 +46,10 @@ public class AppSecurity {
                                 "/h2-console/**",
                                 "/api/music/**",
                                 "/app/music/ws/**",
-                                "/app/music/login",
-                                "app/music/authenticate",
-                                "/app/music/register")
+                                "/app/music/public/**",
+                                "/favicon.ico")
                         .permitAll()
-                        .requestMatchers("/app/music/**","/app/music/chat/**").authenticated()
+                        .requestMatchers("/app/music/room/**","/app/music/chat/**").authenticated()
                         .anyRequest().authenticated())
 
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);

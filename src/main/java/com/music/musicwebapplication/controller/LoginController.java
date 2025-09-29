@@ -34,7 +34,7 @@ public class LoginController {
     }
 
 
-    @PostMapping("/public/signUp")
+    @PostMapping("/private/signUp")
     public ResponseEntity<String> registerUser(@RequestBody RegisterUser newUser){
         newUser.setRole(Role.LISTENER);
         String result = userService.registerUser(newUser);
@@ -44,7 +44,7 @@ public class LoginController {
         ).body(result);
     }
 
-    @PostMapping("/public/authenticate")
+    @PostMapping("/private/authenticate")
     public ResponseEntity<String> loginUser(@RequestBody LoginUser login){
 
         String token;

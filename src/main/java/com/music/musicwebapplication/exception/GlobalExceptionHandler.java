@@ -22,4 +22,12 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(error);
     }
+    @ExceptionHandler(RoomManageException.class)
+    public ResponseEntity<?> roomAlreadyExistHandler(RoomManageException e){
+        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),
+                e.getMessage().startsWith("Room already exist with") ? HttpStatus.BAD_REQUEST.toString(): HttpStatus.CONFLICT.toString(),
+                e.getMessage());
+
+        return ResponseEntity.badRequest().body(error);
+    }
 }

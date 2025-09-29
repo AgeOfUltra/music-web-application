@@ -10,5 +10,5 @@
         private MessageType type;
         private String content;
         private String sender;
-        private String roomId;
+        private String roomName;
     }

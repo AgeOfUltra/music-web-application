@@ -1,5 +1,7 @@
 package com.music.musicwebapplication.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -13,6 +15,7 @@ public class Participant {
     private boolean isOrganizer;
 
     @ManyToOne
-    @JoinColumn(name = "roomId")
+    @JoinColumn(name = "roomId",nullable = false)
+    @JsonIgnore
     private Room room;
 }
