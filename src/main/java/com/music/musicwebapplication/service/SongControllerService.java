@@ -1,14 +1,18 @@
 package com.music.musicwebapplication.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -17,8 +21,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-
-import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,6 +32,10 @@ public class SongControllerService {
     private final S3Client client;
     private final SongRepo repo;
 
+    private final ModelMapper mapper;
+    private final ModelMapper modelMapper;
+    private final ObjectMapper objectMapper;
+
     @Value("${aws.bucket.name}")
     private String bucketName;
 
@@ -37,9 +43,12 @@ public class SongControllerService {
 //    private String region;
 
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo){
+    SongControllerService(S3Client client, SongRepo repo, ModelMapper mapper, ModelMapper modelMapper, ObjectMapper objectMapper){
         this.client = client;
         this.repo = repo;
+        this.mapper= mapper;
+        this.modelMapper = modelMapper;
+        this.objectMapper = objectMapper;
     }
 
     public String fileUploadHelper(MultipartFile file,
@@ -47,7 +56,6 @@ public class SongControllerService {
 
         log.info("Song uploading process started");
 
-        String savedResult= "";
         Optional<Song> currentSong = repo.findSongBySongName(song.getSongName());
 
         if(currentSong.isPresent()){
@@ -59,8 +67,7 @@ public class SongControllerService {
             String s3key = uploadFile(file);
             log.info("Song uploaded successfully with key {}",s3key);
 
-//            String url = generateUrl(parseString(song.getFileName()));
-            String url = getS3Url(s3key);
+            String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
             Song uploadedSong = updateSongInDb(song,url);
@@ -74,7 +81,7 @@ public class SongControllerService {
         }
     }
     private String uploadFile(MultipartFile file) throws IOException{
-        String s3Key = parseString(Objects.requireNonNull(file.getOriginalFilename()));
+        String s3Key = Objects.requireNonNull(file.getOriginalFilename());
         PutObjectResponse response = client.putObject(PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(file.getOriginalFilename())
@@ -87,23 +94,12 @@ public class SongControllerService {
        return s3Key;
     }
 
-    private String getS3Url(String s3Key) {
-        return client.utilities().getUrl(builder -> builder
-                .bucket(bucketName).
-                key(s3Key)).
-                toExternalForm();
-    }
-//
-//    private String generateUrl(String fileName){
-//        return  String.format("https://%s.s3.%s.amazonaws.com/%s",
-//                bucketName, region, fileName);
-//    }
-
-    private String parseString(String fileName){
-        return  fileName.replace(" ","+");
+    private String getStreamUrl(String fileName){
+        return "/app/music/public/streamSong/"+fileName;
     }
 
-    @Transactional
+
+
     protected Song updateSongInDb(SongDto song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
@@ -129,7 +125,7 @@ public class SongControllerService {
             log.info("Song not found in DB with name {}",objectKey);
            throw new SongNotFoundException("Song not found");
         }
-        //object key is same as file name
+
         GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
@@ -138,6 +134,10 @@ public class SongControllerService {
 
     }
 
+    public org.springframework.data.domain.Page<Song> getAllSongsName(int page, int size) {
+        Pageable pageable = PageRequest.of(page,size, Sort.by("id").ascending());
+        return  repo.findAll(pageable);
+    }
 }
 
 

@@ -2,6 +2,7 @@ package com.music.musicwebapplication.config;
 
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -21,10 +22,13 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import java.util.Objects;
+
 @Configuration
 @EnableWebSocketMessageBroker
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 @RequiredArgsConstructor
+@Slf4j
 public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenUtil jwtTokenUtil;
@@ -51,7 +55,6 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-                    // Get the authorization header
                     String authToken = accessor.getFirstNativeHeader("Authorization");
 
                     if (authToken != null && authToken.startsWith("Bearer ")) {
@@ -67,6 +70,9 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
 
                                 SecurityContextHolder.getContext().setAuthentication(authentication);
                                 accessor.setUser(authentication);
+
+                                Objects.requireNonNull(accessor.getSessionAttributes()).put("username", username);
+                                log.info("User {} connected to WebSocket", username);
                             }
                         } catch (Exception e) {
                             throw new IllegalArgumentException("Invalid JWT token");
@@ -76,8 +82,27 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                     }
                 }
 
+                if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    String destination = accessor.getDestination();
+                    if (destination != null && destination.startsWith("/topic/chat/")) {
+                        String roomId = extractRoomIdFromDestination(destination);
+                        if (roomId != null) {
+                            accessor.getSessionAttributes().put("roomId", roomId);
+                            log.info("User {} subscribed to room: {}",
+                                    accessor.getSessionAttributes().get("username"), roomId);
+                        }
+                    }
+                }
+
                 return message;
             }
         });
+    }
+    private String extractRoomIdFromDestination(String destination) {
+        String prefix = "/topic/chat/";
+        if (destination.startsWith(prefix)) {
+            return destination.substring(prefix.length());
+        }
+        return null;
     }
 }

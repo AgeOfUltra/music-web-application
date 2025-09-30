@@ -10,7 +10,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -19,19 +18,30 @@ public class WebSocketEventListener {
     private final SimpMessagingTemplate messageTemplate;
 
     @EventListener
-    public void handleWebSocketDisconnect(SessionDisconnectEvent event){
+    public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String username = (String) headerAccessor.getSessionAttributes().get("username");
         String roomId = (String) headerAccessor.getSessionAttributes().get("roomId");
-        if(username!=null){
-            log.info("{} Disconnected",username);
+
+        if (username != null) {
+            log.info("User {} disconnected from room: {}", username, roomId != null ? roomId : "unknown");
+
+            String targetRoom = roomId != null ? roomId : "general";
+
             var messageContext = ChatMessage.builder()
                     .type(MessageType.LEAVE)
                     .sender(username)
-                    .roomId(roomId)
+                    .content(username + " left the chat")
+                    .roomName(targetRoom)
                     .build();
 
-            messageTemplate.convertAndSend("/topic/chat/"+roomId,messageContext);
+            try {
+                messageTemplate.convertAndSend("/topic/chat/" + targetRoom, messageContext);
+                log.info("Leave message sent for user {} in room {}", username, targetRoom);
+            } catch (Exception e) {
+                log.error("Failed to send leave message for user {} in room {}: {}",
+                        username, targetRoom, e.getMessage());
+            }
         }
     }
 }

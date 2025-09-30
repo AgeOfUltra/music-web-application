@@ -1,8 +1,12 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
+import com.music.musicwebapplication.dto.RegisterUser;
+import com.music.musicwebapplication.service.RegisterUserService;
+import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,12 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/app/music")
+@RequestMapping("/app/music/public")
 @RequiredArgsConstructor
 public class PublicLoginController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;
+
+    private final RegisterUserService userService;
 
     // Return login page
     @GetMapping("/login")
@@ -54,5 +60,14 @@ public class PublicLoginController {
             error.put("error", "Invalid credentials");
             return ResponseEntity.badRequest().body(error);
         }
+    }
+    @PostMapping("/register")
+    public ResponseEntity<String> registerUser(@RequestBody RegisterUser newUser){
+        newUser.setRole(Role.LISTENER);
+        String result = userService.registerUser(newUser);
+
+        return ResponseEntity.status(
+                HttpStatus.CREATED
+        ).body(result);
     }
 }
