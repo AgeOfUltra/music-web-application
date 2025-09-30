@@ -23,21 +23,19 @@ public class RoomService {
         this.participantRepo = participantRepo;
     }
 
-    public Room createRoom(String roomName, int size , String userName, boolean isOrganizer){
+    public Room createRoom(Room room){
 
-        Optional<Room> existingRoom = repo.findRoomByRoomName(roomName);
+        Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
         if(existingRoom.isPresent()){
             throw new RoomManageException("Room already exist with given name");
         }
-        Room room = new Room();
-        room.setRoomName(roomName);
-        room.setMaxCount(size);
-        Participant participant = new Participant();
-        participant.setUserName(userName);
-        participant.setOrganizer(isOrganizer);
-        participant.setRoom(room);
-        participantRepo.save(participant);
-        room.getParticipant().add(participant);
+
+        List<Participant> participant = room.getParticipant();
+        participant.forEach(p->{
+            if(p!=null){
+                p.setRoom(room);
+            }
+        });
         return repo.save(room);
     }
 
