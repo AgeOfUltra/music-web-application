@@ -40,12 +40,12 @@ public class RoomService {
     }
 
     @Transactional
-    public Room joinRoom(String roomName, String userName, boolean isOrganizer){
+    public Participant joinRoom(String roomName, Participant participant){
         Room room = repo.findRoomByRoomName(roomName)
                 .orElseThrow(() -> new RoomNotFoundException("Room Not found with Room Name: " + roomName));
 
         boolean isUserExist = room.getParticipant().stream()
-                .anyMatch(u -> u.getUserName().equals(userName));
+                .anyMatch(u -> u.getUserName().equals(participant.getUserName()));
         if(isUserExist){
             throw new RoomManageException("User already exist in the room");
         }
@@ -53,14 +53,8 @@ public class RoomService {
         if(room.getParticipant().size() >= room.getMaxCount()){
             throw new RoomManageException("Room is full, can't join the room");
         }
-
-        Participant participant = new Participant();
-        participant.setUserName(userName);
-        participant.setOrganizer(isOrganizer);
         participant.setRoom(room);
-        participantRepo.save(participant); // This sets both sides automatically
-
-        return repo.findById(room.getId()).orElse(room);
+        return participantRepo.save(participant);
     }
 
     public boolean exitFromRoom(String roomName, String userName) {
@@ -85,16 +79,27 @@ public class RoomService {
             return true;
         }
         Participant participant = selectParticipant.get();
-        return  room.getParticipant().remove(participant);
+
+        if(participant.isOrganizer()){
+            Participant nextParticipant =getNextAvailablePerson(participant.getId());
+            nextParticipant.setOrganizer(true);
+            participantRepo.save(nextParticipant);
+        }
+        participantRepo.delete(participant);
+        return  true;
 
     }
 
-    public Room getRoomDetails(String roomId){
-        Optional<Room> room = repo.findRoomByRoomName(roomId);
-        if(room.isEmpty()){
-            throw new RoomNotFoundException("Room Not found with Room Name: "+roomId);
+    public Room getRoomDetails(String roomName){
+        return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
+    }
+
+    private Participant getNextAvailablePerson(long id){
+        Optional<Participant> nextParticipant = participantRepo.findById(id);
+        if(nextParticipant.isPresent()){
+            return nextParticipant.get();
         }else{
-            return room.get();
+            return getNextAvailablePerson(id++);
         }
     }
 }
