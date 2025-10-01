@@ -49,7 +49,7 @@ public class AppSecurity {
                                 "/app/music/public/**",
                                 "/favicon.ico")
                         .permitAll()
-                        .requestMatchers("/app/music/room/**","/app/music/chat/**").authenticated()
+                        .requestMatchers("/app/music/room/**","/app/music/chat/","/app/music/chat/**","/app/music/dashboard").authenticated()
                         .anyRequest().authenticated())
 
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);

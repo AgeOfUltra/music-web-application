@@ -75,4 +75,11 @@ public class RoomController {
         return ResponseEntity.ok(room);
 
     }
+
+    @GetMapping("/room/getAvailability")
+    public ResponseEntity<Integer> getAvailableCount(@RequestParam String roomName){
+        Room room = rService.getRoomDetails(roomName);
+        int availableCount = room.getMaxCount() - room.getParticipant().size();
+        return ResponseEntity.ok(availableCount);
+    }
 }

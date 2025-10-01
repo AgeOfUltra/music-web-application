@@ -2,32 +2,45 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Music Application</title>
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Chat - Login</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
         }
 
-        .login-container {
+        .container {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 40px;
-            width: 350px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 400px;
+            max-width: 90%;
         }
 
-        h2 {
+        h1 {
             text-align: center;
             color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
             margin-bottom: 30px;
+            font-size: 14px;
         }
 
         .form-group {
@@ -37,510 +50,253 @@
         label {
             display: block;
             margin-bottom: 5px;
-            color: #666;
-            font-size: 14px;
+            color: #555;
+            font-weight: 500;
         }
 
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-        button {
+        input {
             width: 100%;
             padding: 12px;
-            background-color: #007bff;
-            color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 16px;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        .error-message {
-            color: #dc3545;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-
-        .success-message {
-            color: #28a745;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .links a {
-            color: #007bff;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .links a:hover {
-            text-decoration: underline;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s;
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .modal h3 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 25px;
-            font-size: 20px;
-        }
-
-        .room-option {
-            margin-bottom: 15px;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            background-color: #fafafa;
-        }
-
-        .room-option:hover {
-            border-color: #007bff;
-            background-color: #f0f8ff;
-        }
-
-        .room-option.selected {
-            border-color: #007bff;
-            background-color: #e3f2fd;
-        }
-
-        .room-option h4 {
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 16px;
-        }
-
-        .room-option p {
-            margin: 0;
-            color: #666;
-            font-size: 14px;
-        }
-
-        .custom-room-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
             margin-top: 10px;
-        }
-
-        .custom-room-input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 25px;
-        }
-
-        .modal-buttons button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
         }
 
         .btn-primary {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
         .btn-secondary {
-            background-color: #6c757d;
-            color: white;
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
         }
 
         .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        .popular-rooms {
-            margin-top: 20px;
-        }
-
-        .popular-rooms h4 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        .room-tag {
-            display: inline-block;
-            background-color: #e9ecef;
-            color: #495057;
-            padding: 5px 12px;
-            margin: 3px;
-            border-radius: 15px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .room-tag:hover {
-            background-color: #007bff;
+            background: #667eea;
             color: white;
         }
 
-        .room-validation {
-            color: #dc3545;
-            font-size: 12px;
-            margin-top: 5px;
+        .alert {
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .toggle-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
             display: none;
         }
     </style>
 </head>
 <body>
-<div class="login-container">
-    <h2>Login to Music Chat</h2>
+<div class="container">
+    <div id="loginForm">
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Login to join music chat rooms</p>
 
-    <form id="loginForm">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
+        <div id="loginAlert" class="alert alert-error"></div>
+
+        <form id="loginFormElement" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="loginUsername">Username</label>
+                <input type="text" id="loginUsername" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" name="password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <div class="toggle-form">
+            Don't have an account? <a href="#" onclick="toggleForms(); return false;">Sign Up</a>
         </div>
-
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-
-        <button type="submit" id="loginBtn">Login</button>
-    </form>
-
-    <div id="message"></div>
-
-    <div class="links">
-        <a href="/app/music/public/signUp">Don't have an account? Register</a>
     </div>
-</div>
 
-<!-- Room Selection Modal -->
-<div id="roomModal" class="modal">
-    <div class="modal-content">
-        <h3>Choose a Chat Room</h3>
+    <div id="registerForm" class="hidden">
+        <h1>Create Account</h1>
+        <p class="subtitle">Join the music streaming community</p>
 
-        <div class="room-option" onclick="selectRoomOption('join')">
-            <h4>🚪 Join Existing Room</h4>
-            <p>Enter a room ID to join an existing chat room</p>
-        </div>
+        <div id="registerAlert" class="alert"></div>
 
-        <div class="room-option" onclick="selectRoomOption('create')">
-            <h4>🎵 Create New Room</h4>
-            <p>Create a new room with a custom name</p>
-        </div>
-
-        <div class="room-option" onclick="selectRoomOption('general')">
-            <h4>🌟 General Room</h4>
-            <p>Join the default general chat room</p>
-        </div>
-
-        <div id="customRoomSection" style="display: none; margin-top: 20px;">
-            <input type="text"
-                   id="customRoomInput"
-                   class="custom-room-input"
-                   placeholder="Enter room name (e.g., rock-music-fans, jazz-lovers)">
-            <div id="roomValidation" class="room-validation">
-                Room name should be 3-20 characters, letters, numbers, and hyphens only
+        <form id="registerFormElement" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="registerUsername">Username</label>
+                <input type="text" id="registerUsername" name="username" required minlength="3">
             </div>
 
-            <div class="popular-rooms">
-                <h4>💡 Popular Room Ideas:</h4>
-                <span class="room-tag" onclick="setRoomName('rock-lovers')">rock-lovers</span>
-                <span class="room-tag" onclick="setRoomName('pop-hits')">pop-hits</span>
-                <span class="room-tag" onclick="setRoomName('jazz-cafe')">jazz-cafe</span>
-                <span class="room-tag" onclick="setRoomName('indie-vibes')">indie-vibes</span>
-                <span class="room-tag" onclick="setRoomName('classical-music')">classical-music</span>
-                <span class="room-tag" onclick="setRoomName('hip-hop-zone')">hip-hop-zone</span>
+            <div class="form-group">
+                <label for="registerEmail">Email</label>
+                <input type="email" id="registerEmail" name="email" required>
             </div>
-        </div>
 
-        <div class="modal-buttons">
-            <button type="button" class="btn-secondary" onclick="closeRoomModal()">Cancel</button>
-            <button type="button" class="btn-primary" onclick="proceedToRoom()" id="proceedBtn">Join Room</button>
+            <div class="form-group">
+                <label for="registerPassword">Password</label>
+                <input type="password" id="registerPassword" name="password" required minlength="5">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+
+        <div class="toggle-form">
+            Already have an account? <a href="#" onclick="toggleForms(); return false;">Login</a>
         </div>
     </div>
 </div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    let selectedRoomOption = '';
-    let loginData = null;
+<script>
+    function toggleForms() {
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
 
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+        loginForm.classList.toggle('hidden');
+        registerForm.classList.toggle('hidden');
 
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const messageDiv = document.getElementById('message');
-        const loginBtn = document.getElementById('loginBtn');
+        hideAlerts();
+    }
 
-        // Get CSRF token
-        const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+    function showAlert(elementId, message, isError = true) {
+        const alert = document.getElementById(elementId);
+        alert.textContent = message;
+        alert.className = isError ? 'alert alert-error' : 'alert alert-success';
+        alert.style.display = 'block';
+    }
 
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Logging in...';
-        messageDiv.textContent = '';
+    function hideAlerts() {
+        document.getElementById('loginAlert').style.display = 'none';
+        document.getElementById('registerAlert').style.display = 'none';
+    }
+
+    async function handleLogin(event) {
+        event.preventDefault();
+        hideAlerts();
+
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
 
         try {
-            const response = await fetch('/app/music/authenticate', {
+            const response = await fetch('/app/music/public/authenticate', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    [csrfHeader]: csrfToken
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    username: username,
-                    password: password
-                })
+                body: JSON.stringify({ username, password })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Store login data temporarily
-                loginData = data;
+                // Store in localStorage for API calls
+                localStorage.setItem('jwtToken', data.token);
+                localStorage.setItem('username', data.username);
 
-                messageDiv.className = 'success-message';
-                messageDiv.textContent = 'Login successful! Choose your room...';
+                // Store in cookie for page navigation (expires in 30 minutes)
+                document.cookie = `jwtToken=${data.token}; path=/; max-age=1800; SameSite=Lax`;
 
-                // Show room selection modal
-                showRoomModal();
+                showAlert('loginAlert', data.message, false);
+
+                setTimeout(() => {
+                    window.location.href = '/app/music/dashboard';
+                }, 500);
             } else {
-                messageDiv.className = 'error-message';
-                messageDiv.textContent = data.error || 'Login failed';
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Login';
+                showAlert('loginAlert', data.error || 'Login failed. Please try again.');
             }
         } catch (error) {
+            showAlert('loginAlert', 'Network error. Please try again.');
             console.error('Login error:', error);
-            messageDiv.className = 'error-message';
-            messageDiv.textContent = 'An error occurred. Please try again.';
-            loginBtn.disabled = false;
-            loginBtn.textContent = 'Login';
-        }
-    });
-
-    function showRoomModal() {
-        document.getElementById('roomModal').style.display = 'block';
-        // Reset form
-        selectedRoomOption = '';
-        document.getElementById('customRoomSection').style.display = 'none';
-        document.getElementById('customRoomInput').value = '';
-        clearRoomSelection();
-    }
-
-    function closeRoomModal() {
-        document.getElementById('roomModal').style.display = 'none';
-        // Re-enable login button
-        document.getElementById('loginBtn').disabled = false;
-        document.getElementById('loginBtn').textContent = 'Login';
-        document.getElementById('message').textContent = '';
-        loginData = null;
-    }
-
-    function selectRoomOption(option) {
-        selectedRoomOption = option;
-        clearRoomSelection();
-
-        // Add selected class to clicked option
-        event.target.closest('.room-option').classList.add('selected');
-
-        // Show/hide custom room input
-        const customSection = document.getElementById('customRoomSection');
-        if (option === 'join' || option === 'create') {
-            customSection.style.display = 'block';
-            document.getElementById('customRoomInput').placeholder =
-                option === 'join' ? 'Enter existing room ID' : 'Enter new room name';
-            document.getElementById('customRoomInput').focus();
-        } else {
-            customSection.style.display = 'none';
-        }
-
-        // Update proceed button text
-        const proceedBtn = document.getElementById('proceedBtn');
-        switch(option) {
-            case 'join':
-                proceedBtn.textContent = 'Join Room';
-                break;
-            case 'create':
-                proceedBtn.textContent = 'Create Room';
-                break;
-            case 'general':
-                proceedBtn.textContent = 'Join General';
-                break;
         }
     }
 
-    function clearRoomSelection() {
-        document.querySelectorAll('.room-option').forEach(option => {
-            option.classList.remove('selected');
-        });
-    }
+    async function handleRegister(event) {
+        event.preventDefault();
+        hideAlerts();
 
-    function setRoomName(roomName) {
-        document.getElementById('customRoomInput').value = roomName;
-        validateRoomName();
-    }
+        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
 
-    function validateRoomName() {
-        const roomInput = document.getElementById('customRoomInput');
-        const validation = document.getElementById('roomValidation');
-        const roomName = roomInput.value.trim();
+        try {
+            const response = await fetch('/app/music/public/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, email, password })
+            });
 
-        // Room name validation: 3-20 characters, alphanumeric and hyphens
-        const isValid = /^[a-zA-Z0-9-]{3,20}$/.test(roomName);
+            const data = await response.text();
 
-        if (roomName.length > 0 && !isValid) {
-            validation.style.display = 'block';
-            roomInput.style.borderColor = '#dc3545';
-            return false;
-        } else {
-            validation.style.display = 'none';
-            roomInput.style.borderColor = '#007bff';
-            return true;
-        }
-    }
+            if (response.ok) {
+                showAlert('registerAlert', 'Registration successful! Please login.', false);
 
-    // Add real-time validation
-    document.getElementById('customRoomInput').addEventListener('input', validateRoomName);
+                document.getElementById('registerFormElement').reset();
 
-    function proceedToRoom() {
-        if (!loginData) return;
-
-        let roomId = 'general';
-
-        if (selectedRoomOption === 'general') {
-            roomId = 'general';
-        } else if (selectedRoomOption === 'join' || selectedRoomOption === 'create') {
-            const customRoom = document.getElementById('customRoomInput').value.trim();
-
-            if (!customRoom) {
-                alert('Please enter a room name');
-                return;
+                setTimeout(() => {
+                    toggleForms();
+                }, 1500);
+            } else {
+                showAlert('registerAlert', data || 'Registration failed. Please try again.');
             }
-
-            if (!validateRoomName()) {
-                alert('Please enter a valid room name');
-                return;
-            }
-
-            roomId = customRoom.toLowerCase();
-        } else {
-            alert('Please select a room option');
-            return;
+        } catch (error) {
+            showAlert('registerAlert', 'Network error. Please try again.');
+            console.error('Registration error:', error);
         }
-
-        // Store JWT token and username
-        localStorage.setItem('jwtToken', loginData.token);
-        localStorage.setItem('username', loginData.username);
-
-        // Set JWT token in cookie for server-side authentication
-        document.cookie = `jwtToken=${loginData.token}; path=/; max-age=86400; SameSite=Strict`;
-
-        // Close modal and show success message
-        closeRoomModal();
-        const messageDiv = document.getElementById('message');
-        messageDiv.className = 'success-message';
-        messageDiv.textContent = `Joining room "${roomId}"...`;
-
-        // Redirect to chat room with selected room ID
-        setTimeout(() => {
-            window.location.href = `/app/music/chat?roomId=${encodeURIComponent(roomId)}`;
-        }, 1500);
     }
-
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('roomModal');
-        if (event.target === modal) {
-            closeRoomModal();
-        }
-    });
-
-    // Handle Enter key in custom room input
-    document.getElementById('customRoomInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            proceedToRoom();
-        }
-    });
-    /*]]>*/
 </script>
 </body>
 </html>
