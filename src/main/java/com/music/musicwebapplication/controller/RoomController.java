@@ -38,7 +38,6 @@ public class RoomController {
 
 
     @PostMapping("/room/create")
-//    public ResponseEntity<Room> createRoom(@RequestParam String roomName, @RequestParam int maxCount, Authentication authentication ){
     public ResponseEntity<Room> createRoom(@RequestParam String roomName, @RequestParam int maxCount, @RequestParam String username ){
         Room roomBuild = new Room();
         roomBuild.setRoomName(roomName);

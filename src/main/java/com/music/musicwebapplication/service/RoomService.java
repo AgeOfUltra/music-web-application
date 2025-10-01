@@ -6,12 +6,14 @@ import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.repo.ParticipantRepo;
 import com.music.musicwebapplication.repo.RoomRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class RoomService {
     private final RoomRepo repo;
@@ -57,14 +59,15 @@ public class RoomService {
         return participantRepo.save(participant);
     }
 
+    @Transactional
     public boolean exitFromRoom(String roomName, String userName) {
         Optional<Room> existingRoom = repo.findRoomByRoomName(roomName);
         if (existingRoom.isEmpty()) {
             throw new RoomNotFoundException("Room not found with Room Name: " + roomName);
         }
 
-        Room room = existingRoom.get();
-        List<Participant> existingParticipants = room.getParticipant();
+        List<Participant> existingParticipants = existingRoom.get().getParticipant();
+
         Optional<Participant> selectParticipant = existingParticipants.stream()
                 .filter(p -> p.getUserName().equals(userName))
                 .findFirst();
@@ -73,17 +76,18 @@ public class RoomService {
             throw new IllegalArgumentException("User " + userName + " is not in room: " + roomName);
         }
 
-
-        if (room.getParticipant().isEmpty()) {
-            repo.delete(room);
-            return true;
-        }
         Participant participant = selectParticipant.get();
 
         if(participant.isOrganizer()){
-            Participant nextParticipant =getNextAvailablePerson(participant.getId());
-            nextParticipant.setOrganizer(true);
-            participantRepo.save(nextParticipant);
+            Participant nextParticipant =getNextAvailablePerson(participant.getId()+1, existingRoom.get().getId());
+            if(nextParticipant == null){
+                repo.delete(existingRoom.get());
+                return true;
+            }else{
+                nextParticipant.setOrganizer(true);
+                participantRepo.save(nextParticipant);
+            }
+
         }
         participantRepo.delete(participant);
         return  true;
@@ -94,12 +98,14 @@ public class RoomService {
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
     }
 
-    private Participant getNextAvailablePerson(long id){
+    private Participant getNextAvailablePerson(long id, long roomId){
         Optional<Participant> nextParticipant = participantRepo.findById(id);
         if(nextParticipant.isPresent()){
             return nextParticipant.get();
+        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
+            return getNextAvailablePerson(id++,roomId);
         }else{
-            return getNextAvailablePerson(id++);
+            return null;
         }
     }
 }
