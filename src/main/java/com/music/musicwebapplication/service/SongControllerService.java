@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -137,6 +139,10 @@ public class SongControllerService {
     public org.springframework.data.domain.Page<Song> getAllSongsName(int page, int size) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("id").ascending());
         return  repo.findAll(pageable);
+    }
+
+    public List<Song> searchSongsByName(String songName) {
+        return repo.findBySongNameContainingIgnoreCase(songName);
     }
 }
 

@@ -1,6 +1,8 @@
 package com.music.musicwebapplication.repo;
 
 import com.music.musicwebapplication.entity.Song;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -16,4 +18,6 @@ public interface SongRepo extends JpaRepository<Song,Long> {
 
     @Query("select songName from Song")
     Optional<List<String>> findAllBySongName();
+
+    List<Song> findBySongNameContainingIgnoreCase(String query);
 }

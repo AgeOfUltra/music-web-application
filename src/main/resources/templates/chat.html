@@ -1,1374 +1,814 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Chat Room</title>
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
             margin: 0;
-            padding: 15px;
-            background: #1a1a1a;
-            color: #e0e0e0;
-            min-height: 100vh;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .app-header {
-            text-align: center;
-            color: #00bcd4;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-bottom: 2px solid #667eea;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-title {
             font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 2px solid #00bcd4;
-            border-radius: 8px;
-            background: rgba(0, 188, 212, 0.1);
+            font-weight: 600;
+            color: #333;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #d32f2f;
         }
 
         .main-container {
             display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 20px;
-            height: calc(100vh - 120px);
+            grid-template-columns: 380px 1fr 400px;
+            height: calc(100vh - 70px);
+            gap: 0;
         }
 
-        @media (max-width: 1200px) {
-            .main-container {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto;
-                height: auto;
-            }
-        }
-
-        /* Left Sidebar - Music Search & Queue */
-        .music-sidebar {
-            background: #2a2a2a;
-            border: 2px solid #444;
-            border-radius: 12px;
-            padding: 20px;
+        /* Left Panel - Music Player & Songs */
+        .left-panel {
+            background: white;
             display: flex;
             flex-direction: column;
+            border-right: 2px solid #667eea;
         }
 
-        .search-section {
-            margin-bottom: 20px;
-        }
-
-        .search-bar {
-            width: 90%;
-            padding: 12px;
-            background: #333;
-            border: 2px solid #555;
-            border-radius: 6px;
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-
-        .search-bar:focus {
-            outline: none;
-            border-color: #00bcd4;
-            box-shadow: 0 0 8px rgba(0, 188, 212, 0.3);
-        }
-
-        .queue-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .section-title {
-            color: #00bcd4;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .song-queue {
-            background: #333;
-            border: 2px solid #555;
-            border-radius: 8px;
-            padding: 15px;
-            flex: 1;
-            overflow-y: auto;
-            min-height: 300px;
-        }
-
-        .queue-item {
-            background: rgba(0, 188, 212, 0.1);
-            border: 1px solid #555;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .queue-item:hover {
-            background: rgba(0, 188, 212, 0.2);
-            border-color: #00bcd4;
-            transform: translateY(-1px);
-        }
-
-        .queue-item.playing {
-            background: rgba(0, 188, 212, 0.3);
-            border-color: #00bcd4;
-            box-shadow: 0 0 10px rgba(0, 188, 212, 0.3);
-        }
-
-        .song-title {
-            font-weight: bold;
-            color: #e0e0e0;
-            font-size: 13px;
-            margin-bottom: 4px;
-        }
-
-        .song-artist {
-            color: #aaa;
-            font-size: 11px;
-            margin-bottom: 2px;
-        }
-
-        .song-details {
-            color: #888;
-            font-size: 10px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .song-detail-item {
-            background: rgba(0, 188, 212, 0.1);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-        }
-
-        .loading-indicator {
-            text-align: center;
-            padding: 20px;
-            color: #aaa;
-            font-style: italic;
-        }
-
-        .pagination-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            padding: 10px;
-            background: #333;
-            border-radius: 6px;
-        }
-
-        .pagination-btn {
-            background: #00bcd4;
-            color: #1a1a1a;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .pagination-btn:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-        }
-
-        .page-info {
-            color: #aaa;
-            font-size: 11px;
-        }
-
-        /* Right side container for chat and online users */
-        .chat-and-online-container {
-            display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 20px;
-        }
-
-        /* Center - Chat & Music Player */
-        .chat-container {
-            background: #2a2a2a;
-            border: 2px solid #444;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            border-bottom: 2px solid #444;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-        }
-
-        .chat-header h2 {
-            margin: 0;
-            color: #00bcd4;
-            font-size: 20px;
-        }
-
-        .user-info {
-            color: #aaa;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-
-        /* Music Player Section */
         .music-player {
-            background: #333;
-            border: 2px solid #00bcd4;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 20px;
+            background: white;
+            border-bottom: 2px solid #667eea;
         }
 
         .player-info {
-            text-align: center;
             margin-bottom: 15px;
         }
 
-        .current-song {
-            color: #e0e0e0;
-            font-weight: bold;
-            font-size: 14px;
+        .song-title {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
         }
 
-        .current-artist {
-            color: #aaa;
+        .song-details {
+            color: #666;
             font-size: 12px;
         }
 
-        .current-movie {
-            color: #888;
-            font-size: 11px;
-            font-style: italic;
-        }
-
-        .player-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .control-btn {
-            background: transparent;
-            border: 2px solid #00bcd4;
-            color: #00bcd4;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .control-btn:hover {
-            background: #00bcd4;
-            color: #1a1a1a;
-        }
-
-        .control-btn.play {
-            width: 50px;
-            height: 50px;
-        }
-
-        .control-btn:disabled {
-            background: #555;
-            color: #888;
-            border-color: #555;
-            cursor: not-allowed;
-        }
-
-        .progress-container {
-            margin-bottom: 10px;
-        }
-
-        .progress-bar {
+        audio {
             width: 100%;
-            height: 4px;
-            background: #555;
-            border-radius: 2px;
-            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: #00bcd4;
-            width: 0%;
-            transition: width 0.1s;
+        .search-btn:hover {
+            background: #5568d3;
         }
 
-        .time-display {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        /* Chat Messages */
-        #messageArea {
-            border: 2px solid #555;
-            border-radius: 8px;
-            height: 300px;
-            overflow-y: auto;
-            padding: 15px;
-            background: #333;
-            margin-bottom: 15px;
+        .song-list {
             flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .song-item {
+            background: transparent;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #e0e0e0;
+        }
+
+        .song-item:hover {
+            background: #f5f7fa;
+            border-color: #667eea;
+        }
+
+        .song-item.active {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .song-item-title {
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .song-item.active .song-item-title {
+            color: #667eea;
+        }
+
+        .song-item-info {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .song-item.active .song-item-info {
+            color: #667eea;
+        }
+
+        /* Middle Panel - Chat */
+        .middle-panel {
+            background: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #667eea;
+        }
+
+        .room-header {
+            background: white;
+            padding: 15px 20px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .room-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .room-user-info {
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .participant-count {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            background: #fafbfc;
+            max-height: calc(100vh - 250px);
+            scroll-behavior: smooth;
         }
 
         .message {
-            margin-bottom: 12px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            animation: fadeIn 0.4s ease-in;
-            border-left: 3px solid var(--user-color, #00bcd4);
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
         }
 
-        .message:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message.join {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-            text-align: center;
-            font-style: italic;
-            border-left-color: #4caf50;
-        }
-
-        .message.leave {
-            background: rgba(244, 67, 54, 0.2);
-            color: #f44336;
-            text-align: center;
-            font-style: italic;
-            border-left-color: #f44336;
-        }
-
-        .message.chat {
-            color: #e0e0e0;
-            background: rgba(255, 255, 255, 0.05);
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
         }
 
         .message-sender {
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: var(--user-color, #00bcd4);
-            display: flex;
-            align-items: center;
-        }
-
-        .user-avatar {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
-            font-size: 10px;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 12px;
             color: white;
-            margin-right: 8px;
         }
 
-        .message-timestamp {
-            font-size: 10px;
+        .message-time {
+            font-size: 11px;
             color: #666;
-            margin-left: auto;
-            font-weight: normal;
+            margin-left: 8px;
         }
 
-        .input-group {
+        .message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            max-width: 70%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .system-message {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+            margin: 10px 0;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .system-message.fade-out {
+            opacity: 0;
+        }
+
+        .chat-input-container {
+            background: white;
+            padding: 15px 20px;
+            border-top: 1px solid #ddd;
             display: flex;
             gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            padding: 10px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .send-btn:hover {
+            background: #5568d3;
+        }
+
+        /* Right Panel - Online Users */
+        .right-panel {
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .online-header {
+            background: white;
+            padding: 20px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .online-title {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .participants-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: #fafbfc;
+        }
+
+        .participant-item {
+            background: transparent;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 2px solid #e0e0e0;
+        }
+
+        .participant-name {
+            color: white;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 15px;
+        }
+
+        .organizer-badge {
+            background: #ff9800;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Search Drawer */
+        .search-drawer {
+            position: fixed;
+            top: 0;
+            left: -400px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            transition: left 0.3s;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-drawer.open {
+            left: 0;
+        }
+
+        .drawer-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
         }
 
-        #messageInput {
-            flex: 1;
-            padding: 12px;
-            background: #333;
-            border: 2px solid #555;
-            border-radius: 6px;
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-
-        #messageInput:focus {
-            outline: none;
-            border-color: #00bcd4;
-            box-shadow: 0 0 8px rgba(0, 188, 212, 0.3);
-        }
-
-        button {
-            padding: 12px 16px;
-            background: #00bcd4;
-            color: #1a1a1a;
+        .drawer-close {
+            background: none;
             border: none;
-            border-radius: 6px;
+            color: white;
+            font-size: 24px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
         }
 
-        button:hover {
-            background: #00acc1;
-            transform: translateY(-1px);
-        }
-
-        button:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        #logoutBtn {
-            background: #f44336;
-            color: white;
-        }
-
-        #logoutBtn:hover {
-            background: #e53935;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin-left: 10px;
-            font-weight: 600;
-        }
-
-        .status.connected {
-            background: #4caf50;
-            color: white;
-        }
-
-        .status.disconnected {
-            background: #f44336;
-            color: white;
-        }
-
-        /* Online Users Section */
-        .online-users-section {
-            background: #2a2a2a;
-            border: 2px solid #444;
-            border-radius: 12px;
+        .drawer-search {
             padding: 20px;
         }
 
-        .online-users {
-            background: #333;
-            border: 2px solid #00bcd4;
-            border-radius: 8px;
-            padding: 15px;
-            height: 90%;
+        .drawer-search input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .drawer-results {
+            flex: 1;
             overflow-y: auto;
+            padding: 0 20px 20px 20px;
         }
 
-        .online-count {
-            color: #aaa;
-            font-size: 12px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 6px;
-            background: rgba(0, 188, 212, 0.1);
-            transition: all 0.3s;
-        }
-
-        .user-item:hover {
-            background: rgba(0, 188, 212, 0.2);
-        }
-
-        .user-item .username {
-            font-size: 13px;
-            color: #e0e0e0;
-            font-weight: 500;
-        }
-
-        .notification-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 6px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .notification-toast.success {
-            background: #4caf50;
-        }
-
-        .notification-toast.error {
-            background: #f44336;
-        }
-
-        .notification-toast.info {
-            background: #00bcd4;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Scrollbar styling */
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #333;
+            background: #f5f7fa;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #666;
-            border-radius: 3px;
+            background: #667eea;
+            border-radius: 4px;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #888;
-        }
-
-        /* Loading states */
         .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .error-message {
-            color: #f44336;
             text-align: center;
+            color: #666;
             padding: 20px;
-            font-style: italic;
-        }
-
-        /* Hidden audio element */
-        #audioPlayer {
-            display: none;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-<div class="app-header">
-    Music Chat Application
+<div class="header">
+    <div class="logo">MUSIC CHAT</div>
+    <div class="app-title" id="appTitle">Music Streaming Room</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
 <div class="main-container">
-    <div class="music-sidebar">
-        <div class="search-section">
-            <div class="section-title">Search Music</div>
-            <input type="text" class="search-bar" id="musicSearch" placeholder="Search for songs, artists..." />
+    <!-- Left Panel: Music Player & Song List -->
+    <div class="left-panel">
+        <div class="music-player">
+            <div class="player-info">
+                <div class="song-title" id="currentSongTitle">No song playing</div>
+                <div class="song-details" id="currentSongDetails">Select a song to play</div>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+            <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
         </div>
-
-        <div class="queue-section">
-            <div class="section-title">Song Library</div>
-            <div class="song-queue" id="songQueue">
-                <div class="loading-indicator">Loading songs...</div>
-            </div>
-            <div class="pagination-controls">
-                <button class="pagination-btn" id="prevPageBtn" disabled>← Prev</button>
-                <span class="page-info" id="pageInfo">Page 1 of 1</span>
-                <button class="pagination-btn" id="nextPageBtn" disabled>Next →</button>
-            </div>
+        <div class="song-list" id="songList">
+            <div class="loading">Loading songs...</div>
         </div>
     </div>
 
-    <div class="chat-and-online-container">
-        <div class="chat-container">
-            <div class="chat-header">
-                <h2>Music Chat Room <span id="roomIdDisplay" th:text="'#' + ${roomId}"></span></h2>
-                <div class="user-info">
-                    Logged in as: <strong th:text="${username}"></strong>
-                    <span id="connectionStatus" class="status disconnected">Disconnected</span>
-                </div>
-            </div>
-
-            <div class="music-player">
-                <div class="player-info">
-                    <div class="current-song" id="currentSong">No song selected</div>
-                    <div class="current-artist" id="currentArtist">Select a song to play</div>
-                    <div class="current-movie" id="currentMovie"></div>
-                </div>
-
-                <div class="player-controls">
-                    <button class="control-btn" id="prevBtn" disabled>⏮</button>
-                    <button class="control-btn play" id="playBtn" disabled>▶</button>
-                    <button class="control-btn" id="nextBtn" disabled>⏭</button>
-                </div>
-
-                <div class="progress-container">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="time-display">
-                        <span id="currentTime">0:00</span>
-                        <span id="totalTime">0:00</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="messageArea"></div>
-
-            <div class="input-group">
-                <input type="text" id="messageInput" placeholder="Type your message..." disabled />
-                <button onclick="sendMessage()" disabled id="sendBtn">Send</button>
-                <button onclick="toggleConnection()" id="connectBtn">Connect</button>
-                <button onclick="logout()" id="logoutBtn">Logout</button>
-            </div>
+    <!-- Middle Panel: Chat Section -->
+    <div class="middle-panel">
+        <div class="room-header">
+            <div class="room-name" id="roomName">Loading...</div>
+            <div class="room-user-info" id="roomUserInfo">Logged in as: <span id="currentUserDisplay"></span></div>
+            <div class="participant-count" id="participantCount">0 participants</div>
         </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="system-message">Welcome to the chat room!</div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="messageInput" placeholder="Type a message..." onkeypress="handleEnter(event)">
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
 
-        <div class="online-users-section">
-            <div class="section-title">Who's Online</div>
-            <div class="online-users">
-                <div class="online-count" id="onlineCount">0 users online</div>
-                <div id="userList"></div>
-            </div>
+    <!-- Right Panel: Online Participants -->
+    <div class="right-panel">
+        <div class="online-header">
+            <div class="online-title">Online Participants</div>
+        </div>
+        <div class="participants-list" id="participantsList">
+            <div class="loading">Loading participants...</div>
         </div>
     </div>
 </div>
 
-<!-- Hidden audio element for music playback -->
-<audio id="audioPlayer" preload="metadata"></audio>
+<!-- Search Drawer -->
+<div class="search-drawer" id="searchDrawer">
+    <div class="drawer-header">
+        <h2>Search Songs</h2>
+        <button class="drawer-close" onclick="closeSearchDrawer()">&times;</button>
+    </div>
+    <div class="drawer-search">
+        <input type="text" id="searchInput" placeholder="Search by song name..." onkeypress="handleSearchEnter(event)">
+    </div>
+    <div class="drawer-results" id="searchResults"></div>
+</div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
+<script>
     let stompClient = null;
-    const username = /*[[${username}]]*/ '';
-    const roomId = /*[[${roomId}]]*/ 'general';
-    let connected = false;
-    let isLoggingOut = false;
-
-    // Music player state
-    let isPlaying = false;
-    let currentSongIndex = -1;
-    let songs = [];
-    let audioPlayer = null;
-
-    // Pagination state
     let currentPage = 0;
-    let totalPages = 1;
-    let pageSize = 10;
-    let totalSongs = 0;
-    let isLoading = false;
+    let isLoadingSongs = false;
+    let hasMoreSongs = true;
+    let currentRoomName = null;
+    let currentUsername = null;
+    const userColors = {};
+    const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea'];
 
-    // User color management
-    const userColors = new Map();
-    const activeUsers = new Set();
+    window.onload = function() {
+        initializePage();
+    };
 
-    // Initialize audio player
-    function initializeAudioPlayer() {
-        audioPlayer = document.getElementById('audioPlayer');
+    function initializePage() {
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+        currentUsername = localStorage.getItem('username');
+        const urlParams = new URLSearchParams(window.location.search);
+        currentRoomName = urlParams.get('roomName') || localStorage.getItem('currentRoom');
 
-        audioPlayer.addEventListener('loadstart', () => {
-            console.log('Loading started');
-        });
+        if (!token || !currentUsername || !currentRoomName) {
+            window.location.href = '/app/music/public/login';
+            return;
+        }
 
-        audioPlayer.addEventListener('canplay', () => {
-            console.log('Can start playing');
-            updateTotalTime();
-        });
+        document.getElementById('roomName').textContent = currentRoomName;
+        document.getElementById('currentUserDisplay').textContent = currentUsername;
+        loadSongs();
+        loadRoomInfo();
+        connectWebSocket(token);
 
-        audioPlayer.addEventListener('timeupdate', () => {
-            updateProgress();
-        });
+        // Auto-refresh participants every 10 seconds
+        setInterval(loadRoomInfo, 10000);
 
-        audioPlayer.addEventListener('ended', () => {
-            playNext();
-        });
-
-        audioPlayer.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
-            showNotification('Error loading audio', 'error');
-            isPlaying = false;
-            updatePlayButton();
-        });
-
-        audioPlayer.addEventListener('pause', () => {
-            isPlaying = false;
-            updatePlayButton();
-        });
-
-        audioPlayer.addEventListener('play', () => {
-            isPlaying = true;
-            updatePlayButton();
+        // Infinite scroll for songs
+        const songList = document.getElementById('songList');
+        songList.addEventListener('scroll', () => {
+            if (songList.scrollTop + songList.clientHeight >= songList.scrollHeight - 50) {
+                loadSongs();
+            }
         });
     }
 
-    // Fetch songs from API with pagination
-    async function fetchSongs(page = 0, size = 10) {
-        if (isLoading) return;
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
 
-        isLoading = true;
-        const songQueue = document.getElementById('songQueue');
-
-        if (page === 0) {
-            songQueue.innerHTML = '<div class="loading-indicator">Loading songs...</div>';
+    function getUserColor(username) {
+        if (!userColors[username]) {
+            userColors[username] = colors[Object.keys(userColors).length % colors.length];
         }
+        return userColors[username];
+    }
+
+    async function loadSongs() {
+        if (isLoadingSongs || !hasMoreSongs) return;
+
+        isLoadingSongs = true;
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
 
         try {
-            const token = getJwtToken();
-            const response = await fetch(`/app/music/fetchAllSongs?page=${page}&size=${size}`, {
-                method: 'GET',
+            const response = await fetch(`/app/music/fetchAllSongs?page=${currentPage}&size=10`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.ok) {
+                const data = await response.json();
+                displaySongs(data.content);
+                hasMoreSongs = !data.last;
+                currentPage++;
             }
-
-            const data = await response.json();
-            songs = data.content || [];
-            currentPage = data.page.number;
-            totalPages = data.page.totalPages;
-            totalSongs = data.page.totalElements;
-
-            renderSongs();
-            updatePaginationControls();
-
-            if (currentSongIndex === -1 && songs.length > 0) {
-                // Auto-select first song if none selected
-                selectSong(0);
-            }
-
-            showNotification(`Loaded ${songs.length} songs`, 'success');
-
         } catch (error) {
-            console.error('Error fetching songs:', error);
-            songQueue.innerHTML = '<div class="error-message">Failed to load songs. Please try again.</div>';
-            showNotification('Failed to load songs', 'error');
+            console.error('Error loading songs:', error);
         } finally {
-            isLoading = false;
+            isLoadingSongs = false;
         }
     }
 
-    // Render songs in the queue
-    function renderSongs() {
-        const songQueue = document.getElementById('songQueue');
-
-        if (songs.length === 0) {
-            songQueue.innerHTML = '<div class="error-message">No songs found</div>';
-            return;
+    function displaySongs(songs) {
+        const songList = document.getElementById('songList');
+        if (currentPage === 1) {
+            songList.innerHTML = '';
         }
 
-        songQueue.innerHTML = songs.map((song, index) => `
-            <div class="queue-item ${index === currentSongIndex ? 'playing' : ''}" data-index="${index}">
-                <div class="song-title">${song.songName || 'Unknown Title'}</div>
-                <div class="song-artist">${song.singer || 'Unknown Artist'}</div>
-                <div class="song-details">
-                    ${song.movie ? `<span class="song-detail-item">🎬 ${song.movie}</span>` : ''}
-                    ${song.language ? `<span class="song-detail-item">🌐 ${song.language}</span>` : ''}
-                    ${song.songType ? `<span class="song-detail-item">🎵 ${song.songType}</span>` : ''}
-                    ${song.hero ? `<span class="song-detail-item">👨 ${song.hero}</span>` : ''}
-                    ${song.heroine ? `<span class="song-detail-item">👩 ${song.heroine}</span>` : ''}
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Update pagination controls
-    function updatePaginationControls() {
-        const prevBtn = document.getElementById('prevPageBtn');
-        const nextBtn = document.getElementById('nextPageBtn');
-        const pageInfo = document.getElementById('pageInfo');
-
-        prevBtn.disabled = currentPage <= 0;
-        nextBtn.disabled = currentPage >= totalPages - 1;
-        pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages} (${totalSongs} songs)`;
-    }
-
-    // Select and load a song
-    function selectSong(index) {
-        if (index < 0 || index >= songs.length) return;
-
-        currentSongIndex = index;
-        const song = songs[index];
-
-        // Update UI
-        document.getElementById('currentSong').textContent = song.songName || 'Unknown Title';
-        document.getElementById('currentArtist').textContent = song.singer || 'Unknown Artist';
-        document.getElementById('currentMovie').textContent = song.movie || '';
-
-        // Update queue display
-        document.querySelectorAll('.queue-item').forEach((item, i) => {
-            item.classList.toggle('playing', i === index);
+        songs.forEach(song => {
+            const songItem = document.createElement('div');
+            songItem.className = 'song-item';
+            songItem.onclick = () => playSong(song);
+            songItem.innerHTML = `
+                    <div class="song-item-title">${song.songName}</div>
+                    <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
+                `;
+            songList.appendChild(songItem);
         });
-
-        // Load audio
-        if (song.url) {
-            const token = getJwtToken();
-            // Add authorization header by creating a blob URL if needed
-            // For now, we'll try direct URL with token as query param
-            audioPlayer.src = song.url + '?token=' + encodeURIComponent(token);
-            audioPlayer.load();
-        }
-
-        // Enable controls
-        document.getElementById('playBtn').disabled = false;
-        document.getElementById('prevBtn').disabled = index <= 0;
-        document.getElementById('nextBtn').disabled = index >= songs.length - 1;
     }
 
-    // Music player functions
-    function togglePlay() {
-        if (currentSongIndex === -1) {
-            showNotification('Please select a song first', 'info');
-            return;
-        }
+    function playSong(song) {
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+        const audioPlayer = document.getElementById('audioPlayer');
 
-        if (isPlaying) {
-            audioPlayer.pause();
-        } else {
-            audioPlayer.play().catch(error => {
-                console.error('Playback failed:', error);
-                showNotification('Playback failed. Please try again.', 'error');
+        document.getElementById('currentSongTitle').textContent = song.songName;
+        document.getElementById('currentSongDetails').textContent = `${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}`;
+
+        audioPlayer.src = `/app/music/public/streamSong/${song.fileName}`;
+        audioPlayer.play();
+
+        document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+
+    async function loadRoomInfo() {
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+
+        try {
+            const response = await fetch(`/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
-        }
-    }
 
-    function playNext() {
-        if (currentSongIndex < songs.length - 1) {
-            selectSong(currentSongIndex + 1);
-            if (isPlaying) {
-                setTimeout(() => audioPlayer.play(), 100);
+            if (response.ok) {
+                const room = await response.json();
+                document.getElementById('participantCount').textContent = `${room.participant.length} / ${room.maxCount} participants`;
+                displayParticipants(room.participant);
             }
-        } else {
-            showNotification('End of playlist', 'info');
+        } catch (error) {
+            console.error('Error loading room info:', error);
         }
     }
 
-    function playPrev() {
-        if (currentSongIndex > 0) {
-            selectSong(currentSongIndex - 1);
-            if (isPlaying) {
-                setTimeout(() => audioPlayer.play(), 100);
-            }
-        } else {
-            showNotification('Beginning of playlist', 'info');
-        }
-    }
+    function displayParticipants(participants) {
+        const participantsList = document.getElementById('participantsList');
+        participantsList.innerHTML = '';
 
-    function updatePlayButton() {
-        const playBtn = document.getElementById('playBtn');
-        playBtn.textContent = isPlaying ? '⏸' : '▶';
-    }
-
-    function updateProgress() {
-        if (audioPlayer.duration) {
-            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-            document.getElementById('progressFill').style.width = progress + '%';
-
-            // Update time display
-            const currentMinutes = Math.floor(audioPlayer.currentTime / 60);
-            const currentSeconds = Math.floor(audioPlayer.currentTime % 60);
-            document.getElementById('currentTime').textContent =
-                `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')}`;
-        }
-    }
-
-    function updateTotalTime() {
-        if (audioPlayer.duration) {
-            const totalMinutes = Math.floor(audioPlayer.duration / 60);
-            const totalSeconds = Math.floor(audioPlayer.duration % 60);
-            document.getElementById('totalTime').textContent =
-                `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
-        }
-    }
-
-    // Search functionality
-    function searchMusic() {
-        const searchTerm = document.getElementById('musicSearch').value.trim().toLowerCase();
-
-        if (!searchTerm) {
-            // Show all songs
-            renderSongs();
-            return;
-        }
-
-        // Filter songs based on search term
-        const filteredSongs = songs.filter(song =>
-            (song.songName && song.songName.toLowerCase().includes(searchTerm)) ||
-            (song.singer && song.singer.toLowerCase().includes(searchTerm)) ||
-            (song.movie && song.movie.toLowerCase().includes(searchTerm)) ||
-            (song.language && song.language.toLowerCase().includes(searchTerm)) ||
-            (song.songType && song.songType.toLowerCase().includes(searchTerm))
-        );
-
-        // Render filtered songs
-        const songQueue = document.getElementById('songQueue');
-        if (filteredSongs.length === 0) {
-            songQueue.innerHTML = '<div class="error-message">No songs match your search</div>';
-            return;
-        }
-
-        songQueue.innerHTML = filteredSongs.map((song, index) => {
-            const originalIndex = songs.indexOf(song);
-            return `
-                <div class="queue-item ${originalIndex === currentSongIndex ? 'playing' : ''}" data-index="${originalIndex}">
-                    <div class="song-title">${song.songName || 'Unknown Title'}</div>
-                    <div class="song-artist">${song.singer || 'Unknown Artist'}</div>
-                    <div class="song-details">
-                        ${song.movie ? `<span class="song-detail-item">🎬 ${song.movie}</span>` : ''}
-                        ${song.language ? `<span class="song-detail-item">🌐 ${song.language}</span>` : ''}
-                        ${song.songType ? `<span class="song-detail-item">🎵 ${song.songType}</span>` : ''}
-                        ${song.hero ? `<span class="song-detail-item">👨 ${song.hero}</span>` : ''}
-                        ${song.heroine ? `<span class="song-detail-item">👩 ${song.heroine}</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Progress bar click handler
-    function handleProgressBarClick(e) {
-        if (audioPlayer.duration) {
-            const progressBar = document.getElementById('progressBar');
-            const rect = progressBar.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const width = rect.width;
-            const clickProgress = clickX / width;
-            const newTime = clickProgress * audioPlayer.duration;
-            audioPlayer.currentTime = newTime;
-        }
-    }
-
-    // Generate a consistent light color based on username
-    function getUserColor(username) {
-        if (userColors.has(username)) {
-            return userColors.get(username);
-        }
-
-        let hash = 0;
-        for (let i = 0; i < username.length; i++) {
-            hash = username.charCodeAt(i) + ((hash << 5) - hash);
-            hash = hash & hash;
-        }
-
-        const hue = Math.abs(hash) % 360;
-        const saturation = 60 + (Math.abs(hash) % 20);
-        const lightness = 45 + (Math.abs(hash) % 20);
-
-        const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-        userColors.set(username, color);
-        return color;
-    }
-
-    function getUserInitials(username) {
-        return username.substring(0, 2).toUpperCase();
-    }
-
-    // User management
-    function addUserToList(username) {
-        activeUsers.add(username);
-        updateUserList();
-    }
-
-    function removeUserFromList(username) {
-        activeUsers.delete(username);
-        updateUserList();
-    }
-
-    function updateUserList() {
-        const userList = document.getElementById('userList');
-        const onlineCount = document.getElementById('onlineCount');
-
-        userList.innerHTML = '';
-        const userCount = activeUsers.size;
-        onlineCount.textContent = `${userCount} user${userCount !== 1 ? 's' : ''} online`;
-
-        Array.from(activeUsers).sort().forEach(user => {
-            const userItem = document.createElement('div');
-            userItem.className = 'user-item';
-
-            const userColor = getUserColor(user);
-            const initials = getUserInitials(user);
-            const isCurrentUser = user === username;
-
-            userItem.innerHTML = `
-                <span class="user-avatar" style="background-color: ${userColor}">${initials}</span>
-                <span class="username">${user}${isCurrentUser ? ' (You)' : ''}</span>
-            `;
-
-            userList.appendChild(userItem);
+        participants.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'participant-item';
+            item.innerHTML = `
+                    <div class="participant-name" style="background-color: ${getUserColor(p.userName)}">${p.userName}</div>
+                    ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
+                `;
+            participantsList.appendChild(item);
         });
     }
 
-    // Get JWT token from localStorage
-    function getJwtToken() {
-        return localStorage.getItem('jwtToken');
-    }
-
-    // Clear authentication data
-    function clearAuthData() {
-        localStorage.removeItem('jwtToken');
-        localStorage.removeItem('username');
-        document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Strict';
-    }
-
-    // Show notification toast
-    function showNotification(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `notification-toast ${type}`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3500);
-    }
-
-    // Enhanced logout function
-    function logout() {
-        isLoggingOut = true;
-
-        // Pause music if playing
-        if (isPlaying) {
-            audioPlayer.pause();
-        }
-
-        if (connected && stompClient) {
-            const leaveMessage = {
-                sender: username,
-                content: username + ' left the chat',
-                type: 'LEAVE',
-                roomId: roomId
-            };
-
-            try {
-                stompClient.send('/app/music/chat/' + roomId + '/addUser', {}, JSON.stringify(leaveMessage));
-                setTimeout(() => {
-                    disconnect();
-                    clearAuthData();
-                    showNotification('Logged out successfully', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/app/music/login';
-                    }, 1000);
-                }, 500);
-            } catch (error) {
-                console.error('Error sending leave message:', error);
-                disconnect();
-                clearAuthData();
-                window.location.href = '/app/music/login';
-            }
-        } else {
-            clearAuthData();
-            showNotification('Logged out successfully', 'success');
-            setTimeout(() => {
-                window.location.href = '/app/music/login';
-            }, 1000);
-        }
-    }
-
-    function toggleConnection() {
-        if (!connected) {
-            connect();
-        } else {
-            disconnect();
-        }
-    }
-
-    function connect() {
-        const token = getJwtToken();
-
-        if (!token) {
-            showNotification('No authentication token found. Please login again.', 'error');
-            setTimeout(() => {
-                window.location.href = '/app/music/login';
-            }, 2000);
-            return;
-        }
-
+    function connectWebSocket(token) {
         const socket = new SockJS('/app/music/ws');
         stompClient = Stomp.over(socket);
 
-        const headers = {
-            'Authorization': 'Bearer ' + token
-        };
+        stompClient.connect(
+            {'Authorization': `Bearer ${token}`},
+            (frame) => {
+                console.log('Connected to WebSocket');
 
-        stompClient.connect(headers, function(frame) {
-            console.log('Connected: ' + frame);
-            connected = true;
-            updateConnectionStatus(true);
-            showNotification('Connected to chat room', 'success');
+                stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
+                    const chatMessage = JSON.parse(message.body);
+                    displayMessage(chatMessage);
+                });
 
-            stompClient.subscribe('/topic/chat/' + roomId, function(message) {
-                showMessage(JSON.parse(message.body));
-            });
-
-            stompClient.send('/app/music/chat/' + roomId + '/addUser', {},
-                JSON.stringify({
-                    sender: username,
+                stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
+                    sender: currentUsername,
                     type: 'JOIN',
-                    content: username + ' joined the chat',
-                    roomId: roomId
-                })
-            );
-
-            addUserToList(username);
-        }, function(error) {
-            console.error('Connection error:', error);
-            showNotification('Failed to connect. Please check your authentication.', 'error');
-            clearAuthData();
-            setTimeout(() => {
-                window.location.href = '/app/music/login';
-            }, 2000);
-            connected = false;
-            updateConnectionStatus(false);
-        });
-    }
-
-    function disconnect() {
-        if (stompClient !== null) {
-            stompClient.disconnect(function() {
-                console.log("Disconnected");
-                connected = false;
-                updateConnectionStatus(false);
-                if (!isLoggingOut) {
-                    showNotification('Disconnected from chat', 'info');
-                }
-            });
-        }
-    }
-
-    function updateConnectionStatus(isConnected) {
-        const statusElement = document.getElementById('connectionStatus');
-        const connectBtn = document.getElementById('connectBtn');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-
-        if (isConnected) {
-            statusElement.textContent = 'Connected';
-            statusElement.className = 'status connected';
-            connectBtn.textContent = 'Disconnect';
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
-            messageInput.focus();
-        } else {
-            statusElement.textContent = 'Disconnected';
-            statusElement.className = 'status disconnected';
-            connectBtn.textContent = 'Connect';
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-        }
+                    content: `${currentUsername} joined the room`
+                }));
+            },
+            (error) => {
+                console.error('WebSocket error:', error);
+            }
+        );
     }
 
     function sendMessage() {
-        const messageContent = document.getElementById('messageInput').value.trim();
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
 
-        if (messageContent && stompClient) {
+        if (content && stompClient) {
             const chatMessage = {
-                sender: username,
-                content: messageContent,
-                type: 'CHAT',
-                roomId: roomId
+                sender: currentUsername,
+                content: content,
+                type: 'CHAT'
             };
 
-            stompClient.send('/app/music/chat/' + roomId + '/send', {}, JSON.stringify(chatMessage));
-            document.getElementById('messageInput').value = '';
+            stompClient.send(`/app/music/chat/${currentRoomName}/send`, {}, JSON.stringify(chatMessage));
+            input.value = '';
         }
     }
 
-    function showMessage(message) {
-        const messageArea = document.getElementById('messageArea');
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message ' + message.type.toLowerCase();
-
-        const timestamp = new Date().toLocaleTimeString();
+    function displayMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
 
         if (message.type === 'JOIN' || message.type === 'LEAVE') {
-            messageElement.innerHTML = message.content +
-                '<span class="message-timestamp">' + timestamp + '</span>';
+            const systemMsg = document.createElement('div');
+            systemMsg.className = 'system-message';
+            systemMsg.textContent = message.content;
+            chatMessages.appendChild(systemMsg);
 
-            if (message.type === 'JOIN') {
-                addUserToList(message.sender);
-            } else {
-                removeUserFromList(message.sender);
-            }
-
-            if (message.sender !== username) {
-                if (message.type === 'JOIN') {
-                    showNotification(message.sender + ' joined the chat', 'success');
-                } else if (message.type === 'LEAVE') {
-                    showNotification(message.sender + ' left the chat', 'info');
-                }
-            }
-
-            // Auto-remove join/leave messages after 5 seconds
+            // Auto-remove system messages after 10 seconds
             setTimeout(() => {
-                messageElement.style.opacity = '0';
-                messageElement.style.height = '0';
-                messageElement.style.marginBottom = '0';
-                messageElement.style.padding = '0';
-                messageElement.style.overflow = 'hidden';
+                systemMsg.classList.add('fade-out');
                 setTimeout(() => {
-                    messageElement.remove();
-                }, 500);
-            }, 5000);
+                    if (systemMsg.parentNode) {
+                        systemMsg.parentNode.removeChild(systemMsg);
+                    }
+                }, 500); // Wait for fade animation
+            }, 10000);
+        } else {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
 
-        } else { // Regular CHAT message
-            const userColor = getUserColor(message.sender);
-            const initials = getUserInitials(message.sender);
+            const time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
 
-            messageElement.style.setProperty('--user-color', userColor);
+            messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-sender" style="background-color: ${getUserColor(message.sender)}">${message.sender}</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-content">${message.content}</div>
+                `;
 
-            const senderElement = document.createElement('div');
-            senderElement.className = 'message-sender';
-            senderElement.innerHTML =
-                `<span class="user-avatar" style="background-color: ${userColor}">${initials}</span>` +
-                `<span>${message.sender}:</span>` +
-                `<span class="message-timestamp">${timestamp}</span>`;
-
-            const contentElement = document.createElement('div');
-            contentElement.textContent = message.content;
-
-            messageElement.appendChild(senderElement);
-            messageElement.appendChild(contentElement);
+            chatMessages.appendChild(messageDiv);
         }
 
-        messageArea.appendChild(messageElement);
-        messageArea.scrollTop = messageArea.scrollHeight;
+        // Auto-scroll to bottom to show new messages
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Event listeners
-    document.getElementById('playBtn').addEventListener('click', togglePlay);
-    document.getElementById('nextBtn').addEventListener('click', playNext);
-    document.getElementById('prevBtn').addEventListener('click', playPrev);
-
-    // Progress bar click handler
-    document.getElementById('progressBar').addEventListener('click', handleProgressBarClick);
-
-    // Search functionality
-    document.getElementById('musicSearch').addEventListener('input', searchMusic);
-    document.getElementById('musicSearch').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchMusic();
-        }
-    });
-
-    // Pagination event listeners
-    document.getElementById('prevPageBtn').addEventListener('click', function() {
-        if (currentPage > 0) {
-            fetchSongs(currentPage - 1, pageSize);
-        }
-    });
-
-    document.getElementById('nextPageBtn').addEventListener('click', function() {
-        if (currentPage < totalPages - 1) {
-            fetchSongs(currentPage + 1, pageSize);
-        }
-    });
-
-    // Queue item click handlers
-    document.addEventListener('click', function(e) {
-        const queueItem = e.target.closest('.queue-item');
-        if (queueItem) {
-            const index = parseInt(queueItem.getAttribute('data-index'));
-            if (!isNaN(index) && index >= 0 && index < songs.length) {
-                selectSong(index);
-                showNotification(`Selected: ${songs[index].songName}`, 'info');
-            }
-        }
-    });
-
-    // Message input handler
-    document.getElementById('messageInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+    function handleEnter(event) {
+        if (event.key === 'Enter') {
             sendMessage();
         }
-    });
+    }
 
-    // Window load and cleanup handlers
-    window.onload = function() {
-        const token = getJwtToken();
-        if (!token) {
-            showNotification('No authentication token found. Please login first.', 'error');
-            setTimeout(() => {
-                window.location.href = '/app/music/login';
-            }, 2000);
+    async function searchSongs() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return;
+
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+
+        try {
+            const response = await fetch(`/app/music/searchSong?query=${encodeURIComponent(query)}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const songs = await response.json();
+                displaySearchResults(songs);
+            }
+        } catch (error) {
+            console.error('Error searching songs:', error);
+        }
+    }
+
+    function displaySearchResults(songs) {
+        const searchResults = document.getElementById('searchResults');
+        searchResults.innerHTML = '';
+
+        if (songs.length === 0) {
+            searchResults.innerHTML = '<div class="loading">No songs found</div>';
             return;
         }
 
-        // Initialize audio player
-        initializeAudioPlayer();
+        songs.forEach(song => {
+            const songItem = document.createElement('div');
+            songItem.className = 'song-item';
+            songItem.onclick = () => {
+                playSong(song);
+                closeSearchDrawer();
+            };
+            songItem.innerHTML = `
+                    <div class="song-item-title">${song.songName}</div>
+                    <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
+                `;
+            searchResults.appendChild(songItem);
+        });
+    }
 
-        // Connect to chat
-        connect();
+    function handleSearchEnter(event) {
+        if (event.key === 'Enter') {
+            searchSongs();
+        }
+    }
 
-        // Load initial songs
-        fetchSongs(0, pageSize);
-    };
+    function openSearchDrawer() {
+        document.getElementById('searchDrawer').classList.add('open');
+    }
 
-    window.addEventListener('beforeunload', function(e) {
-        if (connected && !isLoggingOut) {
-            if (stompClient) {
-                const leaveMessage = {
-                    sender: username,
-                    content: username + ' left the chat',
-                    type: 'LEAVE',
-                    roomId: roomId
-                };
+    function closeSearchDrawer() {
+        document.getElementById('searchDrawer').classList.remove('open');
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+    }
 
-                const messageData = JSON.stringify(leaveMessage);
-                navigator.sendBeacon('/app/music/chat/' + roomId + '/leave', messageData);
-            }
-            disconnect();
+    async function logout() {
+        if (stompClient) {
+            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
+                sender: currentUsername,
+                type: 'LEAVE',
+                content: `${currentUsername} left the room`
+            }));
+            stompClient.disconnect();
         }
 
-        // Pause audio on page unload
-        if (audioPlayer && isPlaying) {
-            audioPlayer.pause();
-        }
-    });
+        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
 
-    // Handle visibility change (pause music when tab is hidden)
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden && isPlaying && audioPlayer) {
-            // Optionally pause when tab becomes hidden
-            // audioPlayer.pause();
+        try {
+            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.error('Error leaving room:', error);
         }
-    });
 
-    /*]]>*/
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('username');
+        localStorage.removeItem('currentRoom');
+        document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
+        window.location.href = '/app/music/public/login';
+    }
 </script>
 </body>
 </html>

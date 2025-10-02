@@ -62,6 +62,7 @@ public class RoomController {
         return ResponseEntity.ok(participant);
     }
 
+    //upon logout or participant leave from the room
     @DeleteMapping("/room/leave")
     public ResponseEntity<Boolean> leaveRoom(@RequestParam String roomName, @RequestParam String username){
         boolean isLeft = rService.exitFromRoom(roomName,username);
@@ -81,4 +82,14 @@ public class RoomController {
         int availableCount = room.getMaxCount() - room.getParticipant().size();
         return ResponseEntity.ok(availableCount);
     }
+
+    @GetMapping("/room/getAllParticipants")
+    public ResponseEntity<List<Participant>> getAllParticipants(@RequestParam String roomName){
+        Room room = rService.getRoomDetails(roomName);
+        List<Participant> participants = room.getParticipant();
+        return ResponseEntity.ok(participants);
+    }
+
+
+
 }

@@ -21,6 +21,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.InputStream;
+import java.util.List;
 
 
 @Controller
@@ -34,7 +35,7 @@ public class PublicSongController {
     PublicSongController(SongControllerService songControllerService){
         this.songControllerService = songControllerService;
     }
-    @PreAuthorize("hasAuthority('MUSIC_READ')")
+//    @PreAuthorize("hasAuthority('MUSIC_READ')")
     @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
         log.info("Initiated the song Stream Request for file name : {}",name);
@@ -66,4 +67,10 @@ public class PublicSongController {
         return ResponseEntity.ok(songControllerService.getAllSongsName(page, size));
 
     }
+
+    @GetMapping("/searchSong")
+    public ResponseEntity<List<Song>> searchSongsByName(@RequestParam String query){
+        return ResponseEntity.ok(songControllerService.searchSongsByName(query));
+    }
+
 }
