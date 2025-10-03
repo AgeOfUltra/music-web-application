@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -29,7 +30,7 @@ public class RoomService {
 
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
         if(existingRoom.isPresent()){
-            throw new RoomManageException("Room already exist with given name");
+            throw new RoomManageException("Room already available with given name");
         }
 
         List<Participant> participant = room.getParticipant();
@@ -108,5 +109,12 @@ public class RoomService {
             return null;
         }
     }
+
+    public boolean isUserPresentInAnyRoom(String username){
+        return repo.findAll().stream()
+                .anyMatch(room -> room.getParticipant()
+                        .stream().anyMatch(u->u.getUserName().equals(username)));
+    }
+
 }
 

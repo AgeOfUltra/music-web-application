@@ -2,7 +2,9 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
+import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.service.RegisterUserService;
+import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,7 @@ public class PublicLoginController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;
-
+    private final RoomService roomService;
     private final RegisterUserService userService;
 
     // Return login page
@@ -47,6 +49,10 @@ public class PublicLoginController {
             );
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            if(roomService.isUserPresentInAnyRoom(userDetails.getUsername())){
+                throw new RoomManageException("User already exist in one of the room");
+            }
             String token = jwtTokenUtil.generateToken(userDetails.getUsername());
 
             Map<String, Object> response = new HashMap<>();
