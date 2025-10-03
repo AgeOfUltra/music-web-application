@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -29,6 +28,12 @@ public class RoomService {
     public Room createRoom(Room room){
 
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
+        // TODO : check if the user already present in any of the room.
+
+        if(isUserPresentInAnyRoom(room.getParticipant().getFirst().getUserName())){
+            throw new RoomManageException("User already exist in one of the room");
+        }
+
         if(existingRoom.isPresent()){
             throw new RoomManageException("Room already available with given name");
         }
