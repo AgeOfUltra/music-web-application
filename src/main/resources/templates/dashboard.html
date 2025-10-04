@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Chat - Dashboard</title>
+    <title>Connecting Notes - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
     <style>
+
         * {
             margin: 0;
             padding: 0;
@@ -13,31 +17,41 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
             min-height: 100vh;
         }
 
         .header {
             background: white;
-            padding: 20px 40px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 95px;
+            width: auto;
+        }
+
         .app-name {
+            font-style: normal;
             font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-family: "Alan Sans", sans-serif;
+            font-weight: 600;
+            color: #1a1a1a;
         }
 
         .logout-btn {
             padding: 10px 20px;
-            background: #f44336;
+            background: #1a1a1a;
             color: white;
             border: none;
             border-radius: 5px;
@@ -47,7 +61,7 @@
         }
 
         .logout-btn:hover {
-            background: #d32f2f;
+            background: #2c2c2c;
             transform: translateY(-2px);
         }
 
@@ -62,17 +76,17 @@
             padding: 30px;
             border-radius: 10px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             text-align: center;
         }
 
         .welcome-card h1 {
-            color: #333;
+            color: #1a1a1a;
             margin-bottom: 10px;
         }
 
         .welcome-card p {
-            color: #666;
+            color: #555;
             font-size: 16px;
         }
 
@@ -86,19 +100,21 @@
             background: white;
             padding: 40px 30px;
             border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            border: 2px solid #f0f0f0;
         }
 
         .option-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+            border-color: #1a1a1a;
         }
 
         .option-card h2 {
-            color: #333;
+            color: #1a1a1a;
             margin-bottom: 15px;
             font-size: 24px;
         }
@@ -120,12 +136,12 @@
         }
 
         .btn-create {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a1a1a;
             color: white;
         }
 
         .btn-join {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea  100%);
+            background: #2c2c2c;
             color: white;
         }
 
@@ -141,7 +157,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -157,7 +173,7 @@
             border-radius: 10px;
             width: 500px;
             max-width: 90%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
         .modal-header {
@@ -168,7 +184,7 @@
         }
 
         .modal-header h2 {
-            color: #333;
+            color: #1a1a1a;
             font-size: 24px;
         }
 
@@ -176,7 +192,7 @@
             background: none;
             border: none;
             font-size: 28px;
-            color: #999;
+            color: #666;
             cursor: pointer;
             padding: 0;
             width: 30px;
@@ -185,7 +201,7 @@
         }
 
         .close-btn:hover {
-            color: #333;
+            color: #1a1a1a;
         }
 
         .form-group {
@@ -195,7 +211,7 @@
         label {
             display: block;
             margin-bottom: 8px;
-            color: #555;
+            color: #333;
             font-weight: 500;
         }
 
@@ -210,7 +226,7 @@
 
         input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1a1a1a;
         }
 
         .submit-btn {
@@ -245,7 +261,7 @@
         }
 
         .validation-error {
-            color: #f44336;
+            color: #c33;
             font-size: 12px;
             margin-top: 5px;
         }
@@ -254,12 +270,27 @@
             .options-container {
                 grid-template-columns: 1fr;
             }
+
+            .header-left {
+                gap: 10px;
+            }
+
+            .logo {
+                height: 40px;
+            }
+
+            .app-name {
+                font-size: 18px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="header">
-    <div class="app-name">Music Chat Application</div>
+    <div class="header-left">
+        <img src="/app_logo.png" alt="Connecting Notes Logo" class="logo">
+        <div class="app-name">CONNECTING NOTES</div>
+    </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
@@ -284,7 +315,6 @@
     </div>
 </div>
 
-<!-- Create Room Modal -->
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -313,7 +343,6 @@
     </div>
 </div>
 
-<!-- Join Room Modal -->
 <div id="joinModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -335,7 +364,6 @@
 </div>
 
 <script>
-    // Check authentication on page load
     window.onload = function() {
         checkAuthentication();
         displayUsername();
@@ -401,7 +429,6 @@
         document.getElementById(elementId).style.display = 'none';
     }
 
-    // Validate participant count
     document.getElementById('maxParticipants').addEventListener('input', function(e) {
         const value = parseInt(e.target.value);
         const errorDiv = document.getElementById('participantError');
@@ -439,8 +466,6 @@
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('currentRoom', roomName);
-
-                // Redirect to chat page
                 window.location.href = `/app/music/chat?roomName=${encodeURIComponent(roomName)}`;
             } else {
                 const error = await response.json();
@@ -470,8 +495,6 @@
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('currentRoom', roomName);
-
-                // Redirect to chat page
                 window.location.href = `/app/music/chat?roomName=${encodeURIComponent(roomName)}`;
             } else {
                 const error = await response.json();
@@ -483,7 +506,6 @@
         }
     }
 
-    // Close modals when clicking outside
     window.onclick = function(event) {
         const createModal = document.getElementById('createModal');
         const joinModal = document.getElementById('joinModal');

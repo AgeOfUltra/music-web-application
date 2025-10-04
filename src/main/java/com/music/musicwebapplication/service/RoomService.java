@@ -30,7 +30,7 @@ public class RoomService {
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
         // TODO : check if the user already present in any of the room.
 
-        if(isUserPresentInAnyRoom(room.getParticipant().getFirst().getUserName())){
+        if(isUserPresentInAnyRoom(room.getParticipant().get(0).getUserName())){
             throw new RoomManageException("User already exist in one of the room");
         }
 

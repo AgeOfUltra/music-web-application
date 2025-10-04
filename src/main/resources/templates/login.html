@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Chat - Login</title>
+    <title>Connecting Notes - Login</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -24,21 +24,31 @@
             background: white;
             padding: 40px;
             border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             width: 400px;
             max-width: 90%;
         }
 
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            max-width: 150px;
+            height: auto;
+        }
+
         h1 {
             text-align: center;
-            color: #333;
+            color: #1a1a1a;
             margin-bottom: 10px;
             font-size: 28px;
         }
 
         .subtitle {
             text-align: center;
-            color: #666;
+            color: #555;
             margin-bottom: 30px;
             font-size: 14px;
         }
@@ -50,7 +60,7 @@
         label {
             display: block;
             margin-bottom: 5px;
-            color: #555;
+            color: #333;
             font-weight: 500;
         }
 
@@ -65,7 +75,7 @@
 
         input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1a1a1a;
         }
 
         .btn {
@@ -81,23 +91,23 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         .btn-secondary {
             background: transparent;
-            color: #667eea;
-            border: 2px solid #667eea;
+            color: #1a1a1a;
+            border: 2px solid #1a1a1a;
         }
 
         .btn-secondary:hover {
-            background: #667eea;
+            background: #1a1a1a;
             color: white;
         }
 
@@ -127,7 +137,7 @@
         }
 
         .toggle-form a {
-            color: #667eea;
+            color: #1a1a1a;
             text-decoration: none;
             font-weight: 600;
         }
@@ -143,8 +153,12 @@
 </head>
 <body>
 <div class="container">
+    <div class="logo-container">
+        <img src="/app_logo.png" alt="Connecting Notes Logo">
+    </div>
+
     <div id="loginForm">
-        <h1>Welcome !</h1>
+        <h1>Welcome!</h1>
         <p class="subtitle">Login to join music chat rooms</p>
 
         <div id="loginAlert" class="alert alert-error"></div>
@@ -241,11 +255,8 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Store in localStorage for API calls
                 localStorage.setItem('jwtToken', data.token);
                 localStorage.setItem('username', data.username);
-
-                // Store in cookie for page navigation (expires in 30 minutes)
                 document.cookie = `jwtToken=${data.token}; path=/; max-age=1800; SameSite=Lax`;
 
                 showAlert('loginAlert', data.message, false);
@@ -283,7 +294,6 @@
 
             if (response.ok) {
                 showAlert('registerAlert', 'Registration successful! Please login.', false);
-
                 document.getElementById('registerFormElement').reset();
 
                 setTimeout(() => {

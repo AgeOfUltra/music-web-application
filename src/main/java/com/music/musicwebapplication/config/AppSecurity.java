@@ -47,7 +47,7 @@ public class AppSecurity {
                                 "/api/music/**",
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
-                                "/favicon.ico")
+                                "/favicon.ico","/app_logo.png")
                         .permitAll()
                         .requestMatchers("/app/music/room/**",
                                 "/app/music/chat/",

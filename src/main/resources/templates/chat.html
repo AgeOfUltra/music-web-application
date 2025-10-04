@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Chat Room</title>
+    <title>Connecting Notes - Chat Room</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,7 +18,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
+            background: #f0f0f0;
             height: 100vh;
             overflow: hidden;
         }
@@ -27,26 +30,30 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid #1a1a1a;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .logo {
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            height: 60px;
+            width: auto;
         }
 
         .app-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            font-family: "Alan Sans", sans-serif;
+            color: #1a1a1a;
         }
 
         .logout-btn {
             padding: 8px 20px;
-            background: #f44336;
+            background: #1a1a1a;
             color: white;
             border: none;
             border-radius: 5px;
@@ -56,28 +63,27 @@
         }
 
         .logout-btn:hover {
-            background: #d32f2f;
+            background: #2c2c2c;
         }
 
         .main-container {
             display: grid;
             grid-template-columns: 380px 1fr 400px;
-            height: calc(100vh - 70px);
+            height: calc(100vh - 80px);
             gap: 0;
         }
 
-        /* Left Panel - Music Player & Songs */
         .left-panel {
             background: white;
             display: flex;
             flex-direction: column;
-            border-right: 2px solid #667eea;
+            border-right: 2px solid #1a1a1a;
         }
 
         .music-player {
             padding: 20px;
-            background: linear-gradient(166deg, #78ACFA 10%, #78D5FA 80%);
-            border-bottom: 2px solid #667eea;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+            border-bottom: 2px solid #1a1a1a;
         }
 
         .player-info {
@@ -85,14 +91,14 @@
         }
 
         .song-title {
-            color: #333;
+            color: #ffffff;
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 5px;
         }
 
         .song-details {
-            color: #666;
+            color: #e0e0e0;
             font-size: 12px;
         }
 
@@ -104,28 +110,29 @@
         .search-btn {
             width: 100%;
             padding: 10px;
-            background: #667eea;
-            color: white;
-            border: none;
+            background: white;
+            color: #1a1a1a;
+            border: 2px solid white;
             border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
             margin-top: 10px;
+            transition: all 0.3s;
         }
 
         .search-btn:hover {
-            background: #5568d3;
+            background: #f0f0f0;
         }
 
         .song-list {
-            background: linear-gradient(61deg, #78ACFA 10%, #78D5FA 80%);
+            background: #f5f5f5;
             flex: 1;
             overflow-y: auto;
             padding: 10px;
         }
 
         .song-item {
-            background: #6effdf;
+            background: white;
             padding: 12px;
             margin-bottom: 8px;
             border-radius: 5px;
@@ -135,25 +142,25 @@
         }
 
         .song-item:hover {
-            background: #f5f7fa;
-            border-color: #667eea;
+            background: #f9f9f9;
+            border-color: #1a1a1a;
         }
 
         .song-item.active {
-            background: transparent;
-            border: 2px solid #667eea;
-            color: #667eea;
+            background: #1a1a1a;
+            border: 2px solid #1a1a1a;
+            color: white;
         }
 
         .song-item-title {
-            color: #333;
+            color: #1a1a1a;
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .song-item.active .song-item-title {
-            color: #6900ff;
+            color: white;
         }
 
         .song-item-info {
@@ -162,39 +169,38 @@
         }
 
         .song-item.active .song-item-info {
-            color: #667eea;
+            color: #e0e0e0;
         }
 
-        /* Middle Panel - Chat */
         .middle-panel {
-            background: linear-gradient(135deg, #78D5FA 0%, #78D5FA 100%);
+            background: #f9f9f9;
             display: flex;
             flex-direction: column;
-            border-right: 2px solid #667eea;
+            border-right: 2px solid #1a1a1a;
         }
 
         .room-header {
-            background:linear-gradient(180deg, #78ACFA 10%, #78D5FA 80%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             padding: 15px 20px;
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid #1a1a1a;
         }
 
         .room-name {
             font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: #ffffff;
             margin-bottom: 5px;
         }
 
         .room-user-info {
             font-size: 14px;
-            color: #667eea;
+            color: #e0e0e0;
             font-weight: 500;
             margin-bottom: 5px;
         }
 
         .participant-count {
-            color: #666;
+            color: #e0e0e0;
             font-size: 13px;
         }
 
@@ -203,7 +209,7 @@
             overflow-y: auto;
             overflow-x: hidden;
             padding: 20px;
-            background: radial-gradient(#78D5FA 0%, #78D5FA 20%);
+            background: #f9f9f9;
             max-height: calc(100vh - 250px);
             scroll-behavior: smooth;
         }
@@ -226,6 +232,7 @@
             padding: 4px 10px;
             border-radius: 12px;
             color: white;
+            background: #1a1a1a;
         }
 
         .message-time {
@@ -241,6 +248,7 @@
             max-width: 50%;
             word-wrap: break-word;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
         }
 
         .system-message {
@@ -275,24 +283,24 @@
 
         .chat-input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1a1a1a;
         }
 
         .send-btn {
             padding: 10px 25px;
-            background: #667eea;
+            background: #1a1a1a;
             color: white;
             border: none;
             border-radius: 25px;
             cursor: pointer;
             font-weight: 600;
+            transition: all 0.3s;
         }
 
         .send-btn:hover {
-            background: #5568d3;
+            background: #2c2c2c;
         }
 
-        /* Right Panel - Online Users */
         .right-panel {
             background: white;
             display: flex;
@@ -300,9 +308,9 @@
         }
 
         .online-header {
-            background: linear-gradient(222deg, #78ACFA 10%, #78D5FA 80%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             padding: 20px;
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid #1a1a1a;
         }
 
         .online-title {
@@ -315,11 +323,11 @@
             flex: 1;
             overflow-y: auto;
             padding: 10px;
-            background: linear-gradient(279deg, #78ACFA 10%, #78D5FA 80%);
+            background: #f5f5f5;
         }
 
         .participant-item {
-            background: #7e6eff6e;
+            background: white;
             padding: 12px;
             margin-bottom: 8px;
             border-radius: 5px;
@@ -334,10 +342,11 @@
             font-size: 14px;
             padding: 6px 12px;
             border-radius: 15px;
+            background: #1a1a1a;
         }
 
         .organizer-badge {
-            background: #ff9800;
+            background: #2c2c2c;
             color: white;
             padding: 3px 10px;
             border-radius: 12px;
@@ -345,7 +354,6 @@
             font-weight: 600;
         }
 
-        /* Search Drawer */
         .search-drawer {
             position: fixed;
             top: 0;
@@ -366,7 +374,7 @@
 
         .drawer-header {
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             color: white;
             display: flex;
             justify-content: space-between;
@@ -393,6 +401,11 @@
             font-size: 14px;
         }
 
+        .drawer-search input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+        }
+
         .drawer-results {
             flex: 1;
             overflow-y: auto;
@@ -404,11 +417,11 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: #f5f7fa;
+            background: #f5f5f5;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #667eea;
+            background: #1a1a1a;
             border-radius: 4px;
         }
 
@@ -422,13 +435,14 @@
 </head>
 <body>
 <div class="header">
-    <div class="logo">MUSIC CHAT</div>
-    <div class="app-title" id="appTitle">Music Streaming Room</div>
+    <div class="header-left">
+        <img src="/app_logo.png" alt="Logo" class="logo">
+        <div class="app-title">CONNECTING NOTES</div>
+    </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
 <div class="main-container">
-    <!-- Left Panel: Music Player & Song List -->
     <div class="left-panel">
         <div class="music-player">
             <div class="player-info">
@@ -443,7 +457,6 @@
         </div>
     </div>
 
-    <!-- Middle Panel: Chat Section -->
     <div class="middle-panel">
         <div class="room-header">
             <div class="room-name" id="roomName">Loading...</div>
@@ -459,7 +472,6 @@
         </div>
     </div>
 
-    <!-- Right Panel: Online Participants -->
     <div class="right-panel">
         <div class="online-header">
             <div class="online-title">Online Participants</div>
@@ -470,7 +482,6 @@
     </div>
 </div>
 
-<!-- Search Drawer -->
 <div class="search-drawer" id="searchDrawer">
     <div class="drawer-header">
         <h2>Search Songs</h2>
@@ -490,7 +501,7 @@
     let currentRoomName = null;
     let currentUsername = null;
     const userColors = {};
-    const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0', '#a8edea'];
+    const colors = ['#1a1a1a', '#2c2c2c', '#404040', '#555555', '#696969', '#808080'];
 
     window.onload = function() {
         initializePage();
@@ -513,10 +524,8 @@
         loadRoomInfo();
         connectWebSocket(token);
 
-        // Auto-refresh participants every 10 seconds
         setInterval(loadRoomInfo, 10000);
 
-        // Infinite scroll for songs
         const songList = document.getElementById('songList');
         songList.addEventListener('scroll', () => {
             if (songList.scrollTop + songList.clientHeight >= songList.scrollHeight - 50) {
@@ -576,9 +585,9 @@
             songItem.className = 'song-item';
             songItem.onclick = () => playSong(song);
             songItem.innerHTML = `
-                    <div class="song-item-title">${song.songName}</div>
-                    <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
-                `;
+                <div class="song-item-title">${song.songName}</div>
+                <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            `;
             songList.appendChild(songItem);
         });
     }
@@ -625,9 +634,9 @@
             const item = document.createElement('div');
             item.className = 'participant-item';
             item.innerHTML = `
-                    <div class="participant-name" style="background-color: ${getUserColor(p.userName)}">${p.userName}</div>
-                    ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
-                `;
+                <div class="participant-name" style="background-color: ${getUserColor(p.userName)}">${p.userName}</div>
+                ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
+            `;
             participantsList.appendChild(item);
         });
     }
@@ -683,14 +692,13 @@
             systemMsg.textContent = message.content;
             chatMessages.appendChild(systemMsg);
 
-            // Auto-remove system messages after 10 seconds
             setTimeout(() => {
                 systemMsg.classList.add('fade-out');
                 setTimeout(() => {
                     if (systemMsg.parentNode) {
                         systemMsg.parentNode.removeChild(systemMsg);
                     }
-                }, 500); // Wait for fade animation
+                }, 500);
             }, 10000);
         } else {
             const messageDiv = document.createElement('div');
@@ -699,17 +707,16 @@
             const time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
 
             messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-sender" style="background-color: ${getUserColor(message.sender)}">${message.sender}</span>
-                        <span class="message-time">${time}</span>
-                    </div>
-                    <div class="message-content">${message.content}</div>
-                `;
+                <div class="message-header">
+                    <span class="message-sender" style="background-color: ${getUserColor(message.sender)}">${message.sender}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${message.content}</div>
+            `;
 
             chatMessages.appendChild(messageDiv);
         }
 
-        // Auto-scroll to bottom to show new messages
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
@@ -758,9 +765,9 @@
                 closeSearchDrawer();
             };
             songItem.innerHTML = `
-                    <div class="song-item-title">${song.songName}</div>
-                    <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
-                `;
+                <div class="song-item-title">${song.songName}</div>
+                <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            `;
             searchResults.appendChild(songItem);
         });
     }
