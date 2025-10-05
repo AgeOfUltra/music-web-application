@@ -74,7 +74,7 @@ public class RoomService {
 
         List<Participant> existingParticipants = existingRoom.get().getParticipant();
 
-        Optional<Participant> selectParticipant = existingParticipants.stream()
+        Optional<Participant> selectParticipant =  existingRoom.get().getParticipant().stream()
                 .filter(p -> p.getUserName().equals(userName))
                 .findFirst();
 
@@ -82,20 +82,24 @@ public class RoomService {
             throw new IllegalArgumentException("User " + userName + " is not in room: " + roomName);
         }
 
-        Participant participant = selectParticipant.get();
+        if(existingRoom.get().getParticipant().size() == 1 && selectParticipant.get().isOrganizer()){
+            repo.delete(existingRoom.get());
+            return true;
+        }
 
-        if(participant.isOrganizer()){
-            Participant nextParticipant =getNextAvailablePerson(participant.getId()+1, existingRoom.get().getId());
-            if(nextParticipant == null){
-                repo.delete(existingRoom.get());
-                return true;
-            }else{
-                nextParticipant.setOrganizer(true);
-                participantRepo.save(nextParticipant);
+        if(existingRoom.get().getParticipant().size() >1 && selectParticipant.get().isOrganizer()){
+            Optional<Participant> newOrganizer = existingParticipants.stream().filter(p -> !p.getUserName().equals(userName)).findFirst();
+            if(newOrganizer.isPresent()){
+                newOrganizer.get().setOrganizer(true);
+                participantRepo.save(newOrganizer.get());
             }
 
         }
-        participantRepo.delete(participant);
+
+        existingRoom.get().getParticipant().remove(selectParticipant.get());
+        selectParticipant.get().setOrganizer(false);
+        selectParticipant.get().setRoom(null);
+        repo.save(existingRoom.get());
         return  true;
 
     }

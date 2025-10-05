@@ -71,7 +71,7 @@
         .main-container {
             display: grid;
             grid-template-columns: 380px 1fr 400px;
-            height: calc(100vh - 80px);
+            height: calc(100vh - 90px);
             gap: 0;
         }
 
@@ -560,6 +560,7 @@
     let hasMoreSongs = true;
     let currentRoomName = null;
     let currentUsername = null;
+    let syncInterval = null;
     const userColors = {};
     const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 
@@ -608,6 +609,18 @@
         return userColors[username];
     }
 
+    function getDarkerShade(color) {
+        const colorMap = {
+            '#1a1a1a': '#0a0a0a',
+            '#2d2d2d': '#1a1a1a',
+            '#3d3d3d': '#2d2d2d',
+            '#505050': '#3d3d3d',
+            '#636363': '#505050',
+            '#767676': '#636363'
+        };
+        return colorMap[color] || '#000000';
+    }
+
     async function loadSongs() {
         if (isLoadingSongs || !hasMoreSongs) return;
 
@@ -653,17 +666,85 @@
     }
 
     function playSong(song) {
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+        if (stompClient && stompClient.connected) {
+            const playbackMessage = {
+                action: 'PLAY',
+                songFileName: song.fileName,
+                songName: song.songName,
+                hero: song.hero || 'Unknown',
+                heroine: song.heroine || 'Unknown',
+                language: song.language || 'Unknown'
+            };
+
+            stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
+                JSON.stringify(playbackMessage));
+        } else {
+            console.error('WebSocket not connected');
+        }
+    }
+
+    function handlePlaybackCommand(playbackMsg) {
         const audioPlayer = document.getElementById('audioPlayer');
 
-        document.getElementById('currentSongTitle').textContent = song.songName;
-        document.getElementById('currentSongDetails').textContent = `${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}`;
+        switch(playbackMsg.action) {
+            case 'PLAY':
+                document.getElementById('currentSongTitle').textContent = playbackMsg.songName;
+                document.getElementById('currentSongDetails').textContent =
+                    `${playbackMsg.hero || 'Unknown'} • ${playbackMsg.heroine || 'Unknown'} • ${playbackMsg.language || 'Unknown'}`;
 
-        audioPlayer.src = `/app/music/public/streamSong/${song.fileName}`;
-        audioPlayer.play();
+                audioPlayer.src = `/app/music/public/streamSong/${playbackMsg.songFileName}`;
+                audioPlayer.play();
 
-        document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+                // Update active song styling
+                document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
+
+                showSystemMessage(`${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
+                break;
+
+            case 'PAUSE':
+                audioPlayer.pause();
+                showSystemMessage(`${playbackMsg.controller} paused playback`);
+                break;
+
+            case 'STOP':
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                showSystemMessage(`${playbackMsg.controller} stopped playback`);
+                break;
+
+            case 'SEEK':
+                audioPlayer.currentTime = playbackMsg.timestamp / 1000;
+                break;
+
+            case 'SYNC':
+                if (!audioPlayer.paused) {
+                    const drift = Math.abs(audioPlayer.currentTime - (playbackMsg.timestamp / 1000));
+                    if (drift > 2) {
+                        console.log(`Syncing playback, drift: ${drift}s`);
+                        audioPlayer.currentTime = playbackMsg.timestamp / 1000;
+                    }
+                }
+                break;
+        }
+    }
+
+    function showSystemMessage(text) {
+        const chatMessages = document.getElementById('chatMessages');
+        const systemMsg = document.createElement('div');
+        systemMsg.className = 'system-message';
+        systemMsg.textContent = text;
+        chatMessages.appendChild(systemMsg);
+
+        setTimeout(() => {
+            systemMsg.classList.add('fade-out');
+            setTimeout(() => {
+                if (systemMsg.parentNode) {
+                    systemMsg.parentNode.removeChild(systemMsg);
+                }
+            }, 500);
+        }, 5000);
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     async function loadRoomInfo() {
@@ -693,24 +774,14 @@
         participants.forEach(p => {
             const item = document.createElement('div');
             item.className = 'participant-item';
+            const userColor = getUserColor(p.userName);
+            const darkerColor = getDarkerShade(userColor);
             item.innerHTML = `
-                <div class="participant-name" style="background: linear-gradient(135deg, ${getUserColor(p.userName)}, ${getDarkerShade(getUserColor(p.userName))})">${p.userName}</div>
+                <div class="participant-name" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${p.userName}</div>
                 ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
             `;
             participantsList.appendChild(item);
         });
-    }
-
-    function getDarkerShade(color) {
-        const colors = {
-            '#1a1a1a': '#0a0a0a',
-            '#2d2d2d': '#1a1a1a',
-            '#3d3d3d': '#2d2d2d',
-            '#505050': '#3d3d3d',
-            '#636363': '#505050',
-            '#767676': '#636363'
-        };
-        return colors[color] || '#000000';
     }
 
     function connectWebSocket(token) {
@@ -722,21 +793,50 @@
             (frame) => {
                 console.log('Connected to WebSocket');
 
+                // Subscribe to chat messages
                 stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
                     const chatMessage = JSON.parse(message.body);
                     displayMessage(chatMessage);
                 });
 
+                // Subscribe to playback controls
+                stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
+                    const playbackMsg = JSON.parse(message.body);
+                    handlePlaybackCommand(playbackMsg);
+                });
+
+                // Send join message
                 stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
                     sender: currentUsername,
                     type: 'JOIN',
                     content: `${currentUsername} joined the room`
                 }));
+
+                // Start sync interval after connection
+                startSyncInterval();
             },
             (error) => {
                 console.error('WebSocket error:', error);
             }
         );
+    }
+
+    function startSyncInterval() {
+        if (syncInterval) {
+            clearInterval(syncInterval);
+        }
+
+        syncInterval = setInterval(() => {
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (!audioPlayer.paused && stompClient && stompClient.connected) {
+                const syncMessage = {
+                    action: 'SYNC',
+                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
+                };
+                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
+                    JSON.stringify(syncMessage));
+            }
+        }, 10000);
     }
 
     function sendMessage() {
@@ -864,6 +964,10 @@
     }
 
     async function logout() {
+        if (syncInterval) {
+            clearInterval(syncInterval);
+        }
+
         if (stompClient) {
             stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
                 sender: currentUsername,
