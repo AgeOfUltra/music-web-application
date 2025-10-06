@@ -491,6 +491,15 @@
             padding: 20px;
             font-size: 14px;
         }
+
+        .permission-notice {
+            background: rgba(255, 200, 0, 0.2);
+            color: #856404;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 200, 0, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -511,6 +520,9 @@
             </div>
             <audio id="audioPlayer" controls></audio>
             <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
+        </div>
+        <div id="permissionNotice" class="permission-notice" style="display: none;">
+            Only the organizer can control playback
         </div>
         <div class="song-list" id="songList">
             <div class="loading">Loading songs...</div>
@@ -561,6 +573,8 @@
     let currentRoomName = null;
     let currentUsername = null;
     let syncInterval = null;
+    let isOrganizer = false;
+    let ignoreLocalEvents = false;
     const userColors = {};
     const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 
@@ -591,6 +605,43 @@
         songList.addEventListener('scroll', () => {
             if (songList.scrollTop + songList.clientHeight >= songList.scrollHeight - 50) {
                 loadSongs();
+            }
+        });
+    }
+
+    function setupAudioPlayerListeners() {
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        audioPlayer.addEventListener('pause', () => {
+            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src) {
+                const playbackMessage = {
+                    action: 'PAUSE',
+                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
+                };
+                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
+                    JSON.stringify(playbackMessage));
+            }
+        });
+
+        audioPlayer.addEventListener('play', () => {
+            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src && audioPlayer.currentTime > 0) {
+                const playbackMessage = {
+                    action: 'RESUME',
+                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
+                };
+                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
+                    JSON.stringify(playbackMessage));
+            }
+        });
+
+        audioPlayer.addEventListener('seeked', () => {
+            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src) {
+                const playbackMessage = {
+                    action: 'SEEK',
+                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
+                };
+                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
+                    JSON.stringify(playbackMessage));
             }
         });
     }
@@ -666,6 +717,11 @@
     }
 
     function playSong(song) {
+        if (!isOrganizer) {
+            showSystemMessage('Only the organizer can play songs');
+            return;
+        }
+
         if (stompClient && stompClient.connected) {
             const playbackMessage = {
                 action: 'PLAY',
@@ -685,6 +741,7 @@
 
     function handlePlaybackCommand(playbackMsg) {
         const audioPlayer = document.getElementById('audioPlayer');
+        ignoreLocalEvents = true;
 
         switch(playbackMsg.action) {
             case 'PLAY':
@@ -693,9 +750,8 @@
                     `${playbackMsg.hero || 'Unknown'} • ${playbackMsg.heroine || 'Unknown'} • ${playbackMsg.language || 'Unknown'}`;
 
                 audioPlayer.src = `/app/music/public/streamSong/${playbackMsg.songFileName}`;
-                audioPlayer.play();
+                audioPlayer.play().catch(err => console.error('Play error:', err));
 
-                // Update active song styling
                 document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
 
                 showSystemMessage(`${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
@@ -706,6 +762,14 @@
                 showSystemMessage(`${playbackMsg.controller} paused playback`);
                 break;
 
+            case 'RESUME':
+                if (playbackMsg.timestamp !== undefined) {
+                    audioPlayer.currentTime = playbackMsg.timestamp / 1000;
+                }
+                audioPlayer.play().catch(err => console.error('Resume error:', err));
+                showSystemMessage(`${playbackMsg.controller} resumed playback`);
+                break;
+
             case 'STOP':
                 audioPlayer.pause();
                 audioPlayer.currentTime = 0;
@@ -714,10 +778,11 @@
 
             case 'SEEK':
                 audioPlayer.currentTime = playbackMsg.timestamp / 1000;
+                showSystemMessage(`${playbackMsg.controller} seeked to ${Math.floor(playbackMsg.timestamp / 1000)}s`);
                 break;
 
             case 'SYNC':
-                if (!audioPlayer.paused) {
+                if (!audioPlayer.paused && audioPlayer.src) {
                     const drift = Math.abs(audioPlayer.currentTime - (playbackMsg.timestamp / 1000));
                     if (drift > 2) {
                         console.log(`Syncing playback, drift: ${drift}s`);
@@ -726,6 +791,10 @@
                 }
                 break;
         }
+
+        setTimeout(() => {
+            ignoreLocalEvents = false;
+        }, 100);
     }
 
     function showSystemMessage(text) {
@@ -761,9 +830,30 @@
                 const room = await response.json();
                 document.getElementById('participantCount').textContent = `${room.participant.length} / ${room.maxCount} participants`;
                 displayParticipants(room.participant);
+
+                const currentParticipant = room.participant.find(p => p.userName === currentUsername);
+                if (currentParticipant) {
+                    const wasOrganizer = isOrganizer;
+                    isOrganizer = currentParticipant.organizer;
+
+                    if (!wasOrganizer && isOrganizer) {
+                        setupAudioPlayerListeners();
+                    }
+
+                    updatePermissionNotice();
+                }
             }
         } catch (error) {
             console.error('Error loading room info:', error);
+        }
+    }
+
+    function updatePermissionNotice() {
+        const notice = document.getElementById('permissionNotice');
+        if (!isOrganizer) {
+            notice.style.display = 'block';
+        } else {
+            notice.style.display = 'none';
         }
     }
 
@@ -793,30 +883,32 @@
             (frame) => {
                 console.log('Connected to WebSocket');
 
-                // Subscribe to chat messages
                 stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
                     const chatMessage = JSON.parse(message.body);
                     displayMessage(chatMessage);
                 });
 
-                // Subscribe to playback controls
                 stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
                     const playbackMsg = JSON.parse(message.body);
                     handlePlaybackCommand(playbackMsg);
                 });
 
-                // Send join message
                 stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
                     sender: currentUsername,
                     type: 'JOIN',
                     content: `${currentUsername} joined the room`
                 }));
 
-                // Start sync interval after connection
                 startSyncInterval();
             },
             (error) => {
                 console.error('WebSocket error:', error);
+                setTimeout(() => {
+                    if (stompClient && !stompClient.connected) {
+                        console.log('Attempting to reconnect...');
+                        connectWebSocket(token);
+                    }
+                }, 3000);
             }
         );
     }
@@ -828,7 +920,7 @@
 
         syncInterval = setInterval(() => {
             const audioPlayer = document.getElementById('audioPlayer');
-            if (!audioPlayer.paused && stompClient && stompClient.connected) {
+            if (!audioPlayer.paused && audioPlayer.src && stompClient && stompClient.connected && isOrganizer) {
                 const syncMessage = {
                     action: 'SYNC',
                     timestamp: Math.floor(audioPlayer.currentTime * 1000)
@@ -843,7 +935,7 @@
         const input = document.getElementById('messageInput');
         const content = input.value.trim();
 
-        if (content && stompClient) {
+        if (content && stompClient && stompClient.connected) {
             const chatMessage = {
                 sender: currentUsername,
                 content: content,
@@ -886,13 +978,19 @@
                     <span class="message-sender" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${message.sender}</span>
                     <span class="message-time">${time}</span>
                 </div>
-                <div class="message-content">${message.content}</div>
+                <div class="message-content">${escapeHtml(message.content)}</div>
             `;
 
             chatMessages.appendChild(messageDiv);
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     function handleEnter(event) {
@@ -936,8 +1034,12 @@
             const songItem = document.createElement('div');
             songItem.className = 'song-item';
             songItem.onclick = () => {
-                playSong(song);
-                closeSearchDrawer();
+                if (isOrganizer) {
+                    playSong(song);
+                    closeSearchDrawer();
+                } else {
+                    showSystemMessage('Only the organizer can play songs');
+                }
             };
             songItem.innerHTML = `
                 <div class="song-item-title">${song.songName}</div>
@@ -968,7 +1070,7 @@
             clearInterval(syncInterval);
         }
 
-        if (stompClient) {
+        if (stompClient && stompClient.connected) {
             stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
                 sender: currentUsername,
                 type: 'LEAVE',
@@ -996,6 +1098,20 @@
         document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
         window.location.href = '/app/music/public/login';
     }
+
+    window.addEventListener('beforeunload', () => {
+        if (syncInterval) {
+            clearInterval(syncInterval);
+        }
+
+        if (stompClient && stompClient.connected) {
+            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
+                sender: currentUsername,
+                type: 'LEAVE',
+                content: `${currentUsername} left the room`
+            }));
+        }
+    });
 </script>
 </body>
 </html>
