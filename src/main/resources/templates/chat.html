@@ -782,11 +782,18 @@
                 break;
 
             case 'SYNC':
-                if (!audioPlayer.paused && audioPlayer.src) {
+                if (audioPlayer.src) {
                     const drift = Math.abs(audioPlayer.currentTime - (playbackMsg.timestamp / 1000));
-                    if (drift > 2) {
-                        console.log(`Syncing playback, drift: ${drift}s`);
+
+                    // Sync if there's significant drift OR if audio hasn't started yet
+                    if (drift > 2 || (audioPlayer.paused && audioPlayer.currentTime === 0)) {
+                        console.log(`Syncing playback, drift: ${drift}s, timestamp: ${playbackMsg.timestamp / 1000}s`);
                         audioPlayer.currentTime = playbackMsg.timestamp / 1000;
+
+                        // If organizer started playing and this client hasn't started, play it
+                        if (audioPlayer.paused && audioPlayer.currentTime > 0) {
+                            audioPlayer.play().catch(err => console.error('Auto-play sync error:', err));
+                        }
                     }
                 }
                 break;

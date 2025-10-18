@@ -6,6 +6,7 @@ import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.repo.ParticipantRepo;
 import com.music.musicwebapplication.repo.RoomRepo;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -125,5 +126,12 @@ public class RoomService {
                         .stream().anyMatch(u->u.getUserName().equals(username)));
     }
 
+
+    @PreDestroy
+    private void clearRooms(){
+        log.info("All rooms deletion started...");
+        repo.deleteAll();
+        log.info("All rooms deletion completed...");
+    }
 }
 

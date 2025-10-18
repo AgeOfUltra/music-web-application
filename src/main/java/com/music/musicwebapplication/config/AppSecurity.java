@@ -42,7 +42,7 @@ public class AppSecurity {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
+                        .requestMatchers("/",
                                 "/h2-console/**",
                                 "/api/music/**",
                                 "/app/music/ws/**",
