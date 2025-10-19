@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connecting Notes - Chat Room</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,7 +15,8 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: "Alan Sans", sans-serif;
+            font-style: normal;
             background: #e8e8e8;
             height: 100vh;
             overflow: hidden;
@@ -532,7 +534,7 @@
     <div class="middle-panel">
         <div class="room-header">
             <div class="room-name" id="roomName">Loading...</div>
-            <div class="room-user-info" id="roomUserInfo">Logged in as: <span id="currentUserDisplay"></span></div>
+            <div class="room-user-info" id="roomUserInfo">Logged in as: <span th:text =" ${username}"></span></div>
             <div class="participant-count" id="participantCount">0 participants</div>
         </div>
         <div class="chat-messages" id="chatMessages">
@@ -594,7 +596,7 @@
         }
 
         document.getElementById('roomName').textContent = currentRoomName;
-        document.getElementById('currentUserDisplay').textContent = currentUsername;
+        // document.getElementById('currentUserDisplay').textContent = currentUsername;
         loadSongs();
         loadRoomInfo();
         connectWebSocket(token);
