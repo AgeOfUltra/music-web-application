@@ -167,6 +167,7 @@
         <p class="subtitle">Login to join music chat rooms</p>
 
         <!-- Thymeleaf Form - Submits to Server -->
+        <!--/*@thymesVar id="loginUser" type=""*/-->
         <form th:action="@{/app/music/public/authenticate}" method="post" th:object="${loginUser}">
             <div class="form-group">
                 <label for="username">Username</label>
