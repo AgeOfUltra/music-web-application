@@ -473,7 +473,7 @@
 <script>
     window.onload = function() {
         checkAuthentication();
-        displayUsername();
+        // displayUsername();
     };
 
     function checkAuthentication() {
@@ -490,12 +490,12 @@
         return null;
     }
 
-    function displayUsername() {
-        const username = localStorage.getItem('username');
-        if (username) {
-            document.getElementById('usernameDisplay').textContent = username;
-        }
-    }
+    // function displayUsername() {
+    //     const username = localStorage.getItem('username');
+    //     if (username) {
+    //         document.getElementById('usernameDisplay').textContent = username;
+    //     }
+    // }
 
     function logout() {
         localStorage.removeItem('jwtToken');
