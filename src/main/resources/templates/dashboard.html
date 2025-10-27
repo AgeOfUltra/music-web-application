@@ -480,32 +480,9 @@
 </div>
 
 <script>
-    window.onload = function() {
-        localStorage.setItem('currentRoom', roomName);
-        // checkAuthentication();
-        // displayUsername();
-    };
 
-    // function checkAuthentication() {
-    //     const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-    //     if (!token) {
-    //         window.location.href = '/app/music/public/login';
-    //     }
-    // }
 
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-    }
 
-    // function displayUsername() {
-    //     const username = localStorage.getItem('username');
-    //     if (username) {
-    //         document.getElementById('usernameDisplay').textContent = username;
-    //     }
-    // }
 
     function logout() {
         localStorage.removeItem('jwtToken');
@@ -535,79 +512,8 @@
         hideAlert('joinAlert');
     }
 
-    function showAlert(elementId, message, type = 'error') {
-        const alert = document.getElementById(elementId);
-        alert.textContent = message;
-        alert.className = `alert alert-${type}`;
-        alert.style.display = 'block';
-    }
-
     function hideAlert(elementId) {
         document.getElementById(elementId).style.display = 'none';
-    }
-
-    async function createRoom(event) {
-        event.preventDefault();
-
-        const roomName = document.getElementById('createRoomName').value;
-        // const maxCount = parseInt(document.getElementById('maxParticipants').value);
-        const username = localStorage.getItem('username');
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        if (maxCount < 2 || maxCount > 10) {
-            showAlert('createAlert', 'Max participants must be between 2 and 10', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(`/app/music/room/create?roomName=${encodeURIComponent(roomName)}&maxCount=${maxCount}&username=${encodeURIComponent(username)}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('currentRoom', roomName);
-                window.location.href = `/app/music/chat?roomName=${encodeURIComponent(roomName)}`;
-            } else {
-                const error = await response.json();
-                showAlert('createAlert', error.message || 'Failed to create room', 'error');
-            }
-        } catch (error) {
-            showAlert('createAlert', 'Network error. Please try again.', 'error');
-            console.error('Create room error:', error);
-        }
-    }
-
-    async function joinRoom(event) {
-        event.preventDefault();
-
-        const roomName = document.getElementById('joinRoomName').value;
-        const username = localStorage.getItem('username');
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        try {
-            const response = await fetch(`/app/music/room/join?roomName=${encodeURIComponent(roomName)}&username=${encodeURIComponent(username)}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('currentRoom', roomName);
-                window.location.href = `/app/music/chat?roomName=${encodeURIComponent(roomName)}`;
-            } else {
-                const error = await response.json();
-                showAlert('joinAlert', error.message || 'Failed to join room', 'error');
-            }
-        } catch (error) {
-            showAlert('joinAlert', 'Network error. Please try again.', 'error');
-            console.error('Join room error:', error);
-        }
     }
 
     window.onclick = function(event) {
