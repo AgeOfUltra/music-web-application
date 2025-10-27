@@ -166,17 +166,16 @@
         <h1>Welcome!</h1>
         <p class="subtitle">Login to join music chat rooms</p>
 
-        <div id="loginAlert" class="alert alert-error"></div>
-
-        <form id="loginFormElement" onsubmit="handleLogin(event)">
+        <!-- Thymeleaf Form - Submits to Server -->
+        <form th:action="@{/app/music/public/authenticate}" method="post" th:object="${loginUser}">
             <div class="form-group">
-                <label for="loginUsername">Username</label>
-                <input type="text" id="loginUsername" name="username" required>
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"  required>
             </div>
 
             <div class="form-group">
-                <label for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" name="password" required>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password"  required>
             </div>
 
             <button type="submit" class="btn btn-primary">Login</button>
@@ -193,7 +192,7 @@
 
         <div id="registerAlert" class="alert"></div>
 
-        <form id="registerFormElement" onsubmit="handleRegister(event)">
+        <form id="registerFormElement" method="post" th:action="@{/app/music/public/register}">
             <div class="form-group">
                 <label for="registerUsername">Username</label>
                 <input type="text" id="registerUsername" name="username" required minlength="3">
@@ -222,95 +221,8 @@
     function toggleForms() {
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
-
         loginForm.classList.toggle('hidden');
         registerForm.classList.toggle('hidden');
-
-        hideAlerts();
-    }
-
-    function showAlert(elementId, message, isError = true) {
-        const alert = document.getElementById(elementId);
-        alert.textContent = message;
-        alert.className = isError ? 'alert alert-error' : 'alert alert-success';
-        alert.style.display = 'block';
-    }
-
-    function hideAlerts() {
-        document.getElementById('loginAlert').style.display = 'none';
-        document.getElementById('registerAlert').style.display = 'none';
-    }
-
-    async function handleLogin(event) {
-        event.preventDefault();
-        hideAlerts();
-
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-
-        try {
-            const response = await fetch('/app/music/public/authenticate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                localStorage.setItem('jwtToken', data.token);
-                localStorage.setItem('username', data.username);
-                document.cookie = `jwtToken=${data.token}; path=/; max-age=1800; SameSite=Lax`;
-
-                showAlert('loginAlert', data.message, false);
-
-                setTimeout(() => {
-                    window.location.href = '/app/music/dashboard';
-                }, 500);
-            } else {
-                showAlert('loginAlert', data.error || 'Login failed. Please try again.');
-            }
-        } catch (error) {
-            showAlert('loginAlert', 'Network error. Please try again.');
-            console.error('Login error:', error);
-        }
-    }
-
-    async function handleRegister(event) {
-        event.preventDefault();
-        hideAlerts();
-
-        const username = document.getElementById('registerUsername').value;
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-
-        try {
-            const response = await fetch('/app/music/public/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            const data = await response.text();
-
-            if (response.ok) {
-                showAlert('registerAlert', 'Registration successful! Please login.', false);
-                document.getElementById('registerFormElement').reset();
-
-                setTimeout(() => {
-                    toggleForms();
-                }, 1500);
-            } else {
-                showAlert('registerAlert', data || 'Registration failed. Please try again.');
-            }
-        } catch (error) {
-            showAlert('registerAlert', 'Network error. Please try again.');
-            console.error('Registration error:', error);
-        }
     }
 </script>
 </body>
