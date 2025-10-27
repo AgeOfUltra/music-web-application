@@ -7,176 +7,173 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
 
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Alan Sans", sans-serif;
+        background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-style: normal;
+    }
+
+    .container {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        width: 400px;
+        max-width: 90%;
+    }
+
+    .logo-container {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .logo-container img {
+        max-width: 150px;
+        height: auto;
+    }
+
+    h1 {
+        text-align: center;
+        color: #1a1a1a;
+        margin-bottom: 10px;
+        font-size: 28px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #555;
+        margin-bottom: 30px;
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        color: #333;
+        font-weight: 500;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #1a1a1a;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-secondary {
+        background: transparent;
+        color: #1a1a1a;
+        border: 2px solid #1a1a1a;
+    }
+
+    .btn-secondary:hover {
+        background: #1a1a1a;
+        color: white;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .alert-error {
+        background: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+    }
+
+    .alert-success {
+        background: #efe;
+        color: #3c3;
+        border: 1px solid #cfc;
+    }
+
+    .toggle-form {
+        text-align: center;
+        margin-top: 20px;
+        color: #666;
+    }
+
+    .toggle-form a {
+        color: #1a1a1a;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .toggle-form a:hover {
+        text-decoration: underline;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
     <title>Connecting Notes - Login</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: "Alan Sans", sans-serif;
-            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-style: normal;
-        }
-
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            width: 400px;
-            max-width: 90%;
-        }
-
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .logo-container img {
-            max-width: 150px;
-            height: auto;
-        }
-
-        h1 {
-            text-align: center;
-            color: #1a1a1a;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #555;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #1a1a1a;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #1a1a1a;
-            border: 2px solid #1a1a1a;
-        }
-
-        .btn-secondary:hover {
-            background: #1a1a1a;
-            color: white;
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-
-        .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-        }
-
-        .toggle-form a {
-            color: #1a1a1a;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .toggle-form a:hover {
-            text-decoration: underline;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
 </head>
 <body>
 <div class="container">
     <div class="logo-container">
-        <img src="/app_logo.png" alt="Connecting Notes Logo">
+        <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo">
     </div>
 
     <div id="loginForm">
         <h1>Welcome!</h1>
         <p class="subtitle">Login to join music chat rooms</p>
-
-        <!-- Thymeleaf Form - Submits to Server -->
-        <!--/*@thymesVar id="loginUser" type=""*/-->
         <form th:action="@{/app/music/public/authenticate}" method="post" th:object="${loginUser}">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username"  required>
+                <input type="text" id="username" name="username" required>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password"  required>
+                <input type="password" id="password" name="password" required>
             </div>
 
             <button type="submit" class="btn btn-primary">Login</button>
