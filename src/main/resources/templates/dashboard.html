@@ -431,18 +431,23 @@
 
         <div id="createAlert" class="alert"></div>
 
-        <form id="createRoomForm" onsubmit="createRoom(event)">
+        <form th:action="@{/app/music/room/create}" th:method="POST">
             <div class="form-group">
-                <label for="createRoomName">Room Name</label>
-                <input type="text" id="createRoomName" required placeholder="Enter room name">
+                <label for="roomName">Room Name</label>
+                <input type="text" id="roomName" name="roomName" required placeholder="Enter room name">
             </div>
 
             <div class="form-group">
-                <label for="maxParticipants">Maximum Participants (2-10)</label>
-                <input type="number" id="maxParticipants" min="2" max="10" value="5" required>
+                <label for="maxCount">Maximum Participants (2-10)</label>
+                <input type="number" id="maxCount" name="maxCount" min="2" max="10" value="5" required>
                 <div id="participantError" class="validation-error" style="display: none;">
                     Please enter a value between 2 and 10
                 </div>
+            </div>
+            <div class="form-group" th:contenteditable="false">
+                <label for="username">User name</label>
+                <input type="text" id="username" name="username" required th:value="${username}" readonly >
+
             </div>
 
             <button type="submit" class="submit-btn btn-create">Create Room</button>
@@ -459,12 +464,16 @@
 
         <div id="joinAlert" class="alert"></div>
 
-        <form id="joinRoomForm" onsubmit="joinRoom(event)">
+        <form th:action="@{/app/music/room/join}" id="joinRoomForm" th:method="POST">
             <div class="form-group">
                 <label for="joinRoomName">Room Name</label>
-                <input type="text" id="joinRoomName" required placeholder="Enter room name to join">
+                <input type="text" id="joinRoomName" name="roomName" required placeholder="Enter room name to join">
             </div>
+            <div class="form-group">
+                <label for="joinUsername">User name</label>
+                <input type="text" id="joinUsername"  name="username" required th:value="${username}" readonly>
 
+            </div>
             <button type="submit" class="submit-btn btn-join">Join Room</button>
         </form>
     </div>
@@ -472,16 +481,17 @@
 
 <script>
     window.onload = function() {
-        checkAuthentication();
-        displayUsername();
+        localStorage.setItem('currentRoom', roomName);
+        // checkAuthentication();
+        // displayUsername();
     };
 
-    function checkAuthentication() {
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-        if (!token) {
-            window.location.href = '/app/music/public/login';
-        }
-    }
+    // function checkAuthentication() {
+    //     const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
+    //     if (!token) {
+    //         window.location.href = '/app/music/public/login';
+    //     }
+    // }
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -490,12 +500,12 @@
         return null;
     }
 
-    function displayUsername() {
-        const username = localStorage.getItem('username');
-        if (username) {
-            document.getElementById('usernameDisplay').textContent = username;
-        }
-    }
+    // function displayUsername() {
+    //     const username = localStorage.getItem('username');
+    //     if (username) {
+    //         document.getElementById('usernameDisplay').textContent = username;
+    //     }
+    // }
 
     function logout() {
         localStorage.removeItem('jwtToken');
@@ -536,24 +546,11 @@
         document.getElementById(elementId).style.display = 'none';
     }
 
-    document.getElementById('maxParticipants').addEventListener('input', function(e) {
-        const value = parseInt(e.target.value);
-        const errorDiv = document.getElementById('participantError');
-
-        if (value < 2 || value > 10) {
-            errorDiv.style.display = 'block';
-            e.target.setCustomValidity('Value must be between 2 and 10');
-        } else {
-            errorDiv.style.display = 'none';
-            e.target.setCustomValidity('');
-        }
-    });
-
     async function createRoom(event) {
         event.preventDefault();
 
         const roomName = document.getElementById('createRoomName').value;
-        const maxCount = parseInt(document.getElementById('maxParticipants').value);
+        // const maxCount = parseInt(document.getElementById('maxParticipants').value);
         const username = localStorage.getItem('username');
         const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
 

@@ -1,7 +1,5 @@
 package com.music.musicwebapplication.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.service.SongControllerService;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -66,6 +63,10 @@ public class PublicSongController {
 
         return ResponseEntity.ok(songControllerService.getAllSongsName(page, size));
 
+    }
+
+    protected Page<Song> getAllSongs(){
+        return songControllerService.getAllSongsName(0,10);
     }
 
     @GetMapping("/searchSong")

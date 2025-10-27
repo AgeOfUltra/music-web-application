@@ -136,7 +136,7 @@ public class SongControllerService {
 
     }
 
-    public org.springframework.data.domain.Page<Song> getAllSongsName(int page, int size) {
+    public Page<Song> getAllSongsName(int page, int size) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("id").ascending());
         return  repo.findAll(pageable);
     }

@@ -126,6 +126,12 @@ public class RoomService {
                         .stream().anyMatch(u->u.getUserName().equals(username)));
     }
 
+    public boolean isUserOrganizer(String roomName, String username) {
+        Optional<Room> room = repo.findRoomByRoomName(roomName);
+        return room.map(value -> value.getParticipant().stream()
+                .anyMatch(p -> p.getUserName().equals(username) && p.isOrganizer())).orElse(false);
+
+    }
 
     @PreDestroy
     private void clearRooms(){
