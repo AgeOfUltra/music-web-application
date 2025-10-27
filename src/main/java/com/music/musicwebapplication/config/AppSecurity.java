@@ -33,23 +33,29 @@ public class AppSecurity {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity https) throws Exception {
-        https.csrf(csrf-> csrf
+        https.csrf(csrf -> csrf
                         .ignoringRequestMatchers("/h2-console/**",
                                 "/api/music/**",
                                 "/app/music/**"
                         ))
-                .headers(header-> header
+                .headers(header -> header
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
+                        .requestMatchers("/",
                                 "/h2-console/**",
                                 "/api/music/**",
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
-                                "/favicon.ico")
+                                "/app/music/public/login",
+                                "/favicon.ico", "/app_logo.png")
                         .permitAll()
-                        .requestMatchers("/app/music/room/**","/app/music/chat/**").authenticated()
+                        .requestMatchers("/app/music/room/**",
+                                "/app/music/chat/",
+                                "/app/music/chat/**",
+                                "/app/music/dashboard",
+                                "/app/music/fetchAllSongs",
+                                "/app/music/searchSong").authenticated()
                         .anyRequest().authenticated())
 
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
@@ -58,15 +64,17 @@ public class AppSecurity {
     }
 
     @Bean
-    PasswordEncoder passwordEncoder(){
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
-    public CustomUserDetailService customUserDetailService(){
-        return  new CustomUserDetailService();
+    public CustomUserDetailService customUserDetailService() {
+        return new CustomUserDetailService();
     }
+
     @Bean
-    AuthenticationManager manager(CustomUserDetailService service, PasswordEncoder encoder) throws Exception{
+    AuthenticationManager manager(CustomUserDetailService service, PasswordEncoder encoder) throws Exception {
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(service);
         authenticationProvider.setPasswordEncoder(encoder);
         return new ProviderManager(authenticationProvider);

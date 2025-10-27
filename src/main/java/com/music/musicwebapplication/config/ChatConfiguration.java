@@ -22,7 +22,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import java.util.Objects;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -54,16 +53,25 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-                if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-                    String authToken = accessor.getFirstNativeHeader("Authorization");
+                if (accessor == null) {
+                    return message;
+                }
 
-                    if (authToken != null && authToken.startsWith("Bearer ")) {
+                if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+                    try {
+                        String authToken = accessor.getFirstNativeHeader("Authorization");
+
+                        if (authToken == null || !authToken.startsWith("Bearer ")) {
+                            log.warn("Missing or invalid Authorization header in WebSocket CONNECT");
+                            return message;
+                        }
+
                         String jwt = authToken.substring(7);
 
                         try {
                             String username = jwtTokenUtil.getUserNameFromToken(jwt);
 
-                            if (username != null && jwtTokenUtil.validateToken(username,username,jwt)) {
+                            if (username != null && jwtTokenUtil.validateToken(username, username, jwt)) {
                                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                                 UsernamePasswordAuthenticationToken authentication =
                                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
@@ -71,26 +79,48 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                                 SecurityContextHolder.getContext().setAuthentication(authentication);
                                 accessor.setUser(authentication);
 
-                                Objects.requireNonNull(accessor.getSessionAttributes()).put("username", username);
+                                // IMPORTANT: Store username in session attributes
+                                if (accessor.getSessionAttributes() != null) {
+                                    accessor.getSessionAttributes().put("username", username);
+                                    log.info("Stored username in session: {}", username);
+                                }
+
                                 log.info("User {} connected to WebSocket", username);
+                            } else {
+                                log.warn("JWT token validation failed for user: {}", username);
                             }
                         } catch (Exception e) {
-                            throw new IllegalArgumentException("Invalid JWT token");
+                            log.error("Error validating JWT token: {}", e.getMessage());
                         }
-                    } else {
-                        throw new IllegalArgumentException("Missing or invalid Authorization header");
+                    } catch (Exception e) {
+                        log.error("Error processing WebSocket CONNECT: {}", e.getMessage());
                     }
                 }
 
                 if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-                    String destination = accessor.getDestination();
-                    if (destination != null && destination.startsWith("/topic/chat/")) {
-                        String roomId = extractRoomIdFromDestination(destination);
-                        if (roomId != null) {
-                            accessor.getSessionAttributes().put("roomId", roomId);
-                            log.info("User {} subscribed to room: {}",
-                                    accessor.getSessionAttributes().get("username"), roomId);
+                    try {
+                        String destination = accessor.getDestination();
+                        if (destination != null && destination.startsWith("/topic/chat/")) {
+                            String roomId = extractRoomIdFromDestination(destination);
+                            if (roomId != null && accessor.getSessionAttributes() != null) {
+                                accessor.getSessionAttributes().put("roomId", roomId);
+
+                                Object username = accessor.getSessionAttributes().get("username");
+                                log.info("User {} subscribed to room: {}", username, roomId);
+                            }
                         }
+                    } catch (Exception e) {
+                        log.error("Error processing SUBSCRIBE: {}", e.getMessage());
+                    }
+                }
+
+                if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
+                    try {
+                        Object username = accessor.getSessionAttributes() != null ?
+                                accessor.getSessionAttributes().get("username") : null;
+                        log.info("User {} disconnected", username);
+                    } catch (Exception e) {
+                        log.error("Error processing DISCONNECT: {}", e.getMessage());
                     }
                 }
 
@@ -98,10 +128,18 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
             }
         });
     }
+
     private String extractRoomIdFromDestination(String destination) {
         String prefix = "/topic/chat/";
         if (destination.startsWith(prefix)) {
-            return destination.substring(prefix.length());
+            String roomId = destination.substring(prefix.length());
+            // Handle /playback and /participants suffixes
+            if (roomId.endsWith("/playback")) {
+                roomId = roomId.substring(0, roomId.length() - 9);
+            } else if (roomId.endsWith("/participants")) {
+                roomId = roomId.substring(0, roomId.length() - 13);
+            }
+            return roomId;
         }
         return null;
     }

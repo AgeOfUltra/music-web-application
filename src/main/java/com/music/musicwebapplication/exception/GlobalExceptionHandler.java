@@ -25,7 +25,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RoomManageException.class)
     public ResponseEntity<?> roomAlreadyExistHandler(RoomManageException e){
         ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),
-                e.getMessage().startsWith("Room already exist with") ? HttpStatus.BAD_REQUEST.toString(): HttpStatus.CONFLICT.toString(),
+                e.getMessage().startsWith("Room already available with") ? HttpStatus.BAD_REQUEST.toString():
+                        e.getMessage().startsWith("User is already logged in and present") ? HttpStatus.FORBIDDEN.toString() : HttpStatus.CONFLICT.toString(),
                 e.getMessage());
 
         return ResponseEntity.badRequest().body(error);
