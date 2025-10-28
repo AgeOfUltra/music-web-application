@@ -190,7 +190,8 @@
 
         <div id="registerAlert" class="alert"></div>
 
-        <form id="registerFormElement" method="post" th:action="@{/app/music/public/register}">
+        <!--/*@thymesVar id="newUser" type=""*/-->
+        <form id="registerFormElement" method="post" th:action="@{/app/music/public/register}" th:object="${newUser}">
             <div class="form-group">
                 <label for="registerUsername">Username</label>
                 <input type="text" id="registerUsername" name="username" required minlength="3">

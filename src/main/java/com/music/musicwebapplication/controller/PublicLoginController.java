@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -98,7 +99,19 @@ public class PublicLoginController {
         }
     }
     @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestBody RegisterUser newUser){
+    public ModelAndView registerUser(@ModelAttribute RegisterUser newUser, Model model){
+        ResponseEntity<?> response = registerUserApi(newUser);
+        if(response.getStatusCode().equals(HttpStatus.CREATED)){
+            model.addAttribute("success","User created successfully");
+            return new ModelAndView("redirect:/app/music/public/login");
+        }else{
+            model.addAttribute("error","Error while creating user.");
+            return new ModelAndView("redirect:app/music/public/register");
+        }
+
+    }
+
+    private ResponseEntity<String> registerUserApi(RegisterUser newUser){
         newUser.setRole(Role.LISTENER);
         String result = userService.registerUser(newUser);
 
