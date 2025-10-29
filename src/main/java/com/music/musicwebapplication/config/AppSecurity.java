@@ -11,6 +11,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,21 +34,14 @@ public class AppSecurity {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity https) throws Exception {
-        https.csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/h2-console/**",
-                                "/api/music/**",
-                                "/app/music/**"
-                        ))
+        https.csrf(AbstractHttpConfigurer::disable)
                 .headers(header -> header
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)).authorizeHttpRequests(auth -> auth
                         .requestMatchers("/",
                                 "/h2-console/**",
                                 "/api/music/**",
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
-                                "/app/music/public/login",
                                 "/favicon.ico", "/app_logo.png")
                         .permitAll()
                         .requestMatchers("/app/music/room/**",

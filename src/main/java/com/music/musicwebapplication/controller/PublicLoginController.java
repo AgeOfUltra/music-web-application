@@ -1,3 +1,5 @@
+
+
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
@@ -10,7 +12,9 @@ import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,12 +23,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Controller
 @RequestMapping("/app/music/public")
 @RequiredArgsConstructor
@@ -37,18 +43,41 @@ public class PublicLoginController {
 
     // Return login page
     @GetMapping("/login")
-    public String loginPage() {
+    public String loginPage(Model model) {
+        model.addAttribute("loginUser", new LoginUser());
         return "login";
+    }
+
+    @GetMapping("/signUp")
+    public String signUpPage(Model model) {
+        model.addAttribute("newUser", new RegisterUser());
+        return "signup";
     }
 
     // Handle login and return JWT token
     @PostMapping("/authenticate")
-    public ModelAndView loginUser(@ModelAttribute LoginUser loginUser, HttpServletResponse responseServlet, HttpSession session) {
+    public ModelAndView loginUser(@Valid @ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, HttpSession session, Errors error, Model model) {
+        if(error.hasErrors()){
+            log.error("Login validation failed due to error : {}", error);
+            log.info("Register validation failed due to error : {}", error);
+            log.info("new user data : {}", loginUser);
+            return new ModelAndView("login");
+        }
 
+        String errorMessage="";
         ResponseEntity<?> response = authenticate(loginUser);
+        log.info(response.toString());
         if(response.getStatusCode()==HttpStatus.OK){
             Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
-            String token = (String) responseBody.get("token");
+            String token = "";
+            String message ="";
+
+            if(responseBody!=null){
+                token = (String) responseBody.get("token");
+                message=(String)responseBody.get("message");
+                errorMessage= (String)responseBody.get("error");
+            }
+
 
             // Store in session (server-side)
             session.setAttribute("jwtToken", token);
@@ -62,14 +91,19 @@ public class PublicLoginController {
             cookie.setMaxAge(3600);
             cookie.setAttribute("username",loginUser.getUsername());
             responseServlet.addCookie(cookie);
-            return new ModelAndView( "redirect:/app/music/dashboard");
 
+            model.addAttribute("loginSuccess",message);
+            model.addAttribute("loginError","");
+            log.info("new user data : {}", loginUser);
+            return new ModelAndView("redirect:/app/music/dashboard");
         }else{
-            return new ModelAndView("redirect:/app/music/public/login");
+            model.addAttribute("loginError",errorMessage);
+            log.info("new user data : {}", loginUser);
+            return new ModelAndView("login");
         }
     }
 
-//    API
+    //    API
     public ResponseEntity<?> authenticate( LoginUser loginUser) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -99,14 +133,23 @@ public class PublicLoginController {
         }
     }
     @PostMapping("/register")
-    public ModelAndView registerUser(@ModelAttribute RegisterUser newUser, Model model){
+    public String registerUser(@Valid  @ModelAttribute("newUser") RegisterUser newUser, Model model,Errors error){
+        if(error.hasErrors()){
+            log.error("Register validation failed due to error : {}", error);
+            log.info("Register validation failed due to error : {}", error);
+            log.info("new user data : {}", newUser);
+            return "signup";
+        }
+
         ResponseEntity<?> response = registerUserApi(newUser);
         if(response.getStatusCode().equals(HttpStatus.CREATED)){
             model.addAttribute("success","User created successfully");
-            return new ModelAndView("redirect:/app/music/public/login");
+            log.info("new user data : {}", newUser);
+            return "redirect:/app/music/public/login";
         }else{
             model.addAttribute("error","Error while creating user.");
-            return new ModelAndView("redirect:app/music/public/register");
+            log.info("new user data : {}", newUser);
+            return "signup";
         }
 
     }

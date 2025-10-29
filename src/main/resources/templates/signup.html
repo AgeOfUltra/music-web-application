@@ -6,7 +6,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
-
+    <title>Connecting Notes - Sign Up</title>
     <style>
         * {
             margin: 0;
@@ -22,6 +22,7 @@
             justify-content: center;
             align-items: center;
             font-style: normal;
+            padding: 20px;
         }
 
         .container {
@@ -29,8 +30,8 @@
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            width: 400px;
-            max-width: 90%;
+            width: 100%;
+            max-width: 450px;
         }
 
         .logo-container {
@@ -39,7 +40,7 @@
         }
 
         .logo-container img {
-            max-width: 150px;
+            max-width: 120px;
             height: auto;
         }
 
@@ -75,11 +76,16 @@
             border-radius: 5px;
             font-size: 14px;
             transition: border-color 0.3s;
+            font-family: "Alan Sans", sans-serif;
         }
 
         input:focus {
             outline: none;
             border-color: #1a1a1a;
+        }
+
+        input::placeholder {
+            color: #bbb;
         }
 
         .btn {
@@ -104,17 +110,6 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .btn-secondary {
-            background: transparent;
-            color: #1a1a1a;
-            border: 2px solid #1a1a1a;
-        }
-
-        .btn-secondary:hover {
-            background: #1a1a1a;
-            color: white;
-        }
-
         .alert {
             padding: 12px;
             border-radius: 5px;
@@ -122,16 +117,20 @@
             display: none;
         }
 
+        .alert.show {
+            display: block;
+        }
+
         .alert-error {
-            background: #fee;
+            background: #ffe6e6;
             color: #c33;
-            border: 1px solid #fcc;
+            border: 1px solid #ffcccc;
         }
 
         .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+            background: #e6f4ea;
+            color: #1e7e34;
+            border: 1px solid #c3e6cb;
         }
 
         .toggle-form {
@@ -150,11 +149,33 @@
             text-decoration: underline;
         }
 
-        .hidden {
-            display: none;
+
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .subtitle {
+                font-size: 12px;
+                margin-bottom: 20px;
+            }
+
+            input {
+                padding: 10px;
+                font-size: 13px;
+            }
+
+            .btn {
+                padding: 10px;
+                font-size: 14px;
+            }
         }
     </style>
-    <title>Connecting Notes - Login</title>
 </head>
 <body>
 <div class="container">
@@ -162,37 +183,50 @@
         <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo">
     </div>
 
-    <div id="loginForm">
-        <h1>Welcome!</h1>
-        <p class="subtitle">Login to join music chat rooms</p>
-        <ul>
-            <li role="alert" th:each=" error : ${#fields.errors('loginUser.*')}" th:text="${error}"> </li>
-        </ul>
-        <div th:if="${loginError}">
-            <p th:text="${loginError}"></p>
+    <h1>Create Account</h1>
+    <p class="subtitle">Join the music streaming community</p>
+
+    <!-- Alert Messages -->
+    <div id="errorAlert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+
+    <!-- Sign Up Form -->
+    <ul>
+        <li class="alert alert-danger" role="alert" th:each=" error : ${#fields.errors('newUser.*')}" th:text="${error}"> </li>
+    </ul>
+    <form id="signupForm" th:method="POST" th:action="@{/app/music/public/register}" th:object="${newUser}">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input
+                    type="text"
+                    id="username"
+                    th:field="*{username}"
+                    placeholder="Enter username (3-20 characters)"
+            >
         </div>
-        <div th:if="${loginSuccess}">
-            <p th:text="${loginSuccess}"></p>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input
+                    type="text"
+                    id="email"
+                    th:field="*{email}"
+                    placeholder="Enter your email"
+            >
         </div>
-        <form th:action="@{/app/music/public/authenticate}" method="post" th:object="${loginUser}">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" th:field="*{username}" required>
-            </div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" th:field="*{password}" required>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Login</button>
-        </form>
-
-        <div class="toggle-form">
-            Already have an account? <a th:href="@{/app/music/public/signUp}">SignUp</a>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input
+                    type="password"
+                    id="password"
+                    th:field="*{password}"
+                    placeholder="Enter password (min 8 characters)"
+            >
         </div>
-    </div>
 
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+    </form>
 </div>
 </body>
 </html>
