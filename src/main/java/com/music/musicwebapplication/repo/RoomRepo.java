@@ -10,7 +10,4 @@ import java.util.Optional;
 @Repository
 public interface RoomRepo extends JpaRepository<Room,Long> {
     Optional<Room> findRoomByRoomName(@Param("roomName") String roomName);
-
-//    @Query("SELECT r FROM Room r JOIN FETCH r.participant WHERE r.roomName = :roomName")
-//    Optional<Room> findRoomWithParticipantsByRoomName(@Param("roomName") String roomName);
 }

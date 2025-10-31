@@ -32,7 +32,7 @@ public class PublicSongController {
     PublicSongController(SongControllerService songControllerService){
         this.songControllerService = songControllerService;
     }
-//    @PreAuthorize("hasAuthority('MUSIC_READ')")
+
     @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
         log.info("Initiated the song Stream Request for file name : {}",name);

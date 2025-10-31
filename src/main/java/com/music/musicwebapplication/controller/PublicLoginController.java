@@ -2,7 +2,6 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
-import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.support.Role;
@@ -24,6 +23,7 @@ import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.annotation.RequestScope;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,67 +49,64 @@ public class PublicLoginController {
     // Return login page
     @GetMapping("/login")
     public String loginPage(Model model) {
-        model.addAttribute("loginUser", new LoginUser());
+        if (!model.containsAttribute("loginUser")) {
+            model.addAttribute("loginUser", new LoginUser());
+        }
         return "login";
     }
 
     @GetMapping("/signUp")
     public String signUpPage(Model model) {
-        model.addAttribute("newUser", new RegisterUser());
+        if (!model.containsAttribute("newUser")) {
+            model.addAttribute("newUser", new RegisterUser());
+        }
         return "signup";
     }
 
     // Handle login and return JWT token
     @PostMapping("/authenticate")
-    public ModelAndView loginUser(@Valid @ModelAttribute("loginUser") LoginUser loginUser,Errors error, HttpServletResponse responseServlet, HttpSession session,  Model model) {
-        if(error.hasErrors()){
-            log.error("Login validation failed due to error : {}", error);
-            log.info("Register validation failed due to error : {}", error);
-            log.info("new user data : {}", loginUser);
-            return new ModelAndView("login");
-        }
-
-        String errorMessage="";
+    public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, HttpSession session, RedirectAttributes redirectAttributes) {
+        String errorMessage = "";
         ResponseEntity<?> response = authenticate(loginUser);
         log.info(response.toString());
-        if(response.getStatusCode()==HttpStatus.OK){
-            Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+
+        if (responseBody == null) {
+            log.error("Unknown issue occurred in response body generation! please check the api call and relevant methods");
+            redirectAttributes.addFlashAttribute("loginError", "Unknown issue occurred,Please try again");
+            redirectAttributes.addFlashAttribute("loginUser", loginUser);
+            return new ModelAndView("redirect:/app/music/public/login");
+        }
+        if (response.getStatusCode() == HttpStatus.OK) {
             String token = "";
-            String message ="";
-
-            if(responseBody!=null){
-                token = (String) responseBody.get("token");
-                message=(String)responseBody.get("message");
-                errorMessage= (String)responseBody.get("error");
-            }
-
-
+            token = (String) responseBody.get("token");
             // Store in session (server-side)
             session.setAttribute("jwtToken", token);
             session.setAttribute("username", loginUser.getUsername());
 
             //store the token in cookies for client side
-            Cookie cookie = new Cookie("jwtToken",token);
+            Cookie cookie = new Cookie("jwtToken", token);
             cookie.setHttpOnly(true);
             cookie.setSecure(true);
             cookie.setPath("/");
             cookie.setMaxAge(3600);
-            cookie.setAttribute("username",loginUser.getUsername());
+            cookie.setAttribute("username", loginUser.getUsername());
             responseServlet.addCookie(cookie);
 
-            model.addAttribute("loginSuccess",message);
-            model.addAttribute("loginError","");
-            log.info("new user data : {}", loginUser);
+            log.info("Login Successfully ! logg in user data : {}", loginUser);
             return new ModelAndView("redirect:/app/music/dashboard");
-        }else{
-            model.addAttribute("loginError",errorMessage);
-            log.info("new user data : {}", loginUser);
-            return new ModelAndView("login");
+        } else {
+            errorMessage = (String) responseBody.get("error");
+            redirectAttributes.addFlashAttribute("loginError", errorMessage);
+            redirectAttributes.addFlashAttribute("loginUser", loginUser);
+            log.info("login failed! user data : {}", loginUser);
+            return new ModelAndView("redirect:/app/music/public/login");
         }
     }
 
     //    API
-    public ResponseEntity<?> authenticate( LoginUser loginUser) {
+    public ResponseEntity<?> authenticate(LoginUser loginUser) {
+        Map<String, Object> response = new HashMap<>();
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -120,51 +117,51 @@ public class PublicLoginController {
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            if(roomService.isUserPresentInAnyRoom(userDetails.getUsername())){
-                throw new RoomManageException("User already exist in one of the room");
+            if (roomService.isUserPresentInAnyRoom(userDetails.getUsername())) {
+                return ResponseEntity.badRequest().body("User already exist in one of the room");
             }
             String token = jwtTokenUtil.generateToken(userDetails.getUsername());
 
-            Map<String, Object> response = new HashMap<>();
+
             response.put("token", token);
             response.put("username", userDetails.getUsername());
             response.put("message", "Login successful");
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Invalid credentials");
-            return ResponseEntity.badRequest().body(error);
+            response.put("error", "Invalid credentials");
+            return ResponseEntity.badRequest().body(response);
         }
     }
+
     @PostMapping("/register")
-    public String registerUser(@Valid  @ModelAttribute("newUser") RegisterUser newUser,Errors error, Model model){
-        if(error.hasErrors()){
+    public ModelAndView registerUser(@Valid @ModelAttribute("newUser") RegisterUser newUser, Errors error, RedirectAttributes redirectAttributes) {
+        if (error.hasErrors()) {
             log.error("Register validation failed due to error : {}", error);
-            log.info("Register validation failed due to error : {}", error);
-            log.info("new user data : {}", newUser);
-            return "signup";
+            log.info("failed Dta ! : {}", newUser);
+            redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.newUser", error);
+            redirectAttributes.addFlashAttribute("newUser", newUser);
+            return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
         ResponseEntity<?> response = registerUserApi(newUser);
-        if(response.getStatusCode().equals(HttpStatus.CREATED)){
-            model.addAttribute("success","User created successfully");
-            log.info("new user data : {}", newUser);
-            return "redirect:/app/music/public/login";
-        }else{
-            model.addAttribute("error","Error while creating user.");
-            log.info("new user data : {}", newUser);
-            return "signup";
+        if (response.getStatusCode().equals(HttpStatus.CREATED)) {
+            log.info("New User created successfully! and his/her data : {}", newUser);
+            redirectAttributes.addFlashAttribute("showRegistrationSuccess", true);
+            return new ModelAndView("redirect:/app/music/public/login");
+        } else {
+            redirectAttributes.addAttribute("signUpError", "Error while creating user.Please try again");
+            redirectAttributes.addFlashAttribute("newUser", newUser);
+            log.error("failed to create new user! passed data : {}", newUser);
+            return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
     }
 
-    private ResponseEntity<String> registerUserApi(RegisterUser newUser){
+    private ResponseEntity<String> registerUserApi(RegisterUser newUser) {
         newUser.setRole(Role.LISTENER);
         String result = userService.registerUser(newUser);
 
-        return ResponseEntity.status(
-                HttpStatus.CREATED
-        ).body(result);
+        return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
     }
 }

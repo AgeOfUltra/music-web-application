@@ -1,12 +1,10 @@
 package com.music.musicwebapplication.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -34,23 +32,16 @@ public class SongControllerService {
     private final S3Client client;
     private final SongRepo repo;
 
-    private final ModelMapper mapper;
-    private final ModelMapper modelMapper;
-    private final ObjectMapper objectMapper;
 
     @Value("${aws.bucket.name}")
     private String bucketName;
 
-//    @Value("${cloud.aws.region.static}")
-//    private String region;
 
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo, ModelMapper mapper, ModelMapper modelMapper, ObjectMapper objectMapper){
+    SongControllerService(S3Client client, SongRepo repo){
         this.client = client;
         this.repo = repo;
-        this.mapper= mapper;
-        this.modelMapper = modelMapper;
-        this.objectMapper = objectMapper;
+
     }
 
     public String fileUploadHelper(MultipartFile file,
@@ -145,23 +136,3 @@ public class SongControllerService {
         return repo.findBySongNameContainingIgnoreCase(songName);
     }
 }
-
-
-/*
-*  async version
-*  public CompletableFuture<String> fileUploadHelperAsync(MultipartFile file, SongDto song) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return fileUploadHelper(file, song);
-            } catch (Exception e) {
-                logger.error("Async upload failed: {}", e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        }, executorService);
-    }
-*public void shutdown() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-        }
-    }
-* */
