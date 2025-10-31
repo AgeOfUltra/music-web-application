@@ -1,5 +1,3 @@
-
-
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
@@ -13,7 +11,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +22,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.annotation.RequestScope;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.HashMap;
@@ -33,13 +31,20 @@ import java.util.Map;
 @Slf4j
 @Controller
 @RequestMapping("/app/music/public")
-@RequiredArgsConstructor
+@RequestScope
 public class PublicLoginController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;
     private final RoomService roomService;
     private final RegisterUserService userService;
+
+    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.roomService = roomService;
+        this.userService = userService;
+    }
 
     // Return login page
     @GetMapping("/login")
@@ -56,7 +61,7 @@ public class PublicLoginController {
 
     // Handle login and return JWT token
     @PostMapping("/authenticate")
-    public ModelAndView loginUser(@Valid @ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, HttpSession session, Errors error, Model model) {
+    public ModelAndView loginUser(@Valid @ModelAttribute("loginUser") LoginUser loginUser,Errors error, HttpServletResponse responseServlet, HttpSession session,  Model model) {
         if(error.hasErrors()){
             log.error("Login validation failed due to error : {}", error);
             log.info("Register validation failed due to error : {}", error);
@@ -133,7 +138,7 @@ public class PublicLoginController {
         }
     }
     @PostMapping("/register")
-    public String registerUser(@Valid  @ModelAttribute("newUser") RegisterUser newUser, Model model,Errors error){
+    public String registerUser(@Valid  @ModelAttribute("newUser") RegisterUser newUser,Errors error, Model model){
         if(error.hasErrors()){
             log.error("Register validation failed due to error : {}", error);
             log.info("Register validation failed due to error : {}", error);
