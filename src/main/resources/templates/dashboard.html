@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,6 +94,14 @@
 
             <button type="submit" class="submit-btn btn-join">Join Room</button>
         </form>
+    </div>
+</div>
+<div class="container"  sec:authorize="isAuthenticated()">
+    <div class="upload-card">
+        <i class="bi bi-cloud-arrow-up"></i>
+        <h3>Upload Song</h3>
+        <p>Add your own music to the platform and share it with the community</p>
+        <a th:href="@{/app/music/admin/songUpload}" class="btn-upload">Upload New Song</a>
     </div>
 </div>
 

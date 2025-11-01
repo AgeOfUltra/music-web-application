@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.service;
 
-import com.music.musicwebapplication.dto.SongDto;
+import com.music.musicwebapplication.dto.SongContainer;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
@@ -44,12 +44,10 @@ public class SongControllerService {
 
     }
 
-    public String fileUploadHelper(MultipartFile file,
-                                   SongDto song) throws Exception {
-
+    public String fileUploadHelper(SongContainer container) throws Exception {
         log.info("Song uploading process started");
 
-        Optional<Song> currentSong = repo.findSongBySongName(song.getSongName());
+        Optional<Song> currentSong = repo.findSongBySongName(container.getSongName());
 
         if(currentSong.isPresent()){
             log.info("Song uploading failed! because song already exist in data base with id {}",currentSong.get().getId());
@@ -57,13 +55,13 @@ public class SongControllerService {
         }
 
         try{
-            String s3key = uploadFile(file);
+            String s3key = uploadFile(container.getFile());
             log.info("Song uploaded successfully with key {}",s3key);
 
             String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
-            Song uploadedSong = updateSongInDb(song,url);
+            Song uploadedSong = updateSongInDb(container,url);
             log.info("song saved with name {}",uploadedSong.getSongName());
 
             return "Song uploaded and saved successfully";
@@ -93,7 +91,7 @@ public class SongControllerService {
 
 
 
-    protected Song updateSongInDb(SongDto song, String url){
+    protected Song updateSongInDb(SongContainer song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
         newSong.setFileName(song.getFileName());

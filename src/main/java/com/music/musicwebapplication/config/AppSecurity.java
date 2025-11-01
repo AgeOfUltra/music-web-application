@@ -44,13 +44,16 @@ public class AppSecurity {
                                 "/app/music/public/**",
                                 "/favicon.ico", "/app_logo.png","/css/**","/js/**")
                         .permitAll()
+                        .requestMatchers("/app/music/admin/**").hasRole("ADMIN")
                         .requestMatchers("/app/music/room/**",
                                 "/app/music/chat/",
                                 "/app/music/chat/**",
                                 "/app/music/dashboard",
                                 "/app/music/fetchAllSongs",
                                 "/app/music/searchSong").authenticated()
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated()
+                       )
+
 
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
 
