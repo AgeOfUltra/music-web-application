@@ -838,4 +838,11 @@ window.addEventListener('beforeunload', () => {
             content: `${currentUsername} left the room`
         }));
     }
+
+    // Handle success message
+    const successMessageContainer = document.getElementById('successMessage');
+    const successMessage = successMessageContainer.textContent.trim();
+    if (successMessage === 'true') {
+        notifier.success('Room created successfully! Redirecting to chat...', 0);
+    }
 });

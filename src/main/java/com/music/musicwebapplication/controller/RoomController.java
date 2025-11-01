@@ -1,10 +1,15 @@
 package com.music.musicwebapplication.controller;
 
+import com.music.musicwebapplication.dto.CreateRoom;
+import com.music.musicwebapplication.dto.JoinRoom;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.exception.RoomManageException;
+import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.utils.ColorUsageUtil;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,8 +17,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,23 +59,54 @@ public class RoomController {
 
 //        Actual method
     @PostMapping("/room/create")
-    public ModelAndView createRoom(@RequestParam String roomName, @RequestParam int maxCount, @RequestParam String username ) {
+    public ModelAndView createRoom(@Valid @ModelAttribute("newRoom") CreateRoom newRoom, Errors error, RedirectAttributes redirectAttributes, Authentication auth) {
 
-        ResponseEntity<?> response= createRoomApi(roomName, maxCount, username);
-        if(response.getStatusCode().equals(HttpStatus.OK)){
-            return new ModelAndView("redirect:/app/music/chat?roomName="+roomName);
-        }else{
-            return new ModelAndView("error").addObject("message", "Room creation failed");
+        if(error.hasErrors()){
+            log.error("Room validation failed due to error : {}", error);
+            log.info("failed Data ! : {}", newRoom);
+            redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.newRoom", error);
+            redirectAttributes.addFlashAttribute("newRoom", newRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
         }
+        newRoom.setCreatedBy(auth.getName());
+        log.info("Room created by {} ",newRoom.getCreatedBy());
+        try {
+            ResponseEntity<?> response = createRoomApi(newRoom);
+            if(response.getStatusCode().equals(HttpStatus.OK)){
+                log.info("{} room is created successfully !", newRoom);
+                redirectAttributes.addFlashAttribute("roomCreatedSuccessful",true); // need to show in the chat.html
+                return new ModelAndView("redirect:/app/music/chat?roomName="+newRoom.getRoomName());
+            }else{
+                log.error("room created failed! data : {}", response);
+                log.info("room created failed! data : {}", response);
+                redirectAttributes.addFlashAttribute("creationError","room creation failed. Please try again."); // need to show in dashboard.html
+                redirectAttributes.addFlashAttribute("newRoom", newRoom);
+                return new ModelAndView("redirect:/app/music/dashboard");
+            }
+
+        } catch (RoomManageException | RoomNotFoundException e) {
+            log.error("Room creation error: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("creationError", e.getMessage());
+            redirectAttributes.addFlashAttribute("newRoom", newRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
+
+        }
+        catch (Exception e) {
+            log.error("Unexpected error during room creation: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("creationError", "An unexpected error occurred: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("newRoom", newRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
+
 
     }
 //    API
-    private ResponseEntity<Room> createRoomApi(String roomName,int maxCount,String username ){
+    private ResponseEntity<Room> createRoomApi(CreateRoom newRoom ) throws Exception{
         Room roomBuild = new Room();
-        roomBuild.setRoomName(roomName);
-        roomBuild.setMaxCount(maxCount);
+        roomBuild.setRoomName(newRoom.getRoomName());
+        roomBuild.setMaxCount(newRoom.getMaxCount());
         Participant participant = new Participant();
-        participant.setUserName(username);
+        participant.setUserName(newRoom.getCreatedBy());
         participant.setOrganizer(true);
         List<Participant> participants = new ArrayList<>();
         participants.add(participant);
@@ -80,14 +118,31 @@ public class RoomController {
 
     @PostMapping("/room/join")
 //    Actual method for join room
-    public ModelAndView joinRoom(@RequestParam String roomName, @RequestParam String username) {
-        ResponseEntity<?> response = joinRoomApi(roomName, username);
-        if (response.getStatusCode().equals(HttpStatus.OK)) {
-            // Notify all users in the room about the new participant
-            broadcastParticipantUpdate(roomName);
-            return new ModelAndView("redirect:/app/music/chat?roomName=" + roomName);
-        } else {
-            return new ModelAndView("error").addObject("message", "Room Login Failed");
+    public ModelAndView joinRoom(@ModelAttribute("joinRoom")JoinRoom joinRoom,RedirectAttributes redirectAttributes,Authentication auth) {
+        ResponseEntity<?> response;
+        joinRoom.setParticipantName(auth.getName());
+        try{
+            response = joinRoomApi(joinRoom);
+            if(response.getStatusCode().equals(HttpStatus.OK)) {
+                log.info("Successfully logged-in! {}",joinRoom);
+                redirectAttributes.addFlashAttribute("roomJoinedSuccessful",true);
+                return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomName());
+            }else{
+                log.error("room joined failed! data : {}", response);
+                redirectAttributes.addFlashAttribute("joinError", "Unable to join Room! please try again.");
+                redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
+                return new ModelAndView("redirect:/app/music/dashboard");
+            }
+        }catch (RoomManageException | RoomNotFoundException e){
+            log.error("Room join error: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("joinError", e.getMessage());
+            redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
+        } catch(Exception e){
+            log.error("Unexpected error during room join: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("joinError", "An unexpected error occurred: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
         }
     }
 
@@ -105,11 +160,11 @@ public class RoomController {
 
 
 //    API
-    private ResponseEntity<Participant> joinRoomApi(String roomName,String username){
+    private ResponseEntity<Participant> joinRoomApi(JoinRoom joinRoom) throws Exception{
         Participant newParticipant = new Participant();
-        newParticipant.setUserName(username);
+        newParticipant.setUserName(joinRoom.getParticipantName());
         newParticipant.setOrganizer(false);
-        Participant participant = rService.joinRoom(roomName,newParticipant);
+        Participant participant = rService.joinRoom(joinRoom.getRoomName(),newParticipant);
         return ResponseEntity.ok(participant);
     }
 

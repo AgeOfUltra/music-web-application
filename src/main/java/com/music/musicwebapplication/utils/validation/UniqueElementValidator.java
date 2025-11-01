@@ -1,5 +1,6 @@
 package com.music.musicwebapplication.utils.validation;
 
+import com.music.musicwebapplication.repo.RoomRepo;
 import com.music.musicwebapplication.repo.UserRepo;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -8,10 +9,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class UniqueElementValidator implements ConstraintValidator<UniqueValidator,String> {
-    @Autowired
-    private UserRepo userRepository;
+    private final UserRepo userRepository;
+    private final RoomRepo roomRepo;
 
     private String fieldName;
+
+    public UniqueElementValidator(UserRepo userRepository, RoomRepo roomRepo) {
+        this.userRepository = userRepository;
+        this.roomRepo = roomRepo;
+    }
 
     @Override
     public void initialize(UniqueValidator annotation) {
@@ -28,6 +34,7 @@ public class UniqueElementValidator implements ConstraintValidator<UniqueValidat
             boolean exists = switch(fieldName) {
                 case "username" -> userRepository.existsByUsername(value);
                 case "email" -> userRepository.existsByEmail(value);
+                case "roomName" -> roomRepo.existsByRoomName(value);
                 default -> false;
             };
 
