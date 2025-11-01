@@ -96,7 +96,7 @@
         </form>
     </div>
 </div>
-<div class="container"  sec:authorize="isAuthenticated()">
+<div class="container"  sec:authorize="hasRole('ADMIN')" >
     <div class="upload-card">
         <i class="bi bi-cloud-arrow-up"></i>
         <h3>Upload Song</h3>
