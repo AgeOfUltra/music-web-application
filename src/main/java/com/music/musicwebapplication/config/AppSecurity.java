@@ -49,8 +49,7 @@ public class AppSecurity {
                                 "/app/music/chat/",
                                 "/app/music/chat/**",
                                 "/app/music/dashboard",
-                                "/app/music/fetchAllSongs",
-                                "/app/music/searchSong").authenticated()
+                                "/app/music/audio/**").authenticated()
                         .anyRequest().authenticated()
                        )
 

@@ -13,7 +13,6 @@ let ignoreLocalEvents = false;
 let jwtToken = null;
 let audioLoadTimeout = null;
 let currentSongData = null;
-let isClosing = false;
 const userColors = {};
 const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 
@@ -44,7 +43,6 @@ function initializePage() {
     connectWebSocket(jwtToken);
     loadSongs();
     initializeToastNotifications();
-    setupLogoutButton();
 
     const songList = document.getElementById('songList');
     if (songList) {
@@ -142,7 +140,7 @@ function setupAudioPlayerListeners() {
 
     console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
 
-    // ✅ ORGANIZER: Send PAUSE command when pause button is clicked
+    // Only organizer can send pause events
     audioPlayer.addEventListener('pause', () => {
         if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src) {
             const playbackMessage = {
@@ -155,25 +153,7 @@ function setupAudioPlayerListeners() {
         }
     });
 
-    // ✅ NEW: ORGANIZER: Send RESUME command when play button is clicked
-    audioPlayer.addEventListener('play', () => {
-        if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src && currentSongData) {
-            const playbackMessage = {
-                action: 'RESUME',
-                timestamp: Math.floor(audioPlayer.currentTime * 1000),
-                controller: currentUsername,
-                songFileName: currentSongData.songFileName,
-                songName: currentSongData.songName,
-                hero: currentSongData.hero,
-                heroine: currentSongData.heroine,
-                language: currentSongData.language
-            };
-            console.log('▶️ [ORGANIZER] Sending RESUME command:', playbackMessage);
-            stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
-        }
-    });
-
-    // ✅ Prevent non-organizer from playing audio manually
+    // Prevent non-organizer from playing audio manually
     if (!isOrganizer) {
         console.log('🔒 [NON-ORGANIZER] Locking audio player...');
 
@@ -304,6 +284,9 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
             if (!metadataLoaded) {
                 console.warn('   ⚠️ Metadata loading timeout, attempting to play anyway');
                 audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
+
+                // CRITICAL FIX: Keep ignoreLocalEvents = true during recovery
+                // This prevents pause listener from sending PAUSE command
 
                 audioPlayer.currentTime = startTime;
                 const playPromise = audioPlayer.play();
@@ -456,12 +439,7 @@ function resumeSong() {
     const resumeMessage = {
         action: 'RESUME',
         timestamp: Math.floor(audioPlayer.currentTime * 1000),
-        controller: currentUsername,
-        songFileName: currentSongData?.songFileName,
-        songName: currentSongData?.songName,
-        hero: currentSongData?.hero,
-        heroine: currentSongData?.heroine,
-        language: currentSongData?.language
+        controller: currentUsername
     };
 
     console.log('▶️ [ORGANIZER] Sending RESUME command');
@@ -864,162 +842,46 @@ function closeSearchDrawer() {
     document.getElementById('searchResults').innerHTML = '';
 }
 
-// ==================== TAB CLOSE / PAGE UNLOAD LOGOUT ====================
+// ==================== LOGOUT ====================
+async function logout() {
+    if (participantRefreshInterval) clearInterval(participantRefreshInterval);
 
-// Single beforeunload handler
-window.addEventListener('beforeunload', function(event) {
-    handleTabClose();
-    event.preventDefault();
-    event.returnValue = '';
-});
-
-// Unload event for mobile browsers
-window.addEventListener('unload', function() {
-    handleTabClose();
-});
-
-// Pagehide event for modern browsers
-window.addEventListener('pagehide', function(event) {
-    if (event.persisted === false) {
-        handleTabClose();
-    }
-});
-
-// ==================== HANDLE TAB CLOSE ====================
-
-function handleTabClose() {
-    console.log('🔌 Tab/Window is closing - Initiating logout...');
-
-    // Prevent duplicate execution
-    if (isClosing) {
-        console.log('⚠️ Already closing, skipping duplicate handleTabClose');
-        return;
-    }
-    isClosing = true;
-
-    // Clear participant refresh interval
-    if (participantRefreshInterval) {
-        clearInterval(participantRefreshInterval);
-        console.log('✅ Cleared participant refresh interval');
-    }
-
-    // Disconnect WebSocket and send LEAVE message
     if (stompClient && stompClient.connected) {
-        console.log('📤 Sending LEAVE message via WebSocket');
-
-        try {
-            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'LEAVE',
-                content: `${currentUsername} left the room`
-            }));
-
-            stompClient.disconnect();
-            console.log('✅ WebSocket disconnected');
-        } catch (error) {
-            console.error('❌ Error during WebSocket cleanup:', error);
-        }
+        stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
+            sender: currentUsername,
+            type: 'LEAVE',
+            content: `${currentUsername} left the room`
+        }));
+        stompClient.disconnect();
     }
 
-    // Call logout API
-    logoutUser();
-
-    // Clear session data
-    clearSessionData();
-}
-
-// ==================== LOGOUT FUNCTION ====================
-
-async function logoutUser() {
     try {
-        console.log('🚪 Calling logout API for user:', currentUsername);
-
-        // Leave the room via API with keepalive
-        const response = await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
+        await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${jwtToken}`,
-                'Content-Type': 'application/json'
-            },
-            keepalive: true // Ensures request completes even if tab closes
+                'Authorization': `Bearer ${jwtToken}`
+            }
         });
-
-        console.log('✅ User logged out successfully');
     } catch (error) {
-        console.error('❌ Logout error:', error);
+        console.error('Error leaving room:', error);
     }
-}
 
-// ==================== CLEAR SESSION DATA ====================
-
-function clearSessionData() {
-    console.log('🧹 Clearing session data...');
-
-    // Clear authentication tokens
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('username');
     localStorage.removeItem('currentRoom');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userSession');
-
-    // Clear user info
-    sessionStorage.clear();
-
-    // Clear cookies
     document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
-
-    console.log('✅ Session data cleared');
+    window.location.href = '/app/music/public/login';
 }
 
-// ==================== LOGOUT BUTTON HANDLER ====================
+// ==================== WINDOW UNLOAD ====================
+window.addEventListener('beforeunload', () => {
+    if (participantRefreshInterval) clearInterval(participantRefreshInterval);
 
-function setupLogoutButton() {
-    const logoutBtn = document.querySelector('.logout-btn');
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async function(e) {
-            e.preventDefault();
-            console.log('👤 Logout button clicked');
-
-            // Mark as closing to prevent duplicate calls
-            isClosing = true;
-
-            // Clear participant refresh interval
-            if (participantRefreshInterval) {
-                clearInterval(participantRefreshInterval);
-            }
-
-            // Send LEAVE message via WebSocket
-            if (stompClient && stompClient.connected) {
-                try {
-                    stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                        sender: currentUsername,
-                        type: 'LEAVE',
-                        content: `${currentUsername} left the room`
-                    }));
-                    stompClient.disconnect();
-                } catch (error) {
-                    console.error('Error sending LEAVE message:', error);
-                }
-            }
-
-            // Call logout API
-            try {
-                await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${jwtToken}`
-                    }
-                });
-            } catch (error) {
-                console.error('Error leaving room:', error);
-            }
-
-            // Clear session data
-            clearSessionData();
-
-            // Redirect to login
-            window.location.href = '/app/music/public/login';
-        });
+    if (stompClient && stompClient.connected) {
+        stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
+            sender: currentUsername,
+            type: 'LEAVE',
+            content: `${currentUsername} left the room`
+        }));
     }
-}
+});

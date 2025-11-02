@@ -74,7 +74,7 @@ public class RoomController {
             ResponseEntity<?> response = createRoomApi(newRoom);
             if(response.getStatusCode().equals(HttpStatus.OK)){
                 log.info("{} room is created successfully !", newRoom);
-                redirectAttributes.addFlashAttribute("roomCreatedSuccessful",true); // need to show in the chat.html
+                redirectAttributes.addFlashAttribute("roomCreatedSuccessful","Room Created successfully"); // need to show in the chat.html
                 return new ModelAndView("redirect:/app/music/chat?roomName="+newRoom.getRoomName());
             }else{
                 log.error("room created failed! data : {}", response);
@@ -125,7 +125,7 @@ public class RoomController {
             response = joinRoomApi(joinRoom);
             if(response.getStatusCode().equals(HttpStatus.OK)) {
                 log.info("Successfully logged-in! {}",joinRoom);
-                redirectAttributes.addFlashAttribute("roomJoinedSuccessful",true);
+                redirectAttributes.addFlashAttribute("roomJoinedSuccessful","Joined the room successfully");
                 return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomName());
             }else{
                 log.error("room joined failed! data : {}", response);

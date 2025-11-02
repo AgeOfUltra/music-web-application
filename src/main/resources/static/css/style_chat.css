@@ -34,6 +34,7 @@ body::before {
     pointer-events: none;
 }
 
+/* ==================== HEADER ==================== */
 .header {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -87,6 +88,7 @@ body::before {
     box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
+/* ==================== MAIN CONTAINER ==================== */
 .main-container {
     display: grid;
     grid-template-columns: 380px 1fr 400px;
@@ -95,6 +97,7 @@ body::before {
     padding: 15px;
 }
 
+/* ==================== LEFT PANEL (MUSIC PLAYER) ==================== */
 .left-panel {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -124,13 +127,63 @@ body::before {
     font-weight: 600;
     margin-bottom: 5px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    word-break: break-word;
+    max-height: 50px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .song-details {
     color: rgba(255, 255, 255, 0.8);
     font-size: 12px;
+    word-break: break-word;
+    max-height: 35px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
+/* ==================== AUDIO PLAYER ==================== */
+#audioPlayerWrapper {
+    margin: 10px 0;
+}
+
+#audioPlayerWrapper audio {
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+}
+
+#audioPlayerWrapper.organizer-audio audio {
+    opacity: 1;
+    cursor: pointer;
+}
+
+#audioPlayerWrapper.readonly-audio {
+    opacity: 0.6;
+}
+
+#audioPlayerWrapper.readonly-audio audio {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ==================== PERMISSION NOTICE ==================== */
+.permission-notice {
+    background: rgba(255, 200, 0, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    border: 1px solid rgba(255, 200, 0, 0.3);
+    border-radius: 8px;
+    margin: 0 10px 10px 10px;
+}
+
+/* ==================== BUTTONS ==================== */
 .search-btn {
     width: 100%;
     padding: 10px;
@@ -144,6 +197,7 @@ body::before {
     transition: all 0.3s;
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
+    font-family: "Alan Sans", sans-serif;
 }
 
 .search-btn:hover {
@@ -153,6 +207,13 @@ body::before {
     box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
+.search-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ==================== SONG LIST ==================== */
 .song-list {
     flex: 1;
     overflow-y: auto;
@@ -190,13 +251,26 @@ body::before {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
+    word-break: break-word;
+    max-height: 40px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .song-item-info {
     color: rgba(255, 255, 255, 0.7);
     font-size: 11px;
+    word-break: break-word;
+    max-height: 20px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
 }
 
+/* ==================== MIDDLE PANEL (CHAT) ==================== */
 .middle-panel {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -222,6 +296,7 @@ body::before {
     color: #ffffff;
     margin-bottom: 5px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    word-break: break-word;
 }
 
 .room-user-info {
@@ -236,6 +311,7 @@ body::before {
     font-size: 13px;
 }
 
+/* ==================== CHAT MESSAGES ==================== */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -254,6 +330,7 @@ body::before {
     display: flex;
     align-items: center;
     margin-bottom: 5px;
+    flex-wrap: wrap;
 }
 
 .message-sender {
@@ -262,8 +339,6 @@ body::before {
     padding: 5px 12px;
     border-radius: 12px;
     color: white;
-    background: rgba(102, 126, 234, 0.3);
-    backdrop-filter: blur(5px);
     box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
 }
 
@@ -303,6 +378,7 @@ body::before {
     opacity: 0;
 }
 
+/* ==================== CHAT INPUT ==================== */
 .chat-input-container {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(64, 230, 226, 0.2) 100%);
     padding: 15px 20px;
@@ -322,6 +398,7 @@ body::before {
     color: #ffffff;
     transition: all 0.3s;
     backdrop-filter: blur(5px);
+    font-family: "Alan Sans", sans-serif;
 }
 
 .chat-input::placeholder {
@@ -346,6 +423,7 @@ body::before {
     transition: all 0.3s;
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-family: "Alan Sans", sans-serif;
 }
 
 .send-btn:hover {
@@ -355,6 +433,13 @@ body::before {
     box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
+.send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ==================== RIGHT PANEL (PARTICIPANTS) ==================== */
 .right-panel {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -398,6 +483,8 @@ body::before {
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 4px 12px rgba(31, 38, 135, 0.1);
     transition: all 0.3s;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .participant-item:hover {
@@ -411,9 +498,10 @@ body::before {
     font-size: 14px;
     padding: 6px 12px;
     border-radius: 15px;
-    background: rgba(102, 126, 234, 0.3);
-    backdrop-filter: blur(5px);
     box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
+    flex: 1;
+    word-break: break-word;
+    min-width: 100px;
 }
 
 .organizer-badge {
@@ -425,8 +513,10 @@ body::before {
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(31, 38, 135, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
 }
 
+/* ==================== SEARCH DRAWER ==================== */
 .search-drawer {
     position: fixed;
     top: 0;
@@ -460,6 +550,7 @@ body::before {
 }
 
 .drawer-header h2 {
+    margin: 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -474,6 +565,9 @@ body::before {
     border-radius: 50%;
     transition: all 0.3s;
     backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .drawer-close:hover {
@@ -484,6 +578,9 @@ body::before {
 .drawer-search {
     padding: 20px;
     background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .drawer-search input {
@@ -496,6 +593,7 @@ body::before {
     color: #ffffff;
     transition: all 0.3s;
     backdrop-filter: blur(5px);
+    font-family: "Alan Sans", sans-serif;
 }
 
 .drawer-search input::placeholder {
@@ -516,6 +614,134 @@ body::before {
     background: rgba(255, 255, 255, 0.05);
 }
 
+.drawer-results .song-item {
+    margin-bottom: 10px;
+    padding: 12px;
+}
+
+.no-results {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 40px 20px;
+    font-size: 14px;
+}
+
+.loading {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 20px;
+    font-size: 14px;
+}
+
+/* ==================== TOAST NOTIFICATIONS ==================== */
+#toastContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 500px;
+    pointer-events: none;
+}
+
+.toast {
+    min-width: 300px;
+    max-width: 500px;
+    margin-bottom: 10px;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: #323232;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-in-out;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: "Alan Sans", sans-serif;
+    pointer-events: auto;
+}
+
+.toast.success {
+    background-color: #4caf50;
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.toast.error {
+    background-color: #f44336;
+    border-color: rgba(244, 67, 54, 0.3);
+}
+
+.toast.info {
+    background-color: #2196F3;
+    border-color: rgba(33, 150, 243, 0.3);
+}
+
+.toast.warning {
+    background-color: #ff9800;
+    border-color: rgba(255, 152, 0, 0.3);
+}
+
+.toast-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    font-weight: bold;
+}
+
+.toast-message {
+    flex: 1;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+    opacity: 0.8;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast.removing {
+    animation: slideOut 0.3s ease-in-out forwards;
+}
+
+/* ==================== SCROLLBAR ==================== */
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -534,42 +760,7 @@ body::before {
     background: linear-gradient(180deg, rgba(102, 126, 234, 0.6) 0%, rgba(64, 230, 226, 0.6) 100%);
 }
 
-.loading {
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 20px;
-    font-size: 14px;
-}
-
-.permission-notice {
-    background: rgba(255, 200, 0, 0.2);
-    color: rgba(255, 255, 255, 0.9);
-    padding: 8px;
-    text-align: center;
-    font-size: 12px;
-    border-bottom: 1px solid rgba(255, 200, 0, 0.3);
-    border-radius: 8px;
-}
-
-/* Audio player styles */
-#audioPlayerWrapper.organizer-audio audio {
-    width: 100%;
-    margin-top: 10px;
-    cursor: pointer;
-}
-
-#audioPlayerWrapper.readonly-audio {
-    opacity: 0.5;
-}
-
-#audioPlayerWrapper.readonly-audio audio {
-    width: 100%;
-    margin-top: 10px;
-    pointer-events: none;
-    cursor: not-allowed;
-}
-
-/* Responsive Design */
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
     .main-container {
         grid-template-columns: 300px 1fr 300px;
@@ -581,30 +772,83 @@ body::before {
 }
 
 @media (max-width: 768px) {
+    body {
+        overflow: auto;
+    }
+
     .main-container {
+        display: grid;
         grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        height: auto;
+        min-height: calc(100vh - 90px);
+        gap: 10px;
         padding: 10px;
     }
 
-    .left-panel,
-    .middle-panel,
-    .right-panel {
-        display: none;
-        position: fixed;
-        top: 90px;
-        width: calc(100vw - 20px);
-        height: calc(100vh - 110px);
-        z-index: 50;
+    .left-panel {
+        display: flex;
+        width: 100%;
         margin-right: 0;
-        margin-bottom: 10px;
-        border-radius: 15px;
+        margin-bottom: 0;
+        order: 2;
+        max-height: none;
+    }
+
+    .song-list {
+        display: none !important;
     }
 
     .middle-panel {
         display: flex;
+        width: 100%;
+        margin-right: 0;
+        order: 3;
+        min-height: 450px;
+        flex: 1;
+    }
+
+    .right-panel {
+        display: flex;
+        width: 100%;
+        margin-right: 0;
+        order: 1;
+        max-height: none;
+        min-height: 200px;
+    }
+
+    .chat-messages {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .participants-list {
+        max-height: 200px;
+        overflow-y: auto;
     }
 
     .message-content {
         max-width: 85%;
+    }
+
+    .search-drawer {
+        width: 100%;
+        left: -100%;
+    }
+
+    .search-drawer.open {
+        left: 0;
+    }
+
+    #toastContainer {
+        max-width: calc(100vw - 20px);
+        width: 100%;
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: 100%;
     }
 }

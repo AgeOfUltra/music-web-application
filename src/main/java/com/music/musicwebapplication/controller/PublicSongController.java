@@ -22,7 +22,7 @@ import java.util.List;
 
 
 @Controller
-@RequestMapping("/app/music")
+@RequestMapping("/app/music/audio")
 @Slf4j
 public class PublicSongController {
 
@@ -33,7 +33,7 @@ public class PublicSongController {
         this.songControllerService = songControllerService;
     }
 
-    @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
         log.info("Initiated the song Stream Request for file name : {}",name);
         ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);

@@ -18,9 +18,11 @@
     </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
+
 <!-- Success Message Container (hidden) -->
 <div id="successMessageCreate" style="display: none;" th:text="${roomCreatedSuccessful}"></div>
 <div id="successMessageJoin" style="display: none;" th:text="${roomJoinedSuccessful}"></div>
+
 <div class="main-container">
     <div class="left-panel">
         <div class="music-player">
@@ -33,20 +35,13 @@
             </div>
             <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
         </div>
+
         <div id="permissionNotice" class="permission-notice" style="display: none;">
             Only the organizer can control playback
         </div>
+
         <div class="song-list" id="songList">
-            <div class="song-item" th:each="song : ${ALLSONGS}"
-                 th:data-filename="${song.fileName}"
-                 th:data-songname="${song.songName}"
-                 th:data-hero="${song.hero}"
-                 th:data-heroine="${song.heroine}"
-                 th:data-language="${song.language}"
-                 onclick="handleSongClick(this)">
-                <div class="song-item-title" th:text="${song.songName}"></div>
-                <div class="song-item-info" th:text="${song.hero} + ' • ' + ${song.heroine} + ' • ' + ${song.language}"></div>
-            </div>
+            <!-- Songs loaded dynamically via JavaScript -->
         </div>
     </div>
 
@@ -71,12 +66,7 @@
             <div class="online-title">Online Participants</div>
         </div>
         <div class="participants-list" id="participantsList">
-            <div class="participant-item" th:each="participant : ${participants}">
-                <div class="participant-name"
-                     th:style="'background: linear-gradient(135deg, ' + ${userColor} + ', ' + ${darkerColor} + ')'"
-                     th:text="${participant.userName}"></div>
-                <span class="organizer-badge" th:if="${participant.organizer}">Organizer</span>
-            </div>
+            <!-- Participants loaded dynamically via JavaScript -->
         </div>
     </div>
 </div>
@@ -88,10 +78,14 @@
     </div>
     <div class="drawer-search">
         <input type="text" id="searchInput" placeholder="Search by song name..." onkeypress="handleSearchEnter(event)">
+        <button class="search-btn" onclick="searchSongs()" style="margin-top: 10px; width: 100%;">Search</button>
     </div>
     <div class="drawer-results" id="searchResults"></div>
 </div>
-<div class="toast-container-custom" id="toastContainer"></div>
+
+<!-- Toast Container -->
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/

@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
-@Controller
+//@Controller
 @Slf4j
 @RequiredArgsConstructor
 public class PlaybackController {
@@ -23,8 +23,8 @@ public class PlaybackController {
     private final SimpMessagingTemplate messagingTemplate;
     private final RoomRepo roomRepo;
 
-    @MessageMapping("/chat/{roomName}/playback")
-    @Transactional(readOnly = true)
+//    @MessageMapping("/chat/{roomName}/playback")
+//    @Transactional(readOnly = true)
     public void handlePlayback(@DestinationVariable String roomName,
                                @Payload Map<String, Object> message,
                                @Header(value = "simpSessionAttributes", required = false) Map<String, Object> sessionAttributes) {

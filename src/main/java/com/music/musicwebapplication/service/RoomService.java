@@ -25,9 +25,8 @@ public class RoomService {
         this.repo = repo;
         this.participantRepo = participantRepo;
     }
-
+    @Transactional
     public Room createRoom(Room room){
-
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
         if(isUserPresentInAnyRoom(room.getParticipant().get(0).getUserName())){
             throw new RoomManageException("User already exist in one of the room");
