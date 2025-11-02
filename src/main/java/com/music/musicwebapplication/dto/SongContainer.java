@@ -28,7 +28,6 @@ public class SongContainer {
     @NotBlank(message = "Language is required")
     private String language;
 
-    @NotBlank(message = "Hero name required")
     private String hero;
 
     private String heroine;

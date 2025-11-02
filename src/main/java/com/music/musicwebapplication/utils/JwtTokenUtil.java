@@ -18,7 +18,7 @@ import java.util.Date;
 @SessionScope
 public class JwtTokenUtil {
 
-    private static final long EXPIRY_DATE = 1000 * 60 * 30; // 30 minutes
+    private static final long EXPIRY_DATE = 1000 * 60 * 60; // 30 minutes
 
     @Value("${jwt.security.secret-key:your-secret-key-here-min-256-bits-long}")
     private String secretString;
