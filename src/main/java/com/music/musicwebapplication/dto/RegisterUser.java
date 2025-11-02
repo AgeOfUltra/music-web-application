@@ -29,7 +29,7 @@ public class RegisterUser {
     @Email(message = "provide an valid fieldName address")
     @UniqueValidator(
             fieldName = "email",
-            message = "This fieldName is already registered"
+            message = "This email is already registered"
     )
     private String email;
 
