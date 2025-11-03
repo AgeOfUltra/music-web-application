@@ -1,0 +1,205 @@
+<!-- FILE: templates/fragments/loader.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .mini-loader {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            margin: 0 auto 20px;
+        }
+
+        .note {
+            position: absolute;
+            font-size: 24px;
+            color: white;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+            animation: orbit 1.5s linear infinite;
+        }
+
+        .note1 {
+            animation-delay: 0s;
+        }
+
+        .note2 {
+            animation-delay: 0.5s;
+        }
+
+        .note3 {
+            animation-delay: 1s;
+        }
+
+        .chat {
+            position: absolute;
+            font-size: 20px;
+            color: #ffd700;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+            animation: chatOrbit 1.5s linear infinite;
+        }
+
+        .chat1 {
+            animation-delay: 0.3s;
+        }
+
+        .chat2 {
+            animation-delay: 1.2s;
+        }
+
+        @keyframes orbit {
+            0% {
+                transform: translate(25px, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(0, -25px) rotate(180deg) scale(0.8);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate(-25px, 0) rotate(360deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes chatOrbit {
+            0% {
+                transform: translate(-25px, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(0, 25px) rotate(180deg) scale(0.8);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate(25px, 0) rotate(360deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots span {
+            animation: blink 1.4s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loader Fragment - Include this in any page -->
+<div th:fragment="loader">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="mini-loader">
+                <div class="note note1">♪</div>
+                <div class="chat chat1">💬</div>
+                <div class="note note2">♫</div>
+                <div class="chat chat2">💬</div>
+                <div class="note note3">♪</div>
+            </div>
+            <div class="loading-text">
+                Connecting Notes
+                <div class="loading-dots">
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Loader Plugin
+        window.LoaderPlugin = {
+            show: function() {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.classList.add('show');
+                }
+            },
+            hide: function() {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.classList.remove('show');
+                }
+            },
+            // Auto-show on form submit
+            initFormSubmit: function(formId) {
+                const form = document.getElementById(formId);
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        window.LoaderPlugin.show();
+                    });
+                }
+            },
+            // Hide on error
+            hideOnError: function(errorElementId) {
+                const errorElement = document.getElementById(errorElementId);
+                if (errorElement && errorElement.textContent.trim()) {
+                    window.LoaderPlugin.hide();
+                }
+            }
+        };
+
+        // Hide loader on page load if there are errors
+        window.addEventListener('load', function() {
+            window.LoaderPlugin.hideOnError('errorMessage');
+        });
+    </script>
+</div>
+
+</body>
+</html>

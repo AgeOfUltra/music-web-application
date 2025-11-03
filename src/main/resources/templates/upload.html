@@ -12,6 +12,8 @@
 
 </head>
 <body>
+<div th:replace="fragments/loader"></div>
+
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg">
     <div class="container-fluid px-3 px-md-4">
@@ -175,6 +177,21 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize loader for Upload form
+    LoaderPlugin.initFormSubmit('uploadForm');
+
+    // Hide loader if there are field errors
+    LoaderPlugin.hideOnError('fieldErrors');
+
+    // Hide loader if upload was successful (prevents loader from showing during success toast)
+    window.addEventListener('load', function() {
+        const successToast = document.getElementById('successToast');
+        if (successToast) {
+            LoaderPlugin.hide();
+        }
+    });
+</script>
 <script th:src="@{/js/script_upload.js}"></script>
 </body>
 </html>
