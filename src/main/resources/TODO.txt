@@ -1,3 +1,1 @@
-1) need to add the validation at the controller layer.
-
-2) if the user is closing the tab then need to implement the logout and upon pressing back button need to logout
+1) need to implement the cache and stream the song from the cache

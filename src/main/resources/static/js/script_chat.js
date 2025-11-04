@@ -16,6 +16,8 @@ const userColors = {};
 const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 let currentPage = 0;
 let totalPages = 1;
+let lastActionTime = 0;
+const ACTION_COOLDOWN = 800; // ms
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
     initializePage();
@@ -276,6 +278,7 @@ function setupAudioPlayerListeners() {
 
 // ==================== PLAYBACK HANDLING ====================
 function handlePlaybackCommand(playbackMsg) {
+
     const audioPlayer = document.getElementById('audioPlayer');
 
     if (!audioPlayer) {
