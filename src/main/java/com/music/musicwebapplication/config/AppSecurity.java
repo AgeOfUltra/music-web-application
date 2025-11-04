@@ -42,6 +42,7 @@ public class AppSecurity {
                                 "/api/music/**",
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
+                                "/app/music/audio/public/streamSong/**",
                                 "/favicon.ico", "/app_logo.png","/css/**","/js/**")
                         .permitAll()
                         .requestMatchers("/app/music/admin/**").hasRole("ADMIN")
@@ -49,7 +50,8 @@ public class AppSecurity {
                                 "/app/music/chat/",
                                 "/app/music/chat/**",
                                 "/app/music/dashboard",
-                                "/app/music/audio/**").authenticated()
+                                "/app/music/audio/searchSong",
+                                "/app/music/audio/fetchAllSongs").authenticated()
                         .anyRequest().authenticated()
                        )
 

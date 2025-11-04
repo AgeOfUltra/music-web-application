@@ -40,8 +40,29 @@
             Only the organizer can control playback
         </div>
 
+        <!-- PAGINATION CONTROLS -->
+        <div class="pagination-header">
+            <h3>Songs</h3>
+            <div class="pagination-info">
+                Page <span class="current-page">1</span> of <span class="total-pages">1</span>
+            </div>
+        </div>
+
         <div class="song-list" id="songList">
             <!-- Songs loaded dynamically via JavaScript -->
+        </div>
+
+        <!-- PAGINATION BUTTONS -->
+        <div class="pagination-controls">
+            <button class="nav-button" id="prevBtn" onclick="previousPage()" title="Previous Page">
+                ‹ Previous
+            </button>
+            <div class="page-info">
+                <span class="page-counter"><span id="currentPageNum">1</span>/<span id="totalPagesNum">1</span></span>
+            </div>
+            <button class="nav-button" id="nextBtn" onclick="nextPage()" title="Next Page">
+                Next ›
+            </button>
         </div>
     </div>
 

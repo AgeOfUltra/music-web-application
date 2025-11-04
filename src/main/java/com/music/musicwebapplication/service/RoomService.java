@@ -101,21 +101,21 @@ public class RoomService {
         return  true;
 
     }
-
+    @Transactional
     public Room getRoomDetails(String roomName){
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
     }
 
-    private Participant getNextAvailablePerson(long id, long roomId){
-        Optional<Participant> nextParticipant = participantRepo.findById(id);
-        if(nextParticipant.isPresent()){
-            return nextParticipant.get();
-        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
-            return getNextAvailablePerson(id++,roomId);
-        }else{
-            return null;
-        }
-    }
+//    private Participant getNextAvailablePerson(long id, long roomId){
+//        Optional<Participant> nextParticipant = participantRepo.findById(id);
+//        if(nextParticipant.isPresent()){
+//            return nextParticipant.get();
+//        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
+//            return getNextAvailablePerson(id++,roomId);
+//        }else{
+//            return null;
+//        }
+//    }
 
     public boolean isUserPresentInAnyRoom(String username){
         return repo.findAll().stream()

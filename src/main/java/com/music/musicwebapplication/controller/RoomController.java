@@ -29,13 +29,11 @@ import java.util.List;
 @RequestMapping("/app/music")
 public class RoomController {
     private final RoomService rService;
-    private final PublicSongController publicSongController;
     private final ColorUsageUtil colorUsageUtil;
     private final SimpMessagingTemplate messagingTemplate;
-    public RoomController(RoomService rService, PublicSongController publicSongController, ColorUsageUtil colorUsageUtil, SimpMessagingTemplate messagingTemplate){
+    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, SimpMessagingTemplate messagingTemplate){
 
         this.rService = rService;
-        this.publicSongController = publicSongController;
         this.colorUsageUtil = colorUsageUtil;
         this.messagingTemplate = messagingTemplate;
     }
@@ -46,10 +44,8 @@ public class RoomController {
                            Model model, HttpSession session) {
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomName", roomName);
-        model.addAttribute("ALLSONGS",publicSongController.getAllSongs());
         model.addAttribute("roomCount", currentParticipantCount(roomName));
         model.addAttribute("totalCount", rService.getRoomDetails(roomName).getMaxCount());
-        model.addAttribute("participants", getParticipants(roomName));
         model.addAttribute("userColor",colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
         model.addAttribute("darkerColor",colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
         model.addAttribute("jwtToken",session.getAttribute("jwtToken"));
@@ -145,19 +141,19 @@ public class RoomController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
     }
-
-    private void broadcastParticipantUpdate(String roomName) {
-        try {
-            Room room = rService.getRoomDetails(roomName);
-            messagingTemplate.convertAndSend(
-                    "/topic/chat/" + roomName + "/participants",
-                    room.getParticipant()
-            );
-        } catch (Exception e) {
-            log.error("Error broadcasting participant update", e);
-        }
-    }
-
+//
+//    private void broadcastParticipantUpdate(String roomName) {
+//        try {
+//            Room room = rService.getRoomDetails(roomName);
+//            messagingTemplate.convertAndSend(
+//                    "/topic/chat/" + roomName + "/participants",
+//                    room.getParticipant()
+//            );
+//        } catch (Exception e) {
+//            log.error("Error broadcasting participant update", e);
+//        }
+//    }
+//
 
 //    API
     private ResponseEntity<Participant> joinRoomApi(JoinRoom joinRoom) throws Exception{
@@ -213,19 +209,19 @@ public class RoomController {
         return ResponseEntity.ok(availableCount);
     }
 
-    private List<Participant> getParticipants(String roomName){
-        ResponseEntity<List<Participant>> participants = getAllParticipants(roomName);
-        List<Participant> availableParticipants = null;
-        if(participants.getStatusCode().equals(HttpStatus.OK)){
-            availableParticipants = participants.getBody();
-
-        }
-        return availableParticipants;
-    }
+//    private List<Participant> getParticipants(String roomName){
+//        ResponseEntity<List<Participant>> participants = getAllParticipants(roomName);
+//        List<Participant> availableParticipants = null;
+//        if(participants.getStatusCode().equals(HttpStatus.OK)){
+//            availableParticipants = participants.getBody();
+//
+//        }
+//        return availableParticipants;
+//    }
 
 //    API to get all participants in a room
     @GetMapping("/room/getAllParticipants")
-    private ResponseEntity<List<Participant>> getAllParticipants(String roomName){
+    public ResponseEntity<List<Participant>> getAllParticipants(String roomName){
         Room room = rService.getRoomDetails(roomName);
         List<Participant> participants = room.getParticipant();
         return ResponseEntity.ok(participants);

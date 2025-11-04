@@ -33,7 +33,7 @@ public class PublicSongController {
         this.songControllerService = songControllerService;
     }
 
-    @GetMapping(value = "/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
         log.info("Initiated the song Stream Request for file name : {}",name);
         ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);
@@ -59,15 +59,15 @@ public class PublicSongController {
     @GetMapping("/fetchAllSongs")
    public ResponseEntity<Page<Song>> getSongsAsRequired(
            @RequestParam (defaultValue = "0") int page,
-           @RequestParam(defaultValue = "20")int size){
+           @RequestParam(defaultValue = "10")int size){
 
         return ResponseEntity.ok(songControllerService.getAllSongsName(page, size));
 
     }
 
-    protected Page<Song> getAllSongs(){
-        return songControllerService.getAllSongsName(0,10);
-    }
+//    protected Page<Song> getAllSongs(){
+//        return songControllerService.getAllSongsName(0,10);
+//    }
 
     @GetMapping("/searchSong")
     public ResponseEntity<List<Song>> searchSongsByName(@RequestParam String query){

@@ -209,10 +209,10 @@ public class ChatController {
     }
 
     // ==================== BROADCAST PARTICIPANTS ====================
-    @Transactional(readOnly = true)
+//    @Transactional(readOnly = true)
     protected void broadcastParticipants(String roomName) {
         try {
-            Room room = roomRepo.findRoomByRoomName(roomName).orElse(null);
+            Room room = roomRepo.findRoomWithParticipantsByRoomName(roomName).orElse(null);
 
             if (room != null && room.getParticipant() != null && !room.getParticipant().isEmpty()) {
                 log.info("📡 Broadcasting {} participants for room: {}", room.getParticipant().size(), roomName);

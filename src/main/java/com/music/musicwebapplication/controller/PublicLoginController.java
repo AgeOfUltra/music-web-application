@@ -97,6 +97,9 @@ public class PublicLoginController {
             return new ModelAndView("redirect:/app/music/dashboard");
         } else {
             errorMessage = (String) responseBody.get("error");
+            if(errorMessage.isBlank()){
+                errorMessage=(String)responseBody.get("UserError");
+            }
             redirectAttributes.addFlashAttribute("loginError", errorMessage);
             redirectAttributes.addFlashAttribute("loginUser", loginUser);
             log.info("login failed! user data : {}", loginUser);
@@ -118,6 +121,7 @@ public class PublicLoginController {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
             if (roomService.isUserPresentInAnyRoom(userDetails.getUsername())) {
+                response.put("UserError", "User already exist in one of the room");
                 return ResponseEntity.badRequest().body("User already exist in one of the room");
             }
             String token = jwtTokenUtil.generateToken(userDetails.getUsername());
