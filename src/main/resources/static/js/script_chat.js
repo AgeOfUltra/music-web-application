@@ -1000,13 +1000,6 @@ function closeSearchDrawer() {
     document.getElementById('searchResults').innerHTML = '';
 }
 
-// ==================== TAB CLOSE / PAGE UNLOAD LOGOUT ====================
-
-// window.addEventListener('beforeunload', function(event) {
-//     handleTabClose();
-//     event.preventDefault();
-//     event.returnValue = '';
-// });
 
 let allowUnload = false;
 
@@ -1017,12 +1010,14 @@ window.addEventListener('beforeunload', (event) => {
     }
 });
 
-// Example: When user clicks Logout button or leaves room intentionally
-document.getElementById('logoutButton').addEventListener('click', () => {
-    allowUnload = true;
-    // clean disconnect (like stompClient.disconnect() etc.)
-    window.location.href = '/logout';
-});
+const legacyLogoutBtn = document.getElementById('logoutButton');
+if (legacyLogoutBtn) {
+    legacyLogoutBtn.addEventListener('click', () => {
+        allowUnload = true;
+        window.location.href = '/logout';
+    });
+}
+
 
 
 window.addEventListener('unload', function() {
@@ -1112,6 +1107,39 @@ function clearSessionData() {
 }
 
 // ==================== LOGOUT BUTTON HANDLER ====================
+function handleBackButton() {
+    // No popup for back: just leave the room and go to dashboard
+    allowUnload = true;         // prevents beforeunload warning
+    isClosing = true;
+
+    if (participantRefreshInterval) {
+        clearInterval(participantRefreshInterval);
+    }
+
+    try {
+        if (stompClient && stompClient.connected) {
+            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
+                sender: currentUsername,
+                type: 'LEAVE',
+                content: `${currentUsername} left the room`
+            }));
+            stompClient.disconnect();
+        }
+    } catch (err) {
+        console.error('Error during back-button cleanup:', err);
+    }
+
+    // Inform server we left the room (keep session/token for dashboard)
+    fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${jwtToken}` },
+        keepalive: true
+    }).catch(() => { /* non-blocking */ });
+
+    // Go to dashboard (still logged in)
+    window.location.href = '/app/music/dashboard';
+}
+
 
 function setupLogoutButton() {
     const logoutBtn = document.querySelector('.logout-btn');
@@ -1119,7 +1147,13 @@ function setupLogoutButton() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async function(e) {
             e.preventDefault();
-            console.log('👤 Logout button clicked');
+
+            // Custom confirm popup for logout
+            const confirmed = confirm('Are you sure you want to logout and leave the room?');
+            if (!confirmed) return;
+
+            allowUnload = true;   // no beforeunload prompt
+            console.log('👤 Logout confirmed');
 
             isClosing = true;
 
@@ -1143,17 +1177,16 @@ function setupLogoutButton() {
             try {
                 await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${jwtToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
                 });
             } catch (error) {
                 console.error('Error leaving room:', error);
             }
 
-            clearSessionData();
+            clearSessionData(); // logout path clears session
 
             window.location.href = '/app/music/public/login';
         });
     }
 }
+
