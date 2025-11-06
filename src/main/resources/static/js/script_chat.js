@@ -201,9 +201,13 @@ function initializeToastNotifications() {
 }
 
 // ==================== UPDATE CURRENT SONG DISPLAY ====================
-function updateCurrentSongDisplay(songName, hero, heroine, language,movie) {
+function updateCurrentSongDisplay(songName, hero, language, movie, singer) {
     document.getElementById('currentSongTitle').textContent = songName;
-    document.getElementById('currentSongDetails').textContent = `${hero || movie} • ${heroine}  • ${language}`;
+    const details = [hero || movie, singer || movie, language]
+        .filter(Boolean) // remove empty, null, undefined
+        .join(' • ');
+
+    document.getElementById('currentSongDetails').textContent = details || 'Unknown details';
 }
 
 // ==================== AUDIO PLAYER CONTROL ====================
@@ -217,12 +221,14 @@ function setupAudioPlayerListeners() {
 
     console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
 
-    if (isOrganizer) {
-        // ✅ ORGANIZER MODE: Send playback commands to all users
+    // Always update controls state when listeners are set up
+    updateAudioControls();
 
-        // ORGANIZER: Send PAUSE command when user clicks pause
+    if (isOrganizer) {
+        // ORGANIZER: send PLAY/PAUSE/RESUME events
         audioPlayer.addEventListener('pause', (e) => {
-            if (!ignoreLocalEvents && stompClient?.connected && audioPlayer.src) {
+            // Only propagate when the pause was initiated by the organizer (user interaction)
+            if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
                 const playbackMessage = {
                     action: 'PAUSE',
                     timestamp: Math.floor(audioPlayer.currentTime * 1000),
@@ -233,9 +239,9 @@ function setupAudioPlayerListeners() {
             }
         });
 
-        // ORGANIZER: Send RESUME command when user clicks play
         audioPlayer.addEventListener('play', (e) => {
-            if (!ignoreLocalEvents && stompClient?.connected && audioPlayer.src && currentSongData) {
+            // Only propagate when the play was initiated by the organizer (user interaction)
+            if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src && currentSongData) {
                 const playbackMessage = {
                     action: 'RESUME',
                     timestamp: Math.floor(audioPlayer.currentTime * 1000),
@@ -250,26 +256,29 @@ function setupAudioPlayerListeners() {
                 stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
             }
         });
-
     } else {
-        // ✅ NON-ORGANIZER MODE: Prevent all manual playback control
-
-        // Prevent non-organizer from manually playing
+        // NON-ORGANIZER: prevent user interaction (only if user triggered the action)
         audioPlayer.addEventListener('play', (e) => {
-            if (!ignoreLocalEvents) {
-                console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt');
+            // if user clicked play (isTrusted) and we aren't currently applying a programmatic action,
+            // prevent it and show a notice.
+            if (!ignoreLocalEvents && e.isTrusted) {
+                console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
                 e.preventDefault();
-                audioPlayer.pause();
+                // keep paused
+                try { audioPlayer.pause(); } catch (err) { /* ignore */ }
                 ToastNotification.warning('Only the organizer can control playback');
             }
         }, true);
 
-        // Prevent non-organizer from manually pausing
         audioPlayer.addEventListener('pause', (e) => {
-            if (!ignoreLocalEvents && !audioPlayer.paused) {
-                console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt');
+            // Only intercept user-initiated pause events; programmatic pauses (e.isTrusted === false)
+            // should be allowed when the server tells us to pause.
+            if (!ignoreLocalEvents && e.isTrusted) {
+                console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
                 e.preventDefault();
+                // resume back (best-effort)
                 audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
+                ToastNotification.warning('Only the organizer can control playback');
             }
         }, true);
     }
@@ -315,6 +324,13 @@ function handlePlaybackCommand(playbackMsg) {
             console.warn('⚠️ Unknown playback action:', playbackMsg.action);
             ignoreLocalEvents = false;
     }
+    setTimeout(() => {
+        // safety net: if some error prevented clearing ignore flag, clear it after 10s
+        if (ignoreLocalEvents) {
+            console.warn('⚠️ Clearing ignoreLocalEvents safety-net after 10s');
+            ignoreLocalEvents = false;
+        }
+    }, 10000);
 }
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
@@ -331,7 +347,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
 
     console.log('🎵 Received PLAY command for song:', playbackMsg.songName);
     console.log('   Audio source URL:', newSrc);
-    updateCurrentSongDisplay(playbackMsg.songName, playbackMsg.hero, playbackMsg.heroine, playbackMsg.language,playbackMsg.movie);
+    updateCurrentSongDisplay(playbackMsg.songName, playbackMsg.hero, playbackMsg.language, playbackMsg.movie, playbackMsg.singer);
 
     // Toast notification for all users
     const isOwnAction = playbackMsg.controller === currentUsername;
@@ -341,7 +357,18 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         ToastNotification.info(`🎵 ${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
     }
 
-    const sourceChanged = audioPlayer.src !== newSrc;
+    // const sourceChanged = audioPlayer.src !== newSrc;
+    let sourceChanged = true;
+    try {
+        // compare pathnames so relative / absolute mismatch won't confuse us
+        const existingPath = audioPlayer.src ? new URL(audioPlayer.src).pathname : '';
+        const newPath = new URL(newSrc, window.location.origin).pathname;
+        sourceChanged = existingPath !== newPath;
+    } catch (err) {
+        // fallback to simple compare
+        sourceChanged = audioPlayer.src !== newSrc;
+    }
+
     console.log('   Source changed:', sourceChanged);
 
     if (sourceChanged) {
@@ -443,7 +470,7 @@ function handlePauseCommand(audioPlayer, playbackMsg) {
         ToastNotification.warning(`⏸️ ${playbackMsg.controller} paused the music`);
     }
 
-    displaySystemMessage(`${playbackMsg.controller} paused the music`);
+    // displaySystemMessage(`${playbackMsg.controller} paused the music`);
 
     // ✅ IMPORTANT: Reset flag only after action completes
     setTimeout(() => {
@@ -479,7 +506,7 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
         ToastNotification.success(`▶️ ${playbackMsg.controller} resumed the music`);
     }
 
-    displaySystemMessage(`${playbackMsg.controller} resumed the music`);
+    // displaySystemMessage(`${playbackMsg.controller} resumed the music`);
 }
 
 function playSong(song) {
@@ -677,6 +704,7 @@ function updateParticipantsDisplay(participants) {
         if (p.userName === currentUsername) {
             isOrganizer = p.organizer;
             updatePermissionNotice();
+            updateAudioControls()
         }
     });
 }
@@ -689,6 +717,45 @@ function updatePermissionNotice() {
         notice.style.display = 'none';
     }
 }
+
+function updateAudioControls() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+
+    if (isOrganizer) {
+        // Organizers get full native controls
+        audioPlayer.controls = true;
+        // Remove pointer-block overlay if present
+        const overlay = document.getElementById('controlsOverlay');
+        if (overlay) overlay.style.display = 'none';
+    } else {
+        // Non-organizers: hide native controls to avoid accidental clicks.
+        // Native controls are hidden so we rely on server events to update playback.
+        audioPlayer.controls = true; // keep controls visible if you want them, but disable pointer events instead:
+        // create small overlay to intercept pointer events over the control area
+        let overlay = document.getElementById('controlsOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'controlsOverlay';
+            overlay.style.position = 'absolute';
+            overlay.style.pointerEvents = 'auto';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.zIndex = 50;
+            overlay.style.background = 'transparent';
+            // Add a small tooltip on hover (optional)
+            overlay.title = 'Only the organizer can control playback';
+            const wrapper = document.getElementById('audioPlayerWrapper') || document.body;
+            wrapper.style.position = wrapper.style.position || 'relative';
+            wrapper.appendChild(overlay);
+        } else {
+            overlay.style.display = 'block';
+        }
+    }
+}
+
 
 // ==================== CHAT MESSAGING ====================
 function sendMessage() {
@@ -726,7 +793,7 @@ function displayMessage(message) {
     const chatMessages = document.getElementById('chatMessages');
 
     if (message.type === 'JOIN' || message.type === 'LEAVE') {
-        displaySystemMessage(message.content);
+        // displaySystemMessage(message.content);
     } else {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message';
@@ -935,11 +1002,28 @@ function closeSearchDrawer() {
 
 // ==================== TAB CLOSE / PAGE UNLOAD LOGOUT ====================
 
-window.addEventListener('beforeunload', function(event) {
-    handleTabClose();
-    event.preventDefault();
-    event.returnValue = '';
+// window.addEventListener('beforeunload', function(event) {
+//     handleTabClose();
+//     event.preventDefault();
+//     event.returnValue = '';
+// });
+
+let allowUnload = false;
+
+window.addEventListener('beforeunload', (event) => {
+    if (!allowUnload) {
+        event.preventDefault();
+        event.returnValue = ''; // triggers the warning
+    }
 });
+
+// Example: When user clicks Logout button or leaves room intentionally
+document.getElementById('logoutButton').addEventListener('click', () => {
+    allowUnload = true;
+    // clean disconnect (like stompClient.disconnect() etc.)
+    window.location.href = '/logout';
+});
+
 
 window.addEventListener('unload', function() {
     handleTabClose();
