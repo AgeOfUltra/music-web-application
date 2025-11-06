@@ -38,7 +38,7 @@ public class PublicSongController {
         this.songCacheService = songCacheService;
     }
 
-    @GetMapping(value = "/public/streamSong/{name}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/public/streamSong/{name}",produces = "audio/mpeg")
 //    public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
 //        log.info("Initiated the song Stream Request for file name : {}",name);
 //        ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);
