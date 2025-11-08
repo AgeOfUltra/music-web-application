@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style_signup.css}">
+
+    <title>Connecting Notes ∞ - SignUp</title>
+</head>
+<body>
+<div class="container-signup">
+    <div class="logo-container">
+        <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo">
+    </div>
+
+    <div th:replace="~{fragments/loader}"></div>
+    <div id="signupForm">
+        <h1>Create Account</h1>
+        <p class="subtitle">Join the music chat community</p>
+
+        <div id="fieldErrors" style="display: none;">
+            <span th:each="error : ${#fields.errors('newUser.*')}" th:text="${error}" class="error-item"></span>
+        </div>
+
+        <div id="generalError" style="display: none;" th:text="${signUpError}"></div>
+
+
+        <form th:action="@{/app/music/public/register}" method="post" th:object="${newUser}" id="signupFormElement">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" th:field="*{username}" placeholder="Enter username">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" th:field="*{email}" placeholder="Enter your email">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" th:field="*{password}" placeholder="">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+
+        <div class="toggle-form">
+            Already have an account? <a th:href="@{/app/music/public/login}">Login</a>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container-custom" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/script_signup.js}"></script>
+<script>
+    // Initialize loader for Sign Up form
+    LoaderPlugin.initFormSubmit('signupFormElement');
+
+    // Hide loader if there are field errors
+    LoaderPlugin.hideOnError('fieldErrors');
+
+    // Hide loader if there's a general signup error
+    LoaderPlugin.hideOnError('generalError');
+</body>
+</html>

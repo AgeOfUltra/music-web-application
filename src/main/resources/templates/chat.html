@@ -7,511 +7,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: "Alan Sans", sans-serif;
-            font-style: normal;
-            background: #e8e8e8;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            height: 60px;
-            width: auto;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-        }
-
-        .app-title {
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #000000 0%, #434343 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .logout-btn {
-            padding: 8px 20px;
-            background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .logout-btn:hover {
-            background: linear-gradient(135deg, #2d2d2d 0%, #434343 100%);
-            transform: translateY(-2px);
-        }
-
-        .main-container {
-            display: grid;
-            grid-template-columns: 380px 1fr 400px;
-            height: calc(100vh - 90px);
-            gap: 0;
-        }
-
-        .left-panel {
-            background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%);
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #d0d0d0;
-        }
-
-        .music-player {
-            padding: 20px;
-            background: linear-gradient(135deg, #0a0a0a 0%, #2d2d2d 100%);
-            border-bottom: 1px solid #000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .player-info {
-            margin-bottom: 15px;
-        }
-
-        .song-title {
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .song-details {
-            color: #c0c0c0;
-            font-size: 12px;
-        }
-
-        audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .search-btn {
-            width: 100%;
-            padding: 10px;
-            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-            color: #000;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-top: 10px;
-            transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .search-btn:hover {
-            background: #ffffff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .song-list {
-            background: #f5f5f5;
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .song-item {
-            background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .song-item:hover {
-            background: #ffffff;
-            border-color: #000;
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .song-item.active {
-            background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%);
-            border: 1px solid #000;
-            color: white;
-            transform: translateX(5px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .song-item-title {
-            color: #1a1a1a;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .song-item.active .song-item-title {
-            color: white;
-        }
-
-        .song-item-info {
-            color: #666;
-            font-size: 11px;
-        }
-
-        .song-item.active .song-item-info {
-            color: #c0c0c0;
-        }
-
-        .middle-panel {
-            background: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #d0d0d0;
-        }
-
-        .room-header {
-            background: linear-gradient(135deg, #0a0a0a 0%, #2d2d2d 100%);
-            padding: 15px 20px;
-            border-bottom: 1px solid #000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .room-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffffff;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .room-user-info {
-            font-size: 14px;
-            color: #c0c0c0;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-
-        .participant-count {
-            color: #c0c0c0;
-            font-size: 13px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 20px;
-            background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
-            max-height: calc(100vh - 250px);
-            scroll-behavior: smooth;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .message-sender {
-            font-weight: 600;
-            font-size: 13px;
-            padding: 5px 12px;
-            border-radius: 12px;
-            color: white;
-            background: linear-gradient(135deg, #1a1a1a 0%, #3d3d3d 100%);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .message-time {
-            font-size: 11px;
-            color: #888;
-            margin-left: 8px;
-        }
-
-        .message-content {
-            background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
-            padding: 10px 15px;
-            border-radius: 12px;
-            max-width: 50%;
-            word-wrap: break-word;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e0e0e0;
-        }
-
-        .system-message {
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-            font-style: italic;
-            margin: 10px 0;
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 8px;
-            border-radius: 20px;
-        }
-
-        .system-message.fade-out {
-            opacity: 0;
-        }
-
-        .chat-input-container {
-            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-            padding: 15px 20px;
-            border-top: 1px solid #d0d0d0;
-            display: flex;
-            gap: 10px;
-            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 14px;
-            background: #fafafa;
-            transition: all 0.3s;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: #404040;
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .send-btn {
-            padding: 10px 25px;
-            background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .send-btn:hover {
-            background: linear-gradient(135deg, #2d2d2d 0%, #434343 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .right-panel {
-            background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .online-header {
-            background: linear-gradient(135deg, #0a0a0a 0%, #2d2d2d 100%);
-            padding: 20px;
-            border-bottom: 1px solid #000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .online-title {
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .participants-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            background: #f5f5f5;
-        }
-
-        .participant-item {
-            background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s;
-        }
-
-        .participant-item:hover {
-            transform: translateX(-5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .participant-name {
-            color: white;
-            font-size: 14px;
-            padding: 6px 12px;
-            border-radius: 15px;
-            background: linear-gradient(135deg, #1a1a1a 0%, #3d3d3d 100%);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .organizer-badge {
-            background: linear-gradient(135deg, #2d2d2d 0%, #505050 100%);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .search-drawer {
-            position: fixed;
-            top: 0;
-            left: -400px;
-            width: 400px;
-            height: 100vh;
-            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-            transition: left 0.3s;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .search-drawer.open {
-            left: 0;
-        }
-
-        .drawer-header {
-            padding: 20px;
-            background: linear-gradient(135deg, #0a0a0a 0%, #2d2d2d 100%);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .drawer-header h2 {
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .drawer-close {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            transition: all 0.3s;
-        }
-
-        .drawer-close:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: rotate(90deg);
-        }
-
-        .drawer-search {
-            padding: 20px;
-            background: #fafafa;
-        }
-
-        .drawer-search input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            background: #ffffff;
-            transition: all 0.3s;
-        }
-
-        .drawer-search input:focus {
-            outline: none;
-            border-color: #404040;
-            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .drawer-results {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 20px 20px 20px;
-            background: #f5f5f5;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #434343 0%, #2d2d2d 100%);
-        }
-
-        .loading {
-            text-align: center;
-            color: #666;
-            padding: 20px;
-            font-size: 14px;
-        }
-
-        .permission-notice {
-            background: rgba(255, 200, 0, 0.2);
-            color: #856404;
-            padding: 8px;
-            text-align: center;
-            font-size: 12px;
-            border-bottom: 1px solid rgba(255, 200, 0, 0.3);
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/style_chat.css}">
+    <title>Connecting Notes ∞</title>
 </head>
 <body>
 <div class="header">
+    <button class="btn btn-secondary" onclick="handleBackButton()">
+        Back
+    </button>
     <div class="header-left">
         <img src="/app_logo.png" alt="Logo" class="logo">
         <div class="app-title">CONNECTING NOTES</div>
     </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
+
+<!-- Success Message Container (hidden) -->
+<div id="successMessageCreate" style="display: none;" th:text="${roomCreatedSuccessful}"></div>
+<div id="successMessageJoin" style="display: none;" th:text="${roomJoinedSuccessful}"></div>
 
 <div class="main-container">
     <div class="left-panel">
@@ -520,28 +33,54 @@
                 <div class="song-title" id="currentSongTitle">No song playing</div>
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
-            <audio id="audioPlayer" controls></audio>
+            <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
+                <audio id="audioPlayer" controls  controlsList="nodownload noplaybackrate"></audio>
+            </div>
             <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
         </div>
+
         <div id="permissionNotice" class="permission-notice" style="display: none;">
             Only the organizer can control playback
         </div>
+
+        <!-- PAGINATION CONTROLS -->
+        <div class="pagination-header">
+            <h3>Songs</h3>
+            <div class="pagination-info">
+                Page <span class="current-page">1</span> of <span class="total-pages">1</span>
+            </div>
+        </div>
+
         <div class="song-list" id="songList">
-            <div class="loading">Loading songs...</div>
+            <!-- Songs loaded dynamically via JavaScript -->
+        </div>
+
+        <!-- PAGINATION BUTTONS -->
+        <div class="pagination-controls">
+            <button class="nav-button" id="prevBtn" onclick="previousPage()" title="Previous Page">
+                ‹ Previous
+            </button>
+            <div class="page-info">
+                <span class="page-counter"><span id="currentPageNum">1</span>/<span id="totalPagesNum">1</span></span>
+            </div>
+            <button class="nav-button" id="nextBtn" onclick="nextPage()" title="Next Page">
+                Next ›
+            </button>
         </div>
     </div>
 
     <div class="middle-panel">
         <div class="room-header">
-            <div class="room-name" id="roomName">Loading...</div>
-            <div class="room-user-info" id="roomUserInfo">Logged in as: <span th:text =" ${username}"></span></div>
-            <div class="participant-count" id="participantCount">0 participants</div>
+            <div class="room-name" th:text="${roomName}" id="roomName"></div>
+            <div class="room-user-info">Logged in as: <span th:text="${username}"></span></div>
+            <div class="participant-count" id="participantCount" th:text="'Participants: ' + ${roomCount} + '/' + ${totalCount}"></div>
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="system-message">Welcome to the chat room!</div>
         </div>
         <div class="chat-input-container">
-            <input type="text" class="chat-input" id="messageInput" placeholder="Type a message..." onkeypress="handleEnter(event)">
+            <input type="text" class="chat-input" id="messageInput" placeholder="Type a message..."
+                   onkeypress="handleEnter(event)">
             <button class="send-btn" onclick="sendMessage()">Send</button>
         </div>
     </div>
@@ -551,7 +90,7 @@
             <div class="online-title">Online Participants</div>
         </div>
         <div class="participants-list" id="participantsList">
-            <div class="loading">Loading participants...</div>
+            <!-- Participants loaded dynamically via JavaScript -->
         </div>
     </div>
 </div>
@@ -563,564 +102,30 @@
     </div>
     <div class="drawer-search">
         <input type="text" id="searchInput" placeholder="Search by song name..." onkeypress="handleSearchEnter(event)">
+        <button class="search-btn" onclick="searchSongs()" style="margin-top: 10px; width: 100%;">Search</button>
     </div>
     <div class="drawer-results" id="searchResults"></div>
 </div>
 
-<script>
-    let stompClient = null;
-    let currentPage = 0;
-    let isLoadingSongs = false;
-    let hasMoreSongs = true;
-    let currentRoomName = null;
-    let currentUsername = null;
-    let syncInterval = null;
-    let isOrganizer = false;
-    let ignoreLocalEvents = false;
-    const userColors = {};
-    const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
+<!-- Toast Container -->
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
-    window.onload = function() {
-        initializePage();
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const PAGE_DATA = {
+        username: /*[[${username}]]*/ '',
+        roomName: /*[[${roomName}]]*/ '',
+        roomCount: /*[[${roomCount}]]*/ 0,
+        totalCount: /*[[${totalCount}]]*/ 0,
+        jwtToken: /*[[${jwtToken}]]*/ '',
+        userColor: /*[[${userColor}]]*/ '',
+        darkerColor: /*[[${darkerColor}]]*/ '',
+        isOrganizer: /*[[${isOrganizer}]]*/ false
     };
-
-    function initializePage() {
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-        currentUsername = localStorage.getItem('username');
-        const urlParams = new URLSearchParams(window.location.search);
-        currentRoomName = urlParams.get('roomName') || localStorage.getItem('currentRoom');
-
-        if (!token || !currentUsername || !currentRoomName) {
-            window.location.href = '/app/music/public/login';
-            return;
-        }
-
-        document.getElementById('roomName').textContent = currentRoomName;
-        // document.getElementById('currentUserDisplay').textContent = currentUsername;
-        loadSongs();
-        loadRoomInfo();
-        connectWebSocket(token);
-
-        setInterval(loadRoomInfo, 10000);
-
-        const songList = document.getElementById('songList');
-        songList.addEventListener('scroll', () => {
-            if (songList.scrollTop + songList.clientHeight >= songList.scrollHeight - 50) {
-                loadSongs();
-            }
-        });
-    }
-
-    function setupAudioPlayerListeners() {
-        const audioPlayer = document.getElementById('audioPlayer');
-
-        audioPlayer.addEventListener('pause', () => {
-            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src) {
-                const playbackMessage = {
-                    action: 'PAUSE',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
-                };
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
-                    JSON.stringify(playbackMessage));
-            }
-        });
-
-        audioPlayer.addEventListener('play', () => {
-            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src && audioPlayer.currentTime > 0) {
-                const playbackMessage = {
-                    action: 'RESUME',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
-                };
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
-                    JSON.stringify(playbackMessage));
-            }
-        });
-
-        audioPlayer.addEventListener('seeked', () => {
-            if (!ignoreLocalEvents && isOrganizer && stompClient && stompClient.connected && audioPlayer.src) {
-                const playbackMessage = {
-                    action: 'SEEK',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
-                };
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
-                    JSON.stringify(playbackMessage));
-            }
-        });
-    }
-
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-    }
-
-    function getUserColor(username) {
-        if (!userColors[username]) {
-            userColors[username] = colors[Object.keys(userColors).length % colors.length];
-        }
-        return userColors[username];
-    }
-
-    function getDarkerShade(color) {
-        const colorMap = {
-            '#1a1a1a': '#0a0a0a',
-            '#2d2d2d': '#1a1a1a',
-            '#3d3d3d': '#2d2d2d',
-            '#505050': '#3d3d3d',
-            '#636363': '#505050',
-            '#767676': '#636363'
-        };
-        return colorMap[color] || '#000000';
-    }
-
-    async function loadSongs() {
-        if (isLoadingSongs || !hasMoreSongs) return;
-
-        isLoadingSongs = true;
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        try {
-            const response = await fetch(`/app/music/fetchAllSongs?page=${currentPage}&size=10`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                displaySongs(data.content);
-                hasMoreSongs = !data.last;
-                currentPage++;
-            }
-        } catch (error) {
-            console.error('Error loading songs:', error);
-        } finally {
-            isLoadingSongs = false;
-        }
-    }
-
-    function displaySongs(songs) {
-        const songList = document.getElementById('songList');
-        if (currentPage === 1) {
-            songList.innerHTML = '';
-        }
-
-        songs.forEach(song => {
-            const songItem = document.createElement('div');
-            songItem.className = 'song-item';
-            songItem.onclick = () => playSong(song);
-            songItem.innerHTML = `
-                <div class="song-item-title">${song.songName}</div>
-                <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
-            `;
-            songList.appendChild(songItem);
-        });
-    }
-
-    function playSong(song) {
-        if (!isOrganizer) {
-            showSystemMessage('Only the organizer can play songs');
-            return;
-        }
-
-        if (stompClient && stompClient.connected) {
-            const playbackMessage = {
-                action: 'PLAY',
-                songFileName: song.fileName,
-                songName: song.songName,
-                hero: song.hero || 'Unknown',
-                heroine: song.heroine || 'Unknown',
-                language: song.language || 'Unknown'
-            };
-
-            stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
-                JSON.stringify(playbackMessage));
-        } else {
-            console.error('WebSocket not connected');
-        }
-    }
-
-    function handlePlaybackCommand(playbackMsg) {
-        const audioPlayer = document.getElementById('audioPlayer');
-        ignoreLocalEvents = true;
-
-        switch(playbackMsg.action) {
-            case 'PLAY':
-                document.getElementById('currentSongTitle').textContent = playbackMsg.songName;
-                document.getElementById('currentSongDetails').textContent =
-                    `${playbackMsg.hero || 'Unknown'} • ${playbackMsg.heroine || 'Unknown'} • ${playbackMsg.language || 'Unknown'}`;
-
-                audioPlayer.src = `/app/music/public/streamSong/${playbackMsg.songFileName}`;
-                audioPlayer.play().catch(err => console.error('Play error:', err));
-
-                document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
-
-                showSystemMessage(`${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
-                break;
-
-            case 'PAUSE':
-                audioPlayer.pause();
-                showSystemMessage(`${playbackMsg.controller} paused playback`);
-                break;
-
-            case 'RESUME':
-                if (playbackMsg.timestamp !== undefined) {
-                    audioPlayer.currentTime = playbackMsg.timestamp / 1000;
-                }
-                audioPlayer.play().catch(err => console.error('Resume error:', err));
-                showSystemMessage(`${playbackMsg.controller} resumed playback`);
-                break;
-
-            case 'STOP':
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                showSystemMessage(`${playbackMsg.controller} stopped playback`);
-                break;
-
-            case 'SEEK':
-                audioPlayer.currentTime = playbackMsg.timestamp / 1000;
-                showSystemMessage(`${playbackMsg.controller} seeked to ${Math.floor(playbackMsg.timestamp / 1000)}s`);
-                break;
-
-            case 'SYNC':
-                if (audioPlayer.src) {
-                    const drift = Math.abs(audioPlayer.currentTime - (playbackMsg.timestamp / 1000));
-
-                    // Sync if there's significant drift OR if audio hasn't started yet
-                    if (drift > 2 || (audioPlayer.paused && audioPlayer.currentTime === 0)) {
-                        console.log(`Syncing playback, drift: ${drift}s, timestamp: ${playbackMsg.timestamp / 1000}s`);
-                        audioPlayer.currentTime = playbackMsg.timestamp / 1000;
-
-                        // If organizer started playing and this client hasn't started, play it
-                        if (audioPlayer.paused && audioPlayer.currentTime > 0) {
-                            audioPlayer.play().catch(err => console.error('Auto-play sync error:', err));
-                        }
-                    }
-                }
-                break;
-        }
-
-        setTimeout(() => {
-            ignoreLocalEvents = false;
-        }, 100);
-    }
-
-    function showSystemMessage(text) {
-        const chatMessages = document.getElementById('chatMessages');
-        const systemMsg = document.createElement('div');
-        systemMsg.className = 'system-message';
-        systemMsg.textContent = text;
-        chatMessages.appendChild(systemMsg);
-
-        setTimeout(() => {
-            systemMsg.classList.add('fade-out');
-            setTimeout(() => {
-                if (systemMsg.parentNode) {
-                    systemMsg.parentNode.removeChild(systemMsg);
-                }
-            }, 500);
-        }, 5000);
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    async function loadRoomInfo() {
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        try {
-            const response = await fetch(`/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const room = await response.json();
-                document.getElementById('participantCount').textContent = `${room.participant.length} / ${room.maxCount} participants`;
-                displayParticipants(room.participant);
-
-                const currentParticipant = room.participant.find(p => p.userName === currentUsername);
-                if (currentParticipant) {
-                    const wasOrganizer = isOrganizer;
-                    isOrganizer = currentParticipant.organizer;
-
-                    if (!wasOrganizer && isOrganizer) {
-                        setupAudioPlayerListeners();
-                    }
-
-                    updatePermissionNotice();
-                }
-            }
-        } catch (error) {
-            console.error('Error loading room info:', error);
-        }
-    }
-
-    function updatePermissionNotice() {
-        const notice = document.getElementById('permissionNotice');
-        if (!isOrganizer) {
-            notice.style.display = 'block';
-        } else {
-            notice.style.display = 'none';
-        }
-    }
-
-    function displayParticipants(participants) {
-        const participantsList = document.getElementById('participantsList');
-        participantsList.innerHTML = '';
-
-        participants.forEach(p => {
-            const item = document.createElement('div');
-            item.className = 'participant-item';
-            const userColor = getUserColor(p.userName);
-            const darkerColor = getDarkerShade(userColor);
-            item.innerHTML = `
-                <div class="participant-name" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${p.userName}</div>
-                ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
-            `;
-            participantsList.appendChild(item);
-        });
-    }
-
-    function connectWebSocket(token) {
-        const socket = new SockJS('/app/music/ws');
-        stompClient = Stomp.over(socket);
-
-        stompClient.connect(
-            {'Authorization': `Bearer ${token}`},
-            (frame) => {
-                console.log('Connected to WebSocket');
-
-                stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
-                    const chatMessage = JSON.parse(message.body);
-                    displayMessage(chatMessage);
-                });
-
-                stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
-                    const playbackMsg = JSON.parse(message.body);
-                    handlePlaybackCommand(playbackMsg);
-                });
-
-                stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
-                    sender: currentUsername,
-                    type: 'JOIN',
-                    content: `${currentUsername} joined the room`
-                }));
-
-                startSyncInterval();
-            },
-            (error) => {
-                console.error('WebSocket error:', error);
-                setTimeout(() => {
-                    if (stompClient && !stompClient.connected) {
-                        console.log('Attempting to reconnect...');
-                        connectWebSocket(token);
-                    }
-                }, 3000);
-            }
-        );
-    }
-
-    function startSyncInterval() {
-        if (syncInterval) {
-            clearInterval(syncInterval);
-        }
-
-        syncInterval = setInterval(() => {
-            const audioPlayer = document.getElementById('audioPlayer');
-            if (!audioPlayer.paused && audioPlayer.src && stompClient && stompClient.connected && isOrganizer) {
-                const syncMessage = {
-                    action: 'SYNC',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000)
-                };
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {},
-                    JSON.stringify(syncMessage));
-            }
-        }, 10000);
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('messageInput');
-        const content = input.value.trim();
-
-        if (content && stompClient && stompClient.connected) {
-            const chatMessage = {
-                sender: currentUsername,
-                content: content,
-                type: 'CHAT'
-            };
-
-            stompClient.send(`/app/music/chat/${currentRoomName}/send`, {}, JSON.stringify(chatMessage));
-            input.value = '';
-        }
-    }
-
-    function displayMessage(message) {
-        const chatMessages = document.getElementById('chatMessages');
-
-        if (message.type === 'JOIN' || message.type === 'LEAVE') {
-            const systemMsg = document.createElement('div');
-            systemMsg.className = 'system-message';
-            systemMsg.textContent = message.content;
-            chatMessages.appendChild(systemMsg);
-
-            setTimeout(() => {
-                systemMsg.classList.add('fade-out');
-                setTimeout(() => {
-                    if (systemMsg.parentNode) {
-                        systemMsg.parentNode.removeChild(systemMsg);
-                    }
-                }, 500);
-            }, 10000);
-        } else {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-
-            const time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
-
-            const userColor = getUserColor(message.sender);
-            const darkerColor = getDarkerShade(userColor);
-
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="message-sender" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${message.sender}</span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${escapeHtml(message.content)}</div>
-            `;
-
-            chatMessages.appendChild(messageDiv);
-        }
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function handleEnter(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    }
-
-    async function searchSongs() {
-        const query = document.getElementById('searchInput').value.trim();
-        if (!query) return;
-
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        try {
-            const response = await fetch(`/app/music/searchSong?query=${encodeURIComponent(query)}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const songs = await response.json();
-                displaySearchResults(songs);
-            }
-        } catch (error) {
-            console.error('Error searching songs:', error);
-        }
-    }
-
-    function displaySearchResults(songs) {
-        const searchResults = document.getElementById('searchResults');
-        searchResults.innerHTML = '';
-
-        if (songs.length === 0) {
-            searchResults.innerHTML = '<div class="loading">No songs found</div>';
-            return;
-        }
-
-        songs.forEach(song => {
-            const songItem = document.createElement('div');
-            songItem.className = 'song-item';
-            songItem.onclick = () => {
-                if (isOrganizer) {
-                    playSong(song);
-                    closeSearchDrawer();
-                } else {
-                    showSystemMessage('Only the organizer can play songs');
-                }
-            };
-            songItem.innerHTML = `
-                <div class="song-item-title">${song.songName}</div>
-                <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
-            `;
-            searchResults.appendChild(songItem);
-        });
-    }
-
-    function handleSearchEnter(event) {
-        if (event.key === 'Enter') {
-            searchSongs();
-        }
-    }
-
-    function openSearchDrawer() {
-        document.getElementById('searchDrawer').classList.add('open');
-    }
-
-    function closeSearchDrawer() {
-        document.getElementById('searchDrawer').classList.remove('open');
-        document.getElementById('searchInput').value = '';
-        document.getElementById('searchResults').innerHTML = '';
-    }
-
-    async function logout() {
-        if (syncInterval) {
-            clearInterval(syncInterval);
-        }
-
-        if (stompClient && stompClient.connected) {
-            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'LEAVE',
-                content: `${currentUsername} left the room`
-            }));
-            stompClient.disconnect();
-        }
-
-        const token = getCookie('jwtToken') || localStorage.getItem('jwtToken');
-
-        try {
-            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-        } catch (error) {
-            console.error('Error leaving room:', error);
-        }
-
-        localStorage.removeItem('jwtToken');
-        localStorage.removeItem('username');
-        localStorage.removeItem('currentRoom');
-        document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
-        window.location.href = '/app/music/public/login';
-    }
-
-    window.addEventListener('beforeunload', () => {
-        if (syncInterval) {
-            clearInterval(syncInterval);
-        }
-
-        if (stompClient && stompClient.connected) {
-            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'LEAVE',
-                content: `${currentUsername} left the room`
-            }));
-        }
-    });
+    /*]]>*/
 </script>
+
+<script th:src="@{/js/script_chat.js}"></script>
 </body>
 </html>

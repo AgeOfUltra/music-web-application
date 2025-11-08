@@ -1,100 +1,108 @@
 package com.music.musicwebapplication.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.music.musicwebapplication.dto.SongDto;
+import com.music.musicwebapplication.dto.SongContainer;
 import com.music.musicwebapplication.service.SongControllerService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+@Controller
 @Slf4j
-@RestController
-@RequestMapping("/api/music")
+@RequestMapping("/app/music/admin")
 public class AdminSongController {
 
+    @GetMapping("/songUpload")
+    @PreAuthorize("isAuthenticated()")
+    public String uploadSongPage(Model model) {
+        if (!model.containsAttribute("songContainer")) {
+            model.addAttribute("songContainer", new SongContainer());
+        }
+        return "upload";
+    }
+
     private final SongControllerService songControllerService;
-    private final ObjectMapper objectMapper;
 
     @Autowired
-    AdminSongController(SongControllerService songControllerService, ObjectMapper objectMapper){
+    AdminSongController(SongControllerService songControllerService) {
         this.songControllerService = songControllerService;
-        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> uploadSong(@RequestParam("file")MultipartFile file,
-                                             @RequestParam("song") String  songJson) {
-
+    @PreAuthorize("isAuthenticated()")
+    public ModelAndView uploadSong(@Valid @ModelAttribute("songContainer") SongContainer songContainer, Errors error, RedirectAttributes redirectAttributes) {
+        if (error.hasErrors()) {
+            log.error("Validation failed for song container, {}", songContainer);
+            redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.songContainer", error);
+            redirectAttributes.addFlashAttribute("songContainer", songContainer);
+            redirectAttributes.addFlashAttribute("songUploadFailed", "Please provide valid fields");
+            return new ModelAndView("redirect:/app/music/admin/songUpload");
+        }
+        ResponseEntity<?> response;
         try {
-            if(file.isEmpty()){
-                log.info("file is empty");
-                return ResponseEntity.badRequest().body("File is empty");
-            }
-            String contentType = file.getContentType();
-            if(contentType==null || !contentType.startsWith("audio/")){
-                log.info("incorrect file type");
-                return ResponseEntity.badRequest().body("Please upload audio file");
-            }
-            SongDto song = objectMapper.readValue(songJson, SongDto.class);
-            if(song.getSongName().isEmpty() || song.getSongName().isBlank()){
-                log.info("song name is required");
-                return ResponseEntity.badRequest().body("song name required");
-            }
+            response = uploadSongApi(songContainer);
+            if (response.getStatusCode().equals(HttpStatus.OK)) {
+                log.info(
+                        "Song Uploaded successFull {} ,{}", songContainer.getSongName(), songContainer.getFileName()
+                );
+                redirectAttributes.addFlashAttribute("songUploadedSuccess", true);
 
-            String result = songControllerService.fileUploadHelper(file,song);
-            return ResponseEntity.ok(result);
-
-        }catch (Exception e){
+            } else {
+                log.error("error occurred while upload song");
+                redirectAttributes.addFlashAttribute("songUploadFailed", response.getBody());
+                redirectAttributes.addFlashAttribute("songContainer", songContainer);
+            }
+            return new ModelAndView("redirect:/app/music/admin/songUpload");
+        } catch (Exception e) {
             log.info("Error while uploading file");
             log.error("stack trace : {}", (Object) e.getStackTrace());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload song: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("songUploadFailed", e.getMessage());
+            return new ModelAndView("redirect:/app/music/admin/songUpload");
         }
+    }
+
+    //
+    public ResponseEntity<String> uploadSongApi(SongContainer container) throws Exception {
+
+//        try {
+        MultipartFile file = container.getFile();
+//            if(file.isEmpty()){
+//                log.info("file is empty");
+//                return ResponseEntity.badRequest().body("File is empty");
+//            }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("audio/")) {
+            log.info("incorrect file type");
+            return ResponseEntity.badRequest().body("Please upload audio file");
+        }
+
+//            if(container.getSongName().isEmpty() || container.getSongName().isBlank()){
+//                log.info("song name is required");
+//                return ResponseEntity.badRequest().body("song name required");
+//            }
+        if (!container.getFileName().contains(".mp3")) {
+            log.error("Sent file name {}", container.getFileName());
+            return ResponseEntity.badRequest().body("Only mp3 files are accepted");
+        }
+
+        String result = songControllerService.fileUploadHelper(container);
+        return ResponseEntity.ok(result);
+
+//        } catch (Exception e) {
+//            log.info("Error while uploading file");
+//            log.error("stack trace : {}", (Object) e.getStackTrace());
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Failed to upload song: " + e.getMessage());
+//        }
     }
 
 
 }
-
-/* async version
-*
-* public CompletableFuture<ResponseEntity<String>> uploadSongAsync(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("song") String songJson) {
-
-        try {
-            if (file.isEmpty()) {
-                return CompletableFuture.completedFuture(
-                    ResponseEntity.badRequest().body("File is empty"));
-            }
-
-            SongDto song = objectMapper.readValue(songJson, SongDto.class);
-
-            return musicUploadService.fileUploadHelperAsync(file, song)
-                    .thenApply(result -> ResponseEntity.ok(result))
-                    .exceptionally(throwable -> {
-                        logger.error("Async upload failed: {}", throwable.getMessage(), throwable);
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body("Failed to upload song: " + throwable.getMessage());
-                    });
-
-        } catch (Exception e) {
-            logger.error("Error in async upload: {}", e.getMessage(), e);
-            return CompletableFuture.completedFuture(
-                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload song: " + e.getMessage()));
-        }
-    }
-    * yml file
-    * spring:
-  task:
-    execution:
-      pool:
-        core-size: 5
-        max-size: 10
-        queue-capacity: 25
-* */

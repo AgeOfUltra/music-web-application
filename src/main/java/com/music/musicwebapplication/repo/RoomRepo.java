@@ -11,6 +11,9 @@ import java.util.Optional;
 public interface RoomRepo extends JpaRepository<Room,Long> {
     Optional<Room> findRoomByRoomName(@Param("roomName") String roomName);
 
-//    @Query("SELECT r FROM Room r JOIN FETCH r.participant WHERE r.roomName = :roomName")
-//    Optional<Room> findRoomWithParticipantsByRoomName(@Param("roomName") String roomName);
+    boolean existsByRoomName(String roomName);
+
+    @Query("SELECT r FROM Room r LEFT JOIN FETCH r.participant WHERE r.roomName = :roomName")
+    Optional<Room> findRoomWithParticipantsByRoomName(@Param("roomName") String roomName);
+
 }

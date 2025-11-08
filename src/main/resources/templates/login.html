@@ -6,312 +6,63 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style_login.css}">
 
-    <title>Connecting Notes - Login</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: "Alan Sans", sans-serif;
-            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-style: normal;
-        }
-
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            width: 400px;
-            max-width: 90%;
-        }
-
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .logo-container img {
-            max-width: 150px;
-            height: auto;
-        }
-
-        h1 {
-            text-align: center;
-            color: #1a1a1a;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #555;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #1a1a1a;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #1a1a1a;
-            border: 2px solid #1a1a1a;
-        }
-
-        .btn-secondary:hover {
-            background: #1a1a1a;
-            color: white;
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-
-        .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-        }
-
-        .toggle-form a {
-            color: #1a1a1a;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .toggle-form a:hover {
-            text-decoration: underline;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
+    <title>Connecting Notes ∞ - Login</title>
 </head>
 <body>
-<div class="container">
+<!--loading animation div-->
+<div th:replace="~{fragments/loader}"></div>
+
+<div class="container-login">
     <div class="logo-container">
-        <img src="/app_logo.png" alt="Connecting Notes Logo">
+        <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo">
     </div>
 
     <div id="loginForm">
         <h1>Welcome!</h1>
         <p class="subtitle">Login to join music chat rooms</p>
 
-        <div id="loginAlert" class="alert alert-error"></div>
+        <!-- Hidden container for Thymeleaf error data -->
+        <div id="errorMessage" style="display: none;" th:text="${loginError}"></div>
 
-        <form id="loginFormElement" onsubmit="handleLogin(event)">
+        <form th:action="@{/app/music/public/authenticate}" method="post" th:object="${loginUser}" id="loginFormElement">
             <div class="form-group">
-                <label for="loginUsername">Username</label>
-                <input type="text" id="loginUsername" name="username" required>
+                <label for="username">Username</label>
+                <input type="text" id="username" th:field="*{username}" class="form-control" required>
             </div>
 
             <div class="form-group">
-                <label for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" name="password" required>
+                <label for="password">Password</label>
+                <input type="password" id="password" th:field="*{password}" class="form-control" required>
             </div>
 
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
 
         <div class="toggle-form">
-            Don't have an account? <a href="#" onclick="toggleForms(); return false;">Sign Up</a>
+            Don't have an account? <a th:href="@{/app/music/public/signUp}">SignUp</a>
         </div>
     </div>
 
-    <div id="registerForm" class="hidden">
-        <h1>Create Account</h1>
-        <p class="subtitle">Join the music streaming community</p>
-
-        <div id="registerAlert" class="alert"></div>
-
-        <form id="registerFormElement" onsubmit="handleRegister(event)">
-            <div class="form-group">
-                <label for="registerUsername">Username</label>
-                <input type="text" id="registerUsername" name="username" required minlength="3">
-            </div>
-
-            <div class="form-group">
-                <label for="registerEmail">Email</label>
-                <input type="email" id="registerEmail" name="email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="registerPassword">Password</label>
-                <input type="password" id="registerPassword" name="password" required minlength="5">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Sign Up</button>
-        </form>
-
-        <div class="toggle-form">
-            Already have an account? <a href="#" onclick="toggleForms(); return false;">Login</a>
-        </div>
-    </div>
 </div>
 
+<div class="toast-container-custom" id="toastContainer"></div>
+
+<div id="registrationSuccess" style="display: none;" th:text="${showRegistrationSuccess}"></div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    function toggleForms() {
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
+    // Show loader on login form submit
+    LoaderPlugin.initFormSubmit('loginFormElement');
 
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-
-        hideAlerts();
-    }
-
-    function showAlert(elementId, message, isError = true) {
-        const alert = document.getElementById(elementId);
-        alert.textContent = message;
-        alert.className = isError ? 'alert alert-error' : 'alert alert-success';
-        alert.style.display = 'block';
-    }
-
-    function hideAlerts() {
-        document.getElementById('loginAlert').style.display = 'none';
-        document.getElementById('registerAlert').style.display = 'none';
-    }
-
-    async function handleLogin(event) {
-        event.preventDefault();
-        hideAlerts();
-
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-
-        try {
-            const response = await fetch('/app/music/public/authenticate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                localStorage.setItem('jwtToken', data.token);
-                localStorage.setItem('username', data.username);
-                document.cookie = `jwtToken=${data.token}; path=/; max-age=1800; SameSite=Lax`;
-
-                showAlert('loginAlert', data.message, false);
-
-                setTimeout(() => {
-                    window.location.href = '/app/music/dashboard';
-                }, 500);
-            } else {
-                showAlert('loginAlert', data.error || 'Login failed. Please try again.');
-            }
-        } catch (error) {
-            showAlert('loginAlert', 'Network error. Please try again.');
-            console.error('Login error:', error);
-        }
-    }
-
-    async function handleRegister(event) {
-        event.preventDefault();
-        hideAlerts();
-
-        const username = document.getElementById('registerUsername').value;
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-
-        try {
-            const response = await fetch('/app/music/public/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            const data = await response.text();
-
-            if (response.ok) {
-                showAlert('registerAlert', 'Registration successful! Please login.', false);
-                document.getElementById('registerFormElement').reset();
-
-                setTimeout(() => {
-                    toggleForms();
-                }, 1500);
-            } else {
-                showAlert('registerAlert', data || 'Registration failed. Please try again.');
-            }
-        } catch (error) {
-            showAlert('registerAlert', 'Network error. Please try again.');
-            console.error('Registration error:', error);
-        }
-    }
+    // Hide loader if there's an error
+    LoaderPlugin.hideOnError('errorMessage');
 </script>
+<script th:src="@{/js/script_login.js}"></script>
+
 </body>
 </html>

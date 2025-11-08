@@ -25,12 +25,9 @@ public class RoomService {
         this.repo = repo;
         this.participantRepo = participantRepo;
     }
-
+    @Transactional
     public Room createRoom(Room room){
-
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
-        // TODO : check if the user already present in any of the room.
-
         if(isUserPresentInAnyRoom(room.getParticipant().get(0).getUserName())){
             throw new RoomManageException("User already exist in one of the room");
         }
@@ -104,21 +101,21 @@ public class RoomService {
         return  true;
 
     }
-
+    @Transactional
     public Room getRoomDetails(String roomName){
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
     }
 
-    private Participant getNextAvailablePerson(long id, long roomId){
-        Optional<Participant> nextParticipant = participantRepo.findById(id);
-        if(nextParticipant.isPresent()){
-            return nextParticipant.get();
-        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
-            return getNextAvailablePerson(id++,roomId);
-        }else{
-            return null;
-        }
-    }
+//    private Participant getNextAvailablePerson(long id, long roomId){
+//        Optional<Participant> nextParticipant = participantRepo.findById(id);
+//        if(nextParticipant.isPresent()){
+//            return nextParticipant.get();
+//        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
+//            return getNextAvailablePerson(id++,roomId);
+//        }else{
+//            return null;
+//        }
+//    }
 
     public boolean isUserPresentInAnyRoom(String username){
         return repo.findAll().stream()
@@ -126,6 +123,12 @@ public class RoomService {
                         .stream().anyMatch(u->u.getUserName().equals(username)));
     }
 
+    public boolean isUserOrganizer(String roomName, String username) {
+        Optional<Room> room = repo.findRoomByRoomName(roomName);
+        return room.map(value -> value.getParticipant().stream()
+                .anyMatch(p -> p.getUserName().equals(username) && p.isOrganizer())).orElse(false);
+
+    }
 
     @PreDestroy
     private void clearRooms(){
