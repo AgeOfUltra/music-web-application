@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component
 @Slf4j
 public class InitiateAdmin {
-    @Bean
+//    @Bean
     public CommandLineRunner init(UserRepo userRepo, PasswordEncoder passwordEncoder){
         return args -> {
             if(userRepo.findByUsername("admin").isEmpty()){

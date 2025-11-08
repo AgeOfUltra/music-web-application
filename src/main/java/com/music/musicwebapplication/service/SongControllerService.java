@@ -1,12 +1,10 @@
 package com.music.musicwebapplication.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.music.musicwebapplication.dto.SongDto;
+import com.music.musicwebapplication.dto.SongContainer;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -34,31 +32,22 @@ public class SongControllerService {
     private final S3Client client;
     private final SongRepo repo;
 
-    private final ModelMapper mapper;
-    private final ModelMapper modelMapper;
-    private final ObjectMapper objectMapper;
 
     @Value("${aws.bucket.name}")
     private String bucketName;
 
-//    @Value("${cloud.aws.region.static}")
-//    private String region;
 
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo, ModelMapper mapper, ModelMapper modelMapper, ObjectMapper objectMapper){
+    SongControllerService(S3Client client, SongRepo repo){
         this.client = client;
         this.repo = repo;
-        this.mapper= mapper;
-        this.modelMapper = modelMapper;
-        this.objectMapper = objectMapper;
+
     }
 
-    public String fileUploadHelper(MultipartFile file,
-                                   SongDto song) throws Exception {
-
+    public String fileUploadHelper(SongContainer container) throws Exception {
         log.info("Song uploading process started");
 
-        Optional<Song> currentSong = repo.findSongBySongName(song.getSongName());
+        Optional<Song> currentSong = repo.findSongBySongName(container.getSongName());
 
         if(currentSong.isPresent()){
             log.info("Song uploading failed! because song already exist in data base with id {}",currentSong.get().getId());
@@ -66,13 +55,13 @@ public class SongControllerService {
         }
 
         try{
-            String s3key = uploadFile(file);
+            String s3key = uploadFile(container.getFile());
             log.info("Song uploaded successfully with key {}",s3key);
 
             String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
-            Song uploadedSong = updateSongInDb(song,url);
+            Song uploadedSong = updateSongInDb(container,url);
             log.info("song saved with name {}",uploadedSong.getSongName());
 
             return "Song uploaded and saved successfully";
@@ -102,7 +91,7 @@ public class SongControllerService {
 
 
 
-    protected Song updateSongInDb(SongDto song, String url){
+    protected Song updateSongInDb(SongContainer song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
         newSong.setFileName(song.getFileName());
@@ -145,23 +134,3 @@ public class SongControllerService {
         return repo.findBySongNameContainingIgnoreCase(songName);
     }
 }
-
-
-/*
-*  async version
-*  public CompletableFuture<String> fileUploadHelperAsync(MultipartFile file, SongDto song) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return fileUploadHelper(file, song);
-            } catch (Exception e) {
-                logger.error("Async upload failed: {}", e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        }, executorService);
-    }
-*public void shutdown() {
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-        }
-    }
-* */
