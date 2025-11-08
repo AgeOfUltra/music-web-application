@@ -12,7 +12,7 @@
 
 </head>
 <body>
-<div th:replace="fragments/loader"></div>
+<div th:replace="~{fragments/loader}"></div>
 
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg">
@@ -97,11 +97,11 @@
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
                             <label for="songName" class="form-label">Song Name <span class="text-danger"></span></label>
-                            <input type="text" class="form-control" id="songName" th:field="*{songName}" placeholder="Enter song name">
+                            <input type="text" class="form-control" id="songName" th:field="*{songName}" th:value="*{#strings.trim(songName)}" placeholder="Enter song name">
                         </div>
                         <div class="col-12 col-md-6">
                             <label for="fileName" class="form-label">File Name <span class="text-danger"></span></label>
-                            <input type="text" class="form-control" id="fileName" th:field="*{fileName}" placeholder="e.g., song_title">
+                            <input type="text" class="form-control" id="fileName" th:field="*{fileName}" th:value="*{#strings.trim(fileName)}" placeholder="e.g., song_title.mp3">
                         </div>
                     </div>
 
@@ -109,11 +109,11 @@
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
                             <label for="movie" class="form-label">Movie <span class="text-danger"></span></label>
-                            <input type="text" class="form-control" id="movie" th:field="*{movie}" placeholder="Enter movie name">
+                            <input type="text" class="form-control" id="movie" th:field="*{movie}" th:value="*{#strings.trim(movie)}" placeholder="Enter movie name">
                         </div>
                         <div class="col-12 col-md-6">
                             <label for="singer" class="form-label">Singer <span class="text-danger"></span></label>
-                            <input type="text" class="form-control" id="singer" th:field="*{singer}" placeholder="Enter singer name">
+                            <input type="text" class="form-control" id="singer" th:field="*{singer}" th:value="*{#strings.trim(singer)}" placeholder="Enter singer name">
                         </div>
                     </div>
 
@@ -127,10 +127,8 @@
                                 <option value="English">English</option>
                                 <option value="Tamil">Tamil</option>
                                 <option value="Telugu">Telugu</option>
-                                <option value="Kannada">Kannada</option>
                                 <option value="Malayalam">Malayalam</option>
-                                <option value="Marathi">Marathi</option>
-                                <option value="Punjabi">Punjabi</option>
+                                <option value="Japanese">Japanese</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -139,13 +137,17 @@
                             <select class="form-select" id="songType" th:field="*{songType}">
                                 <option value="">Select Type</option>
                                 <option value="Item">Item</option>
-                                <option value="Love Melody">Love Melody</option>
-                                <option value="Friendship">Friendship</option>
+                                <option value="Love">Love</option>
+                                <option value="Melody">Melody</option>
+                                <option value="Sad">Sad/Heart Break</option>
                                 <option value="Mass">Mass</option>
-                                <option value="class">class</option>
+                                <option value="Friendship">Friendship</option>
                                 <option value="Folk">Folk</option>
+                                <option value="classical">classical</option>
+                                <option value="Folk DJ">Folk DJ</option>
                                 <option value="Rap">Rap</option>
                                 <option value="pop">pop</option>
+                                <option value="other">other</option>
                             </select>
                         </div>
                     </div>

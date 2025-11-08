@@ -499,6 +499,47 @@ body::before {
 .system-message.fade-out {
     opacity: 0;
 }
+/* Chat Bubble Layout */
+.chat-bubble {
+    max-width: 70%;
+    margin: 10px 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Other users (left) */
+.other-message {
+    background: #2f2f2f;
+    color: #fff;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+/* Current user (right) */
+.my-message {
+    background: #4f7dff;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-meta {
+    font-size: 11px;
+    opacity: 0.85;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    column-gap: 12px;
+}
+
+
+/* Message text */
+.bubble-text {
+    font-size: 15px;
+    line-height: 1.4;
+}
 
 /* ==================== CHAT INPUT ==================== */
 .chat-input-container {
@@ -645,7 +686,7 @@ body::before {
     left: -400px;
     width: 400px;
     height: 100vh;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgb(172, 102, 244);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 4px 0 20px rgba(31, 38, 135, 0.2);
@@ -837,6 +878,7 @@ body::before {
     opacity: 0.8;
 }
 
+
 @keyframes slideIn {
     from {
         transform: translateX(400px);
@@ -879,6 +921,82 @@ body::before {
 
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, rgba(102, 126, 234, 0.6) 0%, rgba(64, 230, 226, 0.6) 100%);
+}
+/* =========================
+   CLEAN & COMPACT CHAT UI
+   ========================= */
+
+#chatMessages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* space between messages */
+    padding: 12px;
+}
+
+/* Base bubble */
+.chat-bubble {
+    max-width: 75%;
+    padding: 10px 12px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    word-wrap: break-word;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+/* Other users (LEFT) */
+.other-message {
+    align-self: flex-start;
+    background: #2c2c2c;
+    color: #efefef;
+    border-top-left-radius: 4px;
+}
+
+/* Current user (RIGHT) */
+.my-message {
+    align-self: flex-end;
+    background: #6a1b9a;  /* Purple bubble */
+    color: white;
+    border-top-right-radius: 4px;
+}
+
+/* Sender + time row */
+.chat-meta {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.sender {
+    font-weight: 600;
+}
+
+.time {
+    font-style: italic;
+}
+
+/* Bubble text */
+.bubble-text {
+    margin: 0;
+}
+
+/* =========================
+   MOBILE RESPONSIVE
+   ========================= */
+@media (max-width: 600px) {
+    .chat-bubble {
+        max-width: 90%;
+        padding: 8px 10px;
+        font-size: 13.5px;
+    }
+
+    #chatMessages {
+        gap: 6px;
+        padding: 8px;
+    }
 }
 
 @media (max-width: 1024px) {
@@ -986,11 +1104,18 @@ body::before {
 
     .middle-panel {
         display: flex;
-        width: 100%;
-        margin-right: 0;
+        flex-direction: column;
         order: 3;
-        min-height: 450px;
+        height: calc(100vh - 160px);
+    }
+    .chat-messages {
         flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .chat-input-container {
+        flex-shrink: 0;  /* ✅ always stays at bottom */
     }
 
     .right-panel {
@@ -1002,10 +1127,10 @@ body::before {
         min-height: 200px;
     }
 
-    .chat-messages {
-        max-height: 250px;
-        overflow-y: auto;
-    }
+    /*.chat-messages {*/
+    /*    max-height: 250px;*/
+    /*    overflow-y: auto;*/
+    /*}*/
 
     .participants-list {
         max-height: 200px;

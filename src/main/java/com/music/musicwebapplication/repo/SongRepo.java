@@ -16,8 +16,9 @@ public interface SongRepo extends JpaRepository<Song,Long> {
 
     Optional<Song> findSongByFileName(String objectKey);
 
-    @Query("select songName from Song")
-    Optional<List<String>> findAllBySongName();
-
     List<Song> findBySongNameContainingIgnoreCase(String query);
+
+    boolean existsByFileName(String fileName);
+
+    boolean existsBySongName(String songName);
 }

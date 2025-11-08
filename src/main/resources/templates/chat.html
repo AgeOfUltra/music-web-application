@@ -34,7 +34,7 @@
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
             <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
-                <audio id="audioPlayer" controls></audio>
+                <audio id="audioPlayer" controls  controlsList="nodownload noplaybackrate"></audio>
             </div>
             <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
         </div>
