@@ -16,8 +16,136 @@ const userColors = {};
 const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 let currentPage = 0;
 let totalPages = 1;
-let lastActionTime = 0;
-const ACTION_COOLDOWN = 800; // ms
+let currentParticipants = [];
+let lastUserLeft = null;
+let boundAudioRole = null; // 'organizer' | 'participant' | null
+
+function syncAudioWrapperClass() {
+    const wrapper = document.getElementById('audioPlayerWrapper');
+    if (!wrapper) return;
+
+    wrapper.classList.remove('organizer-audio', 'readonly-audio');
+    wrapper.classList.add(isOrganizer ? 'organizer-audio' : 'readonly-audio');
+}
+
+const onOrganizerPause = (e) => {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+    if (!isOrganizer) return; // guard if role changed mid-flight
+    if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
+        const playbackMessage = {
+            action: 'PAUSE',
+            timestamp: Math.floor(audioPlayer.currentTime * 1000),
+            controller: currentUsername
+        };
+        console.log('⏸️ [ORGANIZER] Sending PAUSE command:', playbackMessage);
+        stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
+    }
+};
+
+const onOrganizerPlay = (e) => {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+    if (!isOrganizer) return;
+    if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src && currentSongData) {
+        const playbackMessage = {
+            action: 'RESUME',
+            timestamp: Math.floor(audioPlayer.currentTime * 1000),
+            controller: currentUsername,
+            songFileName: currentSongData.songFileName,
+            songName: currentSongData.songName,
+            hero: currentSongData.hero,
+            heroine: currentSongData.heroine,
+            language: currentSongData.language
+        };
+        console.log('▶️ [ORGANIZER] Sending RESUME command:', playbackMessage);
+        stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
+    }
+};
+
+const onParticipantPlay = (e) => {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+    if (isOrganizer) return; // guard if role changed
+    if (!ignoreLocalEvents && e.isTrusted) {
+        console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
+        e.preventDefault();
+        try { audioPlayer.pause(); } catch(_) {}
+        ToastNotification.warning('Only the organizer can control playback');
+    }
+};
+
+const onParticipantPause = (e) => {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+    if (isOrganizer) return;
+    if (!ignoreLocalEvents && e.isTrusted) {
+        console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
+        e.preventDefault();
+        audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
+        // ToastNotification.warning('Only the organizer can control playback');
+    }
+};
+
+function bindAudioHandlersForRole(role) {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+
+    // Unbind any previously bound handlers (safe even if not present)
+    audioPlayer.removeEventListener('pause', onOrganizerPause);
+    audioPlayer.removeEventListener('play',  onOrganizerPlay);
+    audioPlayer.removeEventListener('play',  onParticipantPlay, true);
+    audioPlayer.removeEventListener('pause', onParticipantPause, true);
+
+    if (role === 'organizer') {
+        audioPlayer.addEventListener('pause', onOrganizerPause);
+        audioPlayer.addEventListener('play',  onOrganizerPlay);
+    } else {
+        audioPlayer.addEventListener('play',  onParticipantPlay, true);
+        audioPlayer.addEventListener('pause', onParticipantPause, true);
+    }
+
+    boundAudioRole = role;
+    console.log('🎛️ Rebound audio handlers for role:', role);
+}
+
+function onRoleChange() {
+    // 1) Update global UI/flags
+    updatePermissionNotice();
+    syncAudioWrapperClass();
+    updateAudioControls();
+
+    // 2) Rebind audio listeners only if role actually changed
+    const desired = isOrganizer ? 'organizer' : 'participant';
+    if (boundAudioRole !== desired) {
+        bindAudioHandlersForRole(desired);
+    }
+}
+function resetAudioOnOrganizerLeave() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+
+    console.log("🎶 Organizer left - resetting audio");
+
+    // Stop playback
+    try { audioPlayer.pause(); } catch(e) {}
+
+    // Remove audio source completely
+    audioPlayer.src = "";
+    audioPlayer.removeAttribute("src");
+
+    // Reset UI text
+    document.getElementById('currentSongTitle').textContent = "No song playing";
+    document.getElementById('currentSongDetails').textContent = "Select a song to play";
+
+    // Clear current song data
+    currentSongData = null;
+
+    // Reset local event state
+    ignoreLocalEvents = false;
+}
+
+
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
     initializePage();
@@ -213,77 +341,16 @@ function updateCurrentSongDisplay(songName, hero, language, movie, singer) {
 // ==================== AUDIO PLAYER CONTROL ====================
 function setupAudioPlayerListeners() {
     const audioPlayer = document.getElementById('audioPlayer');
-
     if (!audioPlayer) {
         console.error('❌ Audio player not found!');
         return;
     }
-
-    console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
-
-    // Always update controls state when listeners are set up
+    // Apply initial UI + listeners for current role
+    syncAudioWrapperClass();
     updateAudioControls();
-
-    if (isOrganizer) {
-        // ORGANIZER: send PLAY/PAUSE/RESUME events
-        audioPlayer.addEventListener('pause', (e) => {
-            // Only propagate when the pause was initiated by the organizer (user interaction)
-            if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
-                const playbackMessage = {
-                    action: 'PAUSE',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000),
-                    controller: currentUsername
-                };
-                console.log('⏸️ [ORGANIZER] Sending PAUSE command:', playbackMessage);
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
-            }
-        });
-
-        audioPlayer.addEventListener('play', (e) => {
-            // Only propagate when the play was initiated by the organizer (user interaction)
-            if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src && currentSongData) {
-                const playbackMessage = {
-                    action: 'RESUME',
-                    timestamp: Math.floor(audioPlayer.currentTime * 1000),
-                    controller: currentUsername,
-                    songFileName: currentSongData.songFileName,
-                    songName: currentSongData.songName,
-                    hero: currentSongData.hero,
-                    heroine: currentSongData.heroine,
-                    language: currentSongData.language
-                };
-                console.log('▶️ [ORGANIZER] Sending RESUME command:', playbackMessage);
-                stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
-            }
-        });
-    } else {
-        // NON-ORGANIZER: prevent user interaction (only if user triggered the action)
-        audioPlayer.addEventListener('play', (e) => {
-            // if user clicked play (isTrusted) and we aren't currently applying a programmatic action,
-            // prevent it and show a notice.
-            if (!ignoreLocalEvents && e.isTrusted) {
-                console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
-                e.preventDefault();
-                // keep paused
-                try { audioPlayer.pause(); } catch (err) { /* ignore */ }
-                ToastNotification.warning('Only the organizer can control playback');
-            }
-        }, true);
-
-        audioPlayer.addEventListener('pause', (e) => {
-            // Only intercept user-initiated pause events; programmatic pauses (e.isTrusted === false)
-            // should be allowed when the server tells us to pause.
-            if (!ignoreLocalEvents && e.isTrusted) {
-                console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
-                e.preventDefault();
-                // resume back (best-effort)
-                audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
-                ToastNotification.warning('Only the organizer can control playback');
-            }
-        }, true);
-    }
+    bindAudioHandlersForRole(isOrganizer ? 'organizer' : 'participant');
+    console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
 }
-
 
 // ==================== PLAYBACK HANDLING ====================
 function handlePlaybackCommand(playbackMsg) {
@@ -310,22 +377,50 @@ function handlePlaybackCommand(playbackMsg) {
 
     console.log('📥 [' + currentUsername + '] Received playback command:', playbackMsg.action, 'from:', playbackMsg.controller);
 
+    const controller = playbackMsg.controller;
+
+// ✅ NEW FIX: ignore playback from someone who just left (race condition fix)
+    if (controller === lastUserLeft) {
+        console.warn("⏭️ Ignoring playback from user who just left:", controller);
+        ignoreLocalEvents = false;
+        return;
+    }
+
+// ✅ If I am organizer now, ignore all playback from anyone else
+    if (isOrganizer && controller !== currentUsername) {
+        console.warn("⏭️ Ignoring playback event because I am the organizer now:", controller);
+        ignoreLocalEvents = false;
+        return;
+    }
+
+// ✅ If I am NOT organizer, ignore playback for users no longer in room
+    const stillInRoom = currentParticipants.some(p => p.userName === controller);
+
+    if (!stillInRoom) {
+        console.warn("⏭️ Ignoring stale playback event from user who left:", controller);
+        ignoreLocalEvents = false;
+        return;
+    }
+
     switch (playbackMsg.action) {
         case 'PLAY':
             handlePlayCommand(audioPlayer, playbackMsg);
             break;
+
         case 'PAUSE':
             handlePauseCommand(audioPlayer, playbackMsg);
             break;
+
         case 'RESUME':
             handleResumeCommand(audioPlayer, playbackMsg);
             break;
+
         default:
             console.warn('⚠️ Unknown playback action:', playbackMsg.action);
             ignoreLocalEvents = false;
     }
+
     setTimeout(() => {
-        // safety net: if some error prevented clearing ignore flag, clear it after 10s
         if (ignoreLocalEvents) {
             console.warn('⚠️ Clearing ignoreLocalEvents safety-net after 10s');
             ignoreLocalEvents = false;
@@ -557,46 +652,46 @@ function playSong(song) {
     }
 }
 
-function resumeSong() {
-    if (!isOrganizer) {
-        ToastNotification.warning('Only the organizer can resume songs');
-        return;
-    }
-
-    if (!stompClient || !stompClient.connected) {
-        console.error('❌ WebSocket not connected');
-        ToastNotification.error('WebSocket not connected. Please refresh.');
-        return;
-    }
-
-    const audioPlayer = document.getElementById('audioPlayer');
-
-    const resumeMessage = {
-        action: 'RESUME',
-        timestamp: Math.floor(audioPlayer.currentTime * 1000),
-        controller: currentUsername,
-        songFileName: currentSongData?.songFileName,
-        songName: currentSongData?.songName,
-        hero: currentSongData?.hero,
-        heroine: currentSongData?.heroine,
-        language: currentSongData?.language
-    };
-
-    console.log('▶️ [ORGANIZER] Sending RESUME command');
-
-    try {
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/playback`,
-            {},
-            JSON.stringify(resumeMessage)
-        );
-
-        console.log('✅ Resume command sent successfully');
-    } catch (error) {
-        console.error('❌ Error sending resume command:', error);
-        ToastNotification.error('Failed to resume music');
-    }
-}
+// function resumeSong() {
+//     if (!isOrganizer) {
+//         ToastNotification.warning('Only the organizer can resume songs');
+//         return;
+//     }
+//
+//     if (!stompClient || !stompClient.connected) {
+//         console.error('❌ WebSocket not connected');
+//         ToastNotification.error('WebSocket not connected. Please refresh.');
+//         return;
+//     }
+//
+//     const audioPlayer = document.getElementById('audioPlayer');
+//
+//     const resumeMessage = {
+//         action: 'RESUME',
+//         timestamp: Math.floor(audioPlayer.currentTime * 1000),
+//         controller: currentUsername,
+//         songFileName: currentSongData?.songFileName,
+//         songName: currentSongData?.songName,
+//         hero: currentSongData?.hero,
+//         heroine: currentSongData?.heroine,
+//         language: currentSongData?.language
+//     };
+//
+//     console.log('▶️ [ORGANIZER] Sending RESUME command');
+//
+//     try {
+//         stompClient.send(
+//             `/app/music/chat/${currentRoomName}/playback`,
+//             {},
+//             JSON.stringify(resumeMessage)
+//         );
+//
+//         console.log('✅ Resume command sent successfully');
+//     } catch (error) {
+//         console.error('❌ Error sending resume command:', error);
+//         ToastNotification.error('Failed to resume music');
+//     }
+// }
 
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
@@ -610,9 +705,30 @@ function connectWebSocket(token) {
             ToastNotification.success('Connected to chat room');
 
             stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
-                const chatMessage = JSON.parse(message.body);
-                displayMessage(chatMessage);
+                const msg = JSON.parse(message.body);
+
+                console.log("📥 CHAT message received:", msg);
+
+                if (msg.type === "LEAVE") {
+                    lastUserLeft = msg.sender;
+                    console.log("📌 User LEFT:", lastUserLeft);
+
+                    ToastNotification.info(`${msg.sender} left the room`);
+                    return;
+                }
+
+                if (msg.type === "JOIN") {
+                    ToastNotification.success(`${msg.sender} joined the room`);
+                    return;
+                }
+
+
+                // ✅ Only actual user chat messages go here
+                if (msg.type === "CHAT") {
+                    displayMessage(msg);
+                }
             });
+
 
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
                 const playbackMsg = JSON.parse(message.body);
@@ -678,6 +794,7 @@ async function refreshParticipants() {
 function updateParticipantsDisplay(participants) {
     const participantsList = document.getElementById('participantsList');
     const participantCount = document.getElementById('participantCount');
+    currentParticipants = participants;
 
     participantsList.innerHTML = '';
     participantCount.textContent = `${participants.length} / ${PAGE_DATA.totalCount} participants`;
@@ -701,11 +818,18 @@ function updateParticipantsDisplay(participants) {
         `;
         participantsList.appendChild(item);
 
+        const wasOrganizer = isOrganizer; // remember old state
+
         if (p.userName === currentUsername) {
             isOrganizer = p.organizer;
-            updatePermissionNotice();
-            updateAudioControls()
+            onRoleChange();
+
+            // ✅ If organizer LEFT during playback → reset audio fully
+            if (wasOrganizer && !isOrganizer) {
+                resetAudioOnOrganizerLeave();
+            }
         }
+
     });
 }
 
@@ -727,7 +851,7 @@ function updateAudioControls() {
         audioPlayer.controls = true;
         // Remove pointer-block overlay if present
         const overlay = document.getElementById('controlsOverlay');
-        if (overlay) overlay.style.display = 'none';
+        if (overlay) overlay.remove();
     } else {
         // Non-organizers: hide native controls to avoid accidental clicks.
         // Native controls are hidden so we rely on server events to update playback.
@@ -793,54 +917,33 @@ function displayMessage(message) {
     const chatMessages = document.getElementById('chatMessages');
 
     if (message.type === 'JOIN' || message.type === 'LEAVE') {
-        // displaySystemMessage(message.content);
-    } else {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message';
-
-        const time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
-
-        let userColor, darkerColor;
-        if (message.sender === currentUsername) {
-            userColor = currentUserColor;
-            darkerColor = currentUserDarkerColor;
-        } else {
-            userColor = getUserColor(message.sender);
-            darkerColor = getDarkerShade(userColor);
-        }
-
-        messageDiv.innerHTML = `
-            <div class="message-header">
-                <span class="message-sender" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${message.sender}</span>
-                <span class="message-time">${time}</span>
-            </div>
-            <div class="message-content">${escapeHtml(message.content)}</div>
-        `;
-
-        chatMessages.appendChild(messageDiv);
+        return;
     }
 
+    const isCurrentUser = message.sender === currentUsername;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-bubble ' + (isCurrentUser ? 'my-message' : 'other-message');
+
+    const time = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    messageDiv.innerHTML = `
+        <div class="chat-meta">
+            <span class="sender">${message.sender}</span>
+            <span class="time">${time}</span>
+        </div>
+        <div class="bubble-text">
+            ${escapeHtml(message.content)}
+        </div>
+    `;
+
+    chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function displaySystemMessage(text) {
-    const chatMessages = document.getElementById('chatMessages');
-    const systemMsg = document.createElement('div');
-    systemMsg.className = 'system-message';
-    systemMsg.textContent = text;
-    chatMessages.appendChild(systemMsg);
-
-    setTimeout(() => {
-        systemMsg.classList.add('fade-out');
-        setTimeout(() => {
-            if (systemMsg.parentNode) {
-                systemMsg.parentNode.removeChild(systemMsg);
-            }
-        }, 500);
-    }, 5000);
-
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
 
 // ==================== SONG MANAGEMENT ====================
 function displaySongs(songs) {
@@ -946,7 +1049,7 @@ function displaySearchResults(songs) {
         };
         songItem.innerHTML = `
             <div class="song-item-title">${song.songName}</div>
-            <div class="song-item-info">${song.hero || 'Unknown'} • ${song.heroine || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
         `;
         searchResults.appendChild(songItem);
     });
@@ -1000,13 +1103,20 @@ function closeSearchDrawer() {
     document.getElementById('searchResults').innerHTML = '';
 }
 
+function isReload() {
+    const nav = performance.getEntriesByType("navigation")[0];
+    return nav && nav.type === "reload";
+}
 
 let allowUnload = false;
 
 window.addEventListener('beforeunload', (event) => {
+    if (isReload()) {
+        allowUnload = true;
+    }
     if (!allowUnload) {
         event.preventDefault();
-        event.returnValue = ''; // triggers the warning
+        event.returnValue = '';
     }
 });
 
@@ -1034,6 +1144,12 @@ window.addEventListener('pagehide', function(event) {
 
 function handleTabClose() {
     console.log('🔌 Tab/Window is closing - Initiating logout...');
+
+    if (isReload()) {
+        console.log("🔄 Page reload detected — skipping LEAVE + logout");
+        return;
+    }
+
 
     if (isClosing) {
         console.log('⚠️ Already closing, skipping duplicate handleTabClose');
