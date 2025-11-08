@@ -1,2 +1,3 @@
-1) need to add the validation at the controller layer.
+1) need to implement the cache and stream the song from the cache
 
+2) upon network reset need to store the sessionn again.

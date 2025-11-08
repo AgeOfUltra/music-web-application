@@ -8,15 +8,17 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.annotation.SessionScope;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
 @Slf4j
+@SessionScope
 public class JwtTokenUtil {
 
-    private static final long EXPIRY_DATE = 1000 * 60 * 30; // 30 minutes
+    private static final long EXPIRY_DATE = 1000 * 60 * 60; // 30 minutes
 
     @Value("${jwt.security.secret-key:your-secret-key-here-min-256-bits-long}")
     private String secretString;

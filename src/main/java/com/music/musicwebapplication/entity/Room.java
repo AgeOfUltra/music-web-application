@@ -12,6 +12,7 @@ public class Room {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
+    @Column(unique = true)
     private String roomName;
     private int maxCount;
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL,orphanRemoval = true)

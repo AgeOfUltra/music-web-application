@@ -8,15 +8,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style_chat.css}">
+    <title>Connecting Notes ∞</title>
 </head>
 <body>
 <div class="header">
+    <button class="btn btn-secondary" onclick="handleBackButton()">
+        Back
+    </button>
     <div class="header-left">
         <img src="/app_logo.png" alt="Logo" class="logo">
         <div class="app-title">CONNECTING NOTES</div>
     </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
+
+<!-- Success Message Container (hidden) -->
+<div id="successMessageCreate" style="display: none;" th:text="${roomCreatedSuccessful}"></div>
+<div id="successMessageJoin" style="display: none;" th:text="${roomJoinedSuccessful}"></div>
 
 <div class="main-container">
     <div class="left-panel">
@@ -26,24 +34,38 @@
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
             <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
-                <audio id="audioPlayer" controls></audio>
+                <audio id="audioPlayer" controls  controlsList="nodownload noplaybackrate"></audio>
             </div>
             <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
         </div>
+
         <div id="permissionNotice" class="permission-notice" style="display: none;">
             Only the organizer can control playback
         </div>
-        <div class="song-list" id="songList">
-            <div class="song-item" th:each="song : ${ALLSONGS}"
-                 th:data-filename="${song.fileName}"
-                 th:data-songname="${song.songName}"
-                 th:data-hero="${song.hero}"
-                 th:data-heroine="${song.heroine}"
-                 th:data-language="${song.language}"
-                 onclick="handleSongClick(this)">
-                <div class="song-item-title" th:text="${song.songName}"></div>
-                <div class="song-item-info" th:text="${song.hero} + ' • ' + ${song.heroine} + ' • ' + ${song.language}"></div>
+
+        <!-- PAGINATION CONTROLS -->
+        <div class="pagination-header">
+            <h3>Songs</h3>
+            <div class="pagination-info">
+                Page <span class="current-page">1</span> of <span class="total-pages">1</span>
             </div>
+        </div>
+
+        <div class="song-list" id="songList">
+            <!-- Songs loaded dynamically via JavaScript -->
+        </div>
+
+        <!-- PAGINATION BUTTONS -->
+        <div class="pagination-controls">
+            <button class="nav-button" id="prevBtn" onclick="previousPage()" title="Previous Page">
+                ‹ Previous
+            </button>
+            <div class="page-info">
+                <span class="page-counter"><span id="currentPageNum">1</span>/<span id="totalPagesNum">1</span></span>
+            </div>
+            <button class="nav-button" id="nextBtn" onclick="nextPage()" title="Next Page">
+                Next ›
+            </button>
         </div>
     </div>
 
@@ -68,12 +90,7 @@
             <div class="online-title">Online Participants</div>
         </div>
         <div class="participants-list" id="participantsList">
-            <div class="participant-item" th:each="participant : ${participants}">
-                <div class="participant-name"
-                     th:style="'background: linear-gradient(135deg, ' + ${userColor} + ', ' + ${darkerColor} + ')'"
-                     th:text="${participant.userName}"></div>
-                <span class="organizer-badge" th:if="${participant.organizer}">Organizer</span>
-            </div>
+            <!-- Participants loaded dynamically via JavaScript -->
         </div>
     </div>
 </div>
@@ -85,10 +102,15 @@
     </div>
     <div class="drawer-search">
         <input type="text" id="searchInput" placeholder="Search by song name..." onkeypress="handleSearchEnter(event)">
+        <button class="search-btn" onclick="searchSongs()" style="margin-top: 10px; width: 100%;">Search</button>
     </div>
     <div class="drawer-results" id="searchResults"></div>
 </div>
 
+<!-- Toast Container -->
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/
     const PAGE_DATA = {
