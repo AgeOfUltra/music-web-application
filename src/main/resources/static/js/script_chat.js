@@ -83,7 +83,7 @@ const onParticipantPause = (e) => {
         console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
         e.preventDefault();
         audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
-        ToastNotification.warning('Only the organizer can control playback');
+        // ToastNotification.warning('Only the organizer can control playback');
     }
 };
 
@@ -1103,13 +1103,20 @@ function closeSearchDrawer() {
     document.getElementById('searchResults').innerHTML = '';
 }
 
+function isReload() {
+    const nav = performance.getEntriesByType("navigation")[0];
+    return nav && nav.type === "reload";
+}
 
 let allowUnload = false;
 
 window.addEventListener('beforeunload', (event) => {
+    if (isReload()) {
+        allowUnload = true;
+    }
     if (!allowUnload) {
         event.preventDefault();
-        event.returnValue = ''; // triggers the warning
+        event.returnValue = '';
     }
 });
 
@@ -1137,6 +1144,12 @@ window.addEventListener('pagehide', function(event) {
 
 function handleTabClose() {
     console.log('🔌 Tab/Window is closing - Initiating logout...');
+
+    if (isReload()) {
+        console.log("🔄 Page reload detected — skipping LEAVE + logout");
+        return;
+    }
+
 
     if (isClosing) {
         console.log('⚠️ Already closing, skipping duplicate handleTabClose');

@@ -13,11 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
@@ -109,24 +106,24 @@ public class SongControllerService {
         return savedSong.get();
     }
 
-    public ResponseInputStream<GetObjectResponse> getSongStream(String objectKey){
-
-        Optional<Song> song = repo.findSongByFileName(objectKey);
-        if(song.isEmpty()){
-            log.info("Song not found in DB with name {}",objectKey);
-           throw new SongNotFoundException("Song not found");
-        }
-
-        GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(objectKey)
-                .build();
-        return client.getObject(getObjectRequest);
-
-    }
+//    public ResponseInputStream<GetObjectResponse> getSongStream(String objectKey){
+//
+//        Optional<Song> song = repo.findSongByFileName(objectKey);
+//        if(song.isEmpty()){
+//            log.info("Song not found in DB with name {}",objectKey);
+//           throw new SongNotFoundException("Song not found");
+//        }
+//
+//        GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
+//                .bucket(bucketName)
+//                .key(objectKey)
+//                .build();
+//        return client.getObject(getObjectRequest);
+//
+//    }
 
     public Page<Song> getAllSongsName(int page, int size) {
-        Pageable pageable = PageRequest.of(page,size, Sort.by("id").ascending());
+        Pageable pageable = PageRequest.of(page,size, Sort.by("songName").ascending());
         return  repo.findAll(pageable);
     }
 

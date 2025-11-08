@@ -24,7 +24,7 @@ public class WebSocketEventListener {
             StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 
             if (headerAccessor.getSessionAttributes() == null) {
-                log.warn("⚠️ Session attributes not available in disconnect event");
+                log.warn("⚠️ Session attributes missing in disconnect event");
                 return;
             }
 
@@ -32,27 +32,19 @@ public class WebSocketEventListener {
             String username = (String) sessionAttributes.get("username");
             String roomName = (String) sessionAttributes.get("roomName");
 
-            // Validate data
-            if (username == null || username.isEmpty()) {
-                log.debug("ℹ️ User disconnected without username");
+            // Not enough info — stop
+            if (username == null || roomName == null) {
                 return;
             }
 
-            // Use roomName if available, otherwise skip notification
-            if (roomName == null || roomName.isEmpty()) {
-                log.warn("⚠️ User {} disconnected but roomName not available", username);
-                return;
-            }
-
-            log.info("👋 User {} disconnected from room: {}", username, roomName);
-
-            // Create and send disconnect message
-            sendDisconnectMessage(username, roomName);
+            // ⚠️ IMPORTANT: Do NOT send LEAVE here.
+            log.info("🔌 WebSocket disconnected for user {} in room {}, but NOT treating as leave.", username, roomName);
 
         } catch (Exception e) {
             log.error("❌ Error handling WebSocket disconnect: {}", e.getMessage(), e);
         }
     }
+
 
     /**
      * Send disconnect/leave message to room

@@ -15,12 +15,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 
@@ -76,10 +72,6 @@ public class PublicSongController {
         return ResponseEntity.ok(songControllerService.getAllSongsName(page, size));
 
     }
-
-//    protected Page<Song> getAllSongs(){
-//        return songControllerService.getAllSongsName(0,10);
-//    }
 
     @GetMapping("/searchSong")
     public ResponseEntity<List<Song>> searchSongsByName(@RequestParam String query){

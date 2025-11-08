@@ -2,8 +2,10 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
+import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
+import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.Cookie;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,17 +41,25 @@ public class PublicLoginController {
     private final JwtTokenUtil jwtTokenUtil;
     private final RoomService roomService;
     private final RegisterUserService userService;
+    private final UserSessionService sessionService;
 
-    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService) {
+    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenUtil = jwtTokenUtil;
         this.roomService = roomService;
         this.userService = userService;
+        this.sessionService = sessionService;
     }
 
     // Return login page
     @GetMapping("/login")
-    public String loginPage(Model model) {
+    public String loginPage(@RequestParam(required=false) String error,Model model) {
+        if ("alreadyLoggedIn".equals(error)) {
+            model.addAttribute("loginError", "User already logged in");
+        }
+        if ("sessionError".equals(error)) {
+            model.addAttribute("sessionError", "Error occurred while session create/update Please try again after sometime.");
+        }
         if (!model.containsAttribute("loginUser")) {
             model.addAttribute("loginUser", new LoginUser());
         }
@@ -126,15 +137,22 @@ public class PublicLoginController {
             }
             String token = jwtTokenUtil.generateToken(userDetails.getUsername());
 
-
+            String username=userDetails.getUsername();
             response.put("token", token);
-            response.put("username", userDetails.getUsername());
+            response.put("username", username);
             response.put("message", "Login successful");
+
+            boolean isSaved = sessionService.saveSession(token,username);
+            if(!isSaved){
+                log.error("failed to save session.");
+                response.put("error", "User already logged in");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("error", "Invalid credentials");
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
 
