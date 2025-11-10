@@ -20,6 +20,7 @@ let currentParticipants = [];
 let lastUserLeft = null;
 let boundAudioRole = null; // 'organizer' | 'participant' | null
 let logoutInProgress = false;
+let lastKnownOrganizer = null;
 
 
 function syncAudioWrapperClass() {
@@ -761,6 +762,23 @@ function updateParticipantsDisplay(participants) {
     participantsList.innerHTML = '';
     participantCount.textContent = `${participants.length} / ${PAGE_DATA.totalCount} participants`;
 
+    // ✅ Determine current organizer in room
+    const currentOrganizerUser = participants.find(p => p.organizer)?.userName || null;
+
+    // ✅ Detect if organizer changed OR organizer left
+    if (lastKnownOrganizer !== null) {
+        const organizerStillExists = participants.some(p => p.userName === lastKnownOrganizer);
+
+        if (!organizerStillExists) {
+            console.warn("🎵 Organizer actually LEFT — resetting audio");
+            resetAudioOnOrganizerLeave();
+        }
+    }
+
+// ✅ Update the new organizer
+    lastKnownOrganizer = currentOrganizerUser;
+
+    // ===== Render Participant List =====
     participants.forEach(p => {
         const item = document.createElement('div');
         item.className = 'participant-item';
@@ -775,23 +793,24 @@ function updateParticipantsDisplay(participants) {
         }
 
         item.innerHTML = `
-            <div class="participant-name" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">${p.userName}</div>
+            <div class="participant-name" style="background: linear-gradient(135deg, ${userColor}, ${darkerColor})">
+                ${p.userName}
+            </div>
             ${p.organizer ? '<span class="organizer-badge">Organizer</span>' : ''}
         `;
         participantsList.appendChild(item);
 
-        const wasOrganizer = isOrganizer; // remember old state
-
+        // ✅ LOCAL organizer role changed (self only)
+        const wasOrganizer = isOrganizer;
         if (p.userName === currentUsername) {
             isOrganizer = p.organizer;
             onRoleChange();
 
-            // ✅ If organizer LEFT during playback → reset audio fully
+            // Self lost organizer → reset audio also
             if (wasOrganizer && !isOrganizer) {
                 resetAudioOnOrganizerLeave();
             }
         }
-
     });
 }
 

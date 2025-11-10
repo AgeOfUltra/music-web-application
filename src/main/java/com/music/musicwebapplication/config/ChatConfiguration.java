@@ -62,38 +62,36 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                         String authToken = accessor.getFirstNativeHeader("Authorization");
 
                         if (authToken == null || !authToken.startsWith("Bearer ")) {
-                            log.warn("Missing or invalid Authorization header in WebSocket CONNECT");
+                            log.warn("Missing Authorization header in WebSocket CONNECT");
                             return message;
                         }
 
                         String jwt = authToken.substring(7);
+                        String username = jwtTokenUtil.getUserNameFromToken(jwt);
 
-                        try {
-                            String username = jwtTokenUtil.getUserNameFromToken(jwt);
+                        if (username != null && jwtTokenUtil.validateToken(username, username, jwt)) {
 
-                            if (username != null && jwtTokenUtil.validateToken(username, username, jwt)) {
-                                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                                UsernamePasswordAuthenticationToken authentication =
-                                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                            UsernamePasswordAuthenticationToken authentication =
+                                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                                SecurityContextHolder.getContext().setAuthentication(authentication);
-                                accessor.setUser(authentication);
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                            accessor.setUser(authentication);
 
-                                // IMPORTANT: Store username in session attributes
-                                if (accessor.getSessionAttributes() != null) {
-                                    accessor.getSessionAttributes().put("username", username);
-                                    log.info("Stored username in session: {}", username);
-                                }
-
-                                log.info("User {} connected to WebSocket", username);
-                            } else {
-                                log.warn("JWT token validation failed for user: {}", username);
+                            if (accessor.getSessionAttributes() == null) {
+                                accessor.setSessionAttributes(new java.util.HashMap<>());
                             }
-                        } catch (Exception e) {
-                            log.error("Error validating JWT token: {}", e.getMessage());
+
+                            accessor.getSessionAttributes().put("username", username);
+
+                            log.info("✅ WebSocket CONNECT authenticated as {}", username);
+
+                        } else {
+                            log.warn("JWT validation failed for username {}", username);
                         }
+
                     } catch (Exception e) {
-                        log.error("Error processing WebSocket CONNECT: {}", e.getMessage());
+                        log.error("Error in WebSocket CONNECT: {}", e.getMessage());
                     }
                 }
 
