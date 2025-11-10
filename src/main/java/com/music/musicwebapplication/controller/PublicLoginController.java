@@ -113,7 +113,7 @@ public class PublicLoginController {
             return new ModelAndView("redirect:/app/music/dashboard");
         } else {
             errorMessage = (String) responseBody.get("error");
-            if(errorMessage.isBlank()){
+            if( errorMessage == null || errorMessage.isEmpty()){
                 errorMessage=(String)responseBody.get("UserError");
             }
             redirectAttributes.addFlashAttribute("loginError", errorMessage);
