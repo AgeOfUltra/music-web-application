@@ -72,12 +72,8 @@ function closeJoinModal() {
 }
 
 function logout() {
-    // Remove JWT token if stored
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('username');
-    localStorage.removeItem('currentRoom');
-    document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
-    window.location.href = '/app/music/public/login';
+
+    window.location.href = '/app/music/public/logout';
 }
 
 // Close modal when clicking outside

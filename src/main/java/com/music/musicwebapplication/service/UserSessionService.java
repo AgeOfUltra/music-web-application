@@ -4,61 +4,57 @@ import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.repo.UserSessionRepo;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
+
 import java.util.Optional;
 
-@Service
+
 @Slf4j
+@Service
 public class UserSessionService {
     private final UserSessionRepo repo;
 
+    @Autowired
     public UserSessionService(UserSessionRepo repo) {
         this.repo = repo;
     }
 
     public boolean saveSession(String token, String username) {
+        if (repo.existsByUsername(username)) {
+            return false;
+        }
+
         UserSession session = new UserSession();
-        session.setTokenId(token);
+        session.setToken(token);
         session.setUsername(username);
-        session.setVisitedDashBoard(false);
-        boolean b = (long) repo.findAllByUsername(username).size() == 0;
+        session.setRoomName(null);
+        repo.save(session);
 
-        UserSession savedSession = null;
-
-        if (b) {
-            savedSession = repo.save(session);
-            return savedSession.getId() >= 0;
-        }
-        return false;
+        return true;
+    }
+    @Transactional
+    public void updateRoomName(String username, String roomName) {
+        repo.updateRoomName(username, roomName);
+    }
+    @Transactional
+    public void clearRoomForUser(String username) {
+        repo.updateRoomName(username, null);
     }
 
-    public Optional<Map<String, ?>> updateDashBoardEntry(String username) {
-        UserSession currentSession = repo.getUserSessionByUsername(username);
 
-        Map<String, Object> reponseDataHandlerMap = new HashMap<>();
-
-        if (currentSession == null) {
-            reponseDataHandlerMap.put("ERROR", "User not found");
-            return Optional.of(reponseDataHandlerMap);
-        }
-
-        if (currentSession.isVisitedDashBoard()) {
-            Object obj = "user already visited";
-            reponseDataHandlerMap.put("ALREADY_VISITED", obj);
-            return Optional.of(reponseDataHandlerMap);
-        }
-
-        currentSession.setVisitedDashBoard(true);
-        repo.save(currentSession);
-
-        reponseDataHandlerMap.put("UPDATED", true);
-
-        return Optional.of(reponseDataHandlerMap);
+    public Optional<String> getRoomName(String username) {
+        return repo.findByUsername(username).map(UserSession::getRoomName);
     }
-
+    public Optional<String> getToken(String username) {
+        return repo.findByUsername(username).map(UserSession::getToken);
+    }
+    @Transactional
+    public void deleteUserSession(String username) {
+        repo.deleteByUsername(username);
+    }
     @PreDestroy
     private void clearUserSessions() {
         log.info("All rooms deletion started...");
@@ -66,3 +62,4 @@ public class UserSessionService {
         log.info("All rooms deletion completed...");
     }
 }
+

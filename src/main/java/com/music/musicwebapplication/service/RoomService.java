@@ -65,57 +65,53 @@ public class RoomService {
 
     @Transactional
     public boolean exitFromRoom(String roomName, String userName) {
-        Optional<Room> existingRoom = repo.findRoomByRoomName(roomName);
-        if (existingRoom.isEmpty()) {
-            throw new RoomNotFoundException("Room not found with Room Name: " + roomName);
-        }
 
-        List<Participant> existingParticipants = existingRoom.get().getParticipant();
+        Room room = repo.findRoomByRoomName(roomName)
+                .orElseThrow(() -> new RoomNotFoundException("Room not found: " + roomName));
 
-        Optional<Participant> selectParticipant =  existingRoom.get().getParticipant().stream()
+        List<Participant> participants = room.getParticipant();
+
+        Participant leavingUser = participants.stream()
                 .filter(p -> p.getUserName().equals(userName))
-                .findFirst();
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("User " + userName + " is not in room: " + roomName));
 
-        if (selectParticipant.isEmpty()) {
-            throw new IllegalArgumentException("User " + userName + " is not in room: " + roomName);
-        }
+        boolean isOrganizer = leavingUser.isOrganizer();
+        int currentSize = participants.size();
 
-        if(existingRoom.get().getParticipant().size() == 1 && selectParticipant.get().isOrganizer()){
-            repo.delete(existingRoom.get());
+
+        if (currentSize == 1 && isOrganizer) {
+            repo.delete(room);
             return true;
         }
 
-        if(existingRoom.get().getParticipant().size() >1 && selectParticipant.get().isOrganizer()){
-            Optional<Participant> newOrganizer = existingParticipants.stream().filter(p -> !p.getUserName().equals(userName)).findFirst();
-            if(newOrganizer.isPresent()){
-                newOrganizer.get().setOrganizer(true);
-                participantRepo.save(newOrganizer.get());
-            }
 
+        if (isOrganizer && currentSize > 1) {
+            participants.stream()
+                    .filter(p -> !p.getUserName().equals(userName))
+                    .findFirst()
+                    .ifPresent(newOrg -> {
+                        newOrg.setOrganizer(true);
+                        participantRepo.save(newOrg);
+                    });
         }
 
-        existingRoom.get().getParticipant().remove(selectParticipant.get());
-        selectParticipant.get().setOrganizer(false);
-        selectParticipant.get().setRoom(null);
-        repo.save(existingRoom.get());
-        return  true;
 
+        participants.remove(leavingUser);
+        leavingUser.setRoom(null);
+        leavingUser.setOrganizer(false);
+
+        repo.save(room);
+
+        return true;
     }
+
     @Transactional
     public Room getRoomDetails(String roomName){
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
     }
 
-//    private Participant getNextAvailablePerson(long id, long roomId){
-//        Optional<Participant> nextParticipant = participantRepo.findById(id);
-//        if(nextParticipant.isPresent()){
-//            return nextParticipant.get();
-//        }else if(participantRepo.countParticipantByRoomId(roomId) - 1 > 0){
-//            return getNextAvailablePerson(id++,roomId);
-//        }else{
-//            return null;
-//        }
-//    }
+
 
     public boolean isUserPresentInAnyRoom(String username){
         return repo.findAll().stream()
@@ -129,6 +125,30 @@ public class RoomService {
                 .anyMatch(p -> p.getUserName().equals(username) && p.isOrganizer())).orElse(false);
 
     }
+
+    @Transactional
+    public Optional<String> exitFromRoomLogoutHandler(String username) {
+        Optional<Room> userRoom = repo.findAll()
+                .stream()
+                .filter(room -> room.getParticipant()
+                        .stream()
+                        .anyMatch(p -> p.getUserName().equals(username)))
+                .findFirst();
+
+        if (userRoom.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String roomName = userRoom.get().getRoomName();
+        try {
+            exitFromRoom(roomName, username);
+            return Optional.of(roomName);
+        } catch (Exception e) {
+            log.error("Error while removing user {} from room {}", username, roomName, e);
+            return Optional.empty();
+        }
+    }
+
 
     @PreDestroy
     private void clearRooms(){

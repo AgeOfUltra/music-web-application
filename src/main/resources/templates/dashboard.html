@@ -18,7 +18,11 @@
         <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="logo">
         <div class="app-name">CONNECTING NOTES</div>
     </div>
-    <button class="logout-btn" onclick="logout()">Logout</button>
+<!--    <button class="logout-btn" onclick="logout()">Logout</button>-->
+<!--    <button sec:authorize="isAuthenticated()">-->
+<!--            <a th:href="@{/app/music/public/logout}" class="nav-link">Logout</a>-->
+<!--    </button>-->
+    <a th:href="@{/app/music/public/logout}" class="nav-link logout-btn">Logout</a>
 </div>
 
 <div th:replace="~{fragments/loader}"></div>

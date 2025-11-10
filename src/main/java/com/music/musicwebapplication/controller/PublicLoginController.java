@@ -2,39 +2,40 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
-import com.music.musicwebapplication.entity.UserSession;
+import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.annotation.RequestScope;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.swing.text.html.Option;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Controller
 @RequestMapping("/app/music/public")
-@RequestScope
 public class PublicLoginController {
 
     private final AuthenticationManager authenticationManager;
@@ -42,24 +43,30 @@ public class PublicLoginController {
     private final RoomService roomService;
     private final RegisterUserService userService;
     private final UserSessionService sessionService;
-
-    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService) {
+    private final PublicLoginService loginService;
+    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService, PublicLoginService loginService) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenUtil = jwtTokenUtil;
         this.roomService = roomService;
         this.userService = userService;
         this.sessionService = sessionService;
+        this.loginService = loginService;
     }
 
     // Return login page
     @GetMapping("/login")
-    public String loginPage(@RequestParam(required=false) String error,Model model) {
+    public String loginPage(@RequestParam(required=false) String error,
+                            @RequestParam(required=false) String logout, Model model) {
         if ("alreadyLoggedIn".equals(error)) {
             model.addAttribute("loginError", "User already logged in");
         }
         if ("sessionError".equals(error)) {
             model.addAttribute("sessionError", "Error occurred while session create/update Please try again after sometime.");
         }
+        if(logout!=null && logout.equals("true")){
+            model.addAttribute("loginError", "User logged out successfully");
+        }
+
         if (!model.containsAttribute("loginUser")) {
             model.addAttribute("loginUser", new LoginUser());
         }
@@ -76,7 +83,7 @@ public class PublicLoginController {
 
     // Handle login and return JWT token
     @PostMapping("/authenticate")
-    public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, HttpSession session, RedirectAttributes redirectAttributes) {
+    public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, RedirectAttributes redirectAttributes) {
         String errorMessage = "";
         ResponseEntity<?> response = authenticate(loginUser);
         log.info(response.toString());
@@ -91,18 +98,16 @@ public class PublicLoginController {
         if (response.getStatusCode() == HttpStatus.OK) {
             String token = "";
             token = (String) responseBody.get("token");
-            // Store in session (server-side)
-            session.setAttribute("jwtToken", token);
-            session.setAttribute("username", loginUser.getUsername());
 
-            //store the token in cookies for client side
-            Cookie cookie = new Cookie("jwtToken", token);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(3600);
-            cookie.setAttribute("username", loginUser.getUsername());
-            responseServlet.addCookie(cookie);
+            ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                    .httpOnly(true)
+                    .secure(false)           // true in production (HTTPS)
+                    .path("/")
+                    .maxAge(60 * 60)         // 1 hour
+                    .sameSite("Lax")      // or "Lax" depending on your flows
+                    .build();
+
+            responseServlet.addHeader("Set-Cookie", cookie.toString());
 
             log.info("Login Successfully ! logg in user data : {}", loginUser);
             return new ModelAndView("redirect:/app/music/dashboard");
@@ -119,42 +124,43 @@ public class PublicLoginController {
     }
 
     //    API
+    // PublicLoginController
     public ResponseEntity<?> authenticate(LoginUser loginUser) {
         Map<String, Object> response = new HashMap<>();
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginUser.getUsername(),
-                            loginUser.getPassword()
-                    )
+                            loginUser.getUsername(), loginUser.getPassword())
             );
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
             if (roomService.isUserPresentInAnyRoom(userDetails.getUsername())) {
                 response.put("UserError", "User already exist in one of the room");
-                return ResponseEntity.badRequest().body("User already exist in one of the room");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // <— map, not String
             }
-            String token = jwtTokenUtil.generateToken(userDetails.getUsername());
 
-            String username=userDetails.getUsername();
+            String token = jwtTokenUtil.generateToken(userDetails.getUsername());
+            String username = userDetails.getUsername();
+
             response.put("token", token);
             response.put("username", username);
             response.put("message", "Login successful");
 
-            boolean isSaved = sessionService.saveSession(token,username);
-            if(!isSaved){
-                log.error("failed to save session.");
+            boolean isSaved = sessionService.saveSession(token, username);
+            if (!isSaved) {
                 response.put("error", "User already logged in");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
             response.put("error", "Invalid credentials");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
+
 
     @PostMapping("/register")
     public ModelAndView registerUser(@Valid @ModelAttribute("newUser") RegisterUser newUser, Errors error, RedirectAttributes redirectAttributes) {
@@ -183,7 +189,37 @@ public class PublicLoginController {
     private ResponseEntity<String> registerUserApi(RegisterUser newUser) {
         newUser.setRole(Role.LISTENER);
         String result = userService.registerUser(newUser);
-
         return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
     }
+
+    @GetMapping("/logout")
+    public String logoutUser(HttpServletResponse response, HttpServletRequest request) {
+
+        String username = loginService.extractUsernameFromJwt(request);
+
+        if (username != null) {
+
+            Optional<String> leftRoom = roomService.exitFromRoomLogoutHandler(username);
+            sessionService.updateRoomName(username, null);
+            sessionService.deleteUserSession(username);
+        }
+
+        // 4. remove JWT cookie
+        ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
+                .build();
+
+        response.addHeader("Set-Cookie", deleteCookie.toString());
+
+        SecurityContextHolder.clearContext();
+
+        return "redirect:/app/music/public/login?logout=true";
+    }
+
+
+
+
 }

@@ -44,51 +44,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String authorization = request.getHeader("Authorization");
-        String token = null;
         String username = null;
+        String token = null;
 
-
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            token = authorization.substring(7);
-        }
-
-
-        if (token == null) {
-            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-            if (cookies != null) {
-                for (jakarta.servlet.http.Cookie cookie : cookies) {
-                    if ("jwtToken".equals(cookie.getName())) {
-                        token = cookie.getValue();
-                        break;
-                    }
+        if (request.getCookies() != null) {
+            for (var c : request.getCookies()) {
+                if ("jwt".equals(c.getName())) {
+                    token = c.getValue();
+                    break;
                 }
             }
         }
+
 
         if (token != null) {
             username = jwtTokenUtil.getUserNameFromToken(token);
         }
 
 
-//        Optional<Map<String, ?>> responseSession = sessionService.updateDashBoardEntry(username, "ACTION_FROM_JWT");
-//
-//        if (responseSession.isEmpty()) {
-//            log.error("response ie empty for session of current user");
-//            response.sendRedirect("/app/music/public/login?error=alreadyLoggedIn");
-//            return;
-//        } else {
-//            if (!responseSession.get().containsKey("ERROR") && (request.getRequestURI().contains("authenticate"))) {
-//                if (responseSession.get().containsKey("ALREADY_VISITED")) {
-//                    log.info("User already visited the page.");
-//                    response.sendRedirect("/app/music/public/login?error=alreadyLoggedIn");
-//                    return;
-//                }
-//            }
-//        }
 
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (username != null  && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = service.loadUserByUsername(username);
                 if (jwtTokenUtil.validateToken(username, userDetails.getUsername(), token)) {

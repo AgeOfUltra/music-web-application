@@ -6,15 +6,11 @@ import lombok.Data;
 @Entity
 @Data
 public class UserSession {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String username;
-
-    @Column(unique = true)
-    private String tokenId;
-
-    private boolean visitedDashBoard;
+    private String token;
+    private String roomName;
 }

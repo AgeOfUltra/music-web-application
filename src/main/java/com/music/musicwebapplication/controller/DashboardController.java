@@ -19,29 +19,10 @@ import java.util.Optional;
 @RequestMapping("/app/music")
 public class DashboardController {
 
-    private final UserSessionService session;
-
-    public DashboardController(UserSessionService session) {
-        this.session = session;
-    }
-
     @GetMapping("/dashboard")
     public String dashboardPage(Model model, Authentication authentication) {
         String currentUser = authentication.getName();
         model.addAttribute("currentUser",currentUser);
-
-        Optional<Map<String,?>>  response = session.updateDashBoardEntry(currentUser);
-        if(response.isEmpty()){
-            log.error("response ie empty for session of current user");
-            model.addAttribute("sessionError","SessionError");
-            return "redirect:/app/music/public/login/error=sessionError";
-        }else{
-            if(response.get().containsKey("ALREADY_VISITED")){
-                log.info("User already visited the page.");
-            }else{
-                log.info("User visiting the dashboard Page first time.");
-            }
-        }
 
         if(!model.containsAttribute("newRoom")){
             model.addAttribute("newRoom",new CreateRoom());
