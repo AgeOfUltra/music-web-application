@@ -19,6 +19,8 @@ let totalPages = 1;
 let currentParticipants = [];
 let lastUserLeft = null;
 let boundAudioRole = null; // 'organizer' | 'participant' | null
+let logoutInProgress = false;
+
 
 function syncAudioWrapperClass() {
     const wrapper = document.getElementById('audioPlayerWrapper');
@@ -175,7 +177,6 @@ function initializePage() {
     connectWebSocket(jwtToken);
     loadSongsForPage(0);
     initializeToastNotifications();
-    setupLogoutButton();
 }
 
 // ==================== PAGINATION FUNCTIONS ====================
@@ -652,46 +653,7 @@ function playSong(song) {
     }
 }
 
-// function resumeSong() {
-//     if (!isOrganizer) {
-//         ToastNotification.warning('Only the organizer can resume songs');
-//         return;
-//     }
-//
-//     if (!stompClient || !stompClient.connected) {
-//         console.error('❌ WebSocket not connected');
-//         ToastNotification.error('WebSocket not connected. Please refresh.');
-//         return;
-//     }
-//
-//     const audioPlayer = document.getElementById('audioPlayer');
-//
-//     const resumeMessage = {
-//         action: 'RESUME',
-//         timestamp: Math.floor(audioPlayer.currentTime * 1000),
-//         controller: currentUsername,
-//         songFileName: currentSongData?.songFileName,
-//         songName: currentSongData?.songName,
-//         hero: currentSongData?.hero,
-//         heroine: currentSongData?.heroine,
-//         language: currentSongData?.language
-//     };
-//
-//     console.log('▶️ [ORGANIZER] Sending RESUME command');
-//
-//     try {
-//         stompClient.send(
-//             `/app/music/chat/${currentRoomName}/playback`,
-//             {},
-//             JSON.stringify(resumeMessage)
-//         );
-//
-//         console.log('✅ Resume command sent successfully');
-//     } catch (error) {
-//         console.error('❌ Error sending resume command:', error);
-//         ToastNotification.error('Failed to resume music');
-//     }
-// }
+
 
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
@@ -967,8 +929,8 @@ function displaySongs(songs) {
         songItem.dataset.language = song.language;
         songItem.onclick = () => handleSongClick(songItem);
         songItem.innerHTML = `
-            <div class="song-item-title">${song.songName}</div>
-            <div class="song-item-info">${song.hero || song.movie} • ${song.singer || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            <div class="song-item-title">${song.songName} * ${song.language}</div>
+            <div class="song-item-info">${song.hero || song.singer} • ${song.movie || 'Unknown'} • ${song.language || 'Unknown'}</div>
         `;
         songList.appendChild(songItem);
     });
@@ -1048,7 +1010,7 @@ function displaySearchResults(songs) {
             }
         };
         songItem.innerHTML = `
-            <div class="song-item-title">${song.songName}</div>
+            <div class="song-item-title">${song.songName} * ${song.language}</div>
             <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
         `;
         searchResults.appendChild(songItem);
@@ -1120,16 +1082,6 @@ window.addEventListener('beforeunload', (event) => {
     }
 });
 
-const legacyLogoutBtn = document.getElementById('logoutButton');
-if (legacyLogoutBtn) {
-    legacyLogoutBtn.addEventListener('click', () => {
-        allowUnload = true;
-        window.location.href = '/logout';
-    });
-}
-
-
-
 window.addEventListener('unload', function() {
     handleTabClose();
 });
@@ -1162,147 +1114,75 @@ function handleTabClose() {
         console.log('✅ Cleared participant refresh interval');
     }
 
-    if (stompClient && stompClient.connected) {
-        console.log('📤 Sending LEAVE message via WebSocket');
+    safeDisconnectWebSocket();
 
+}
+
+function safeDisconnectWebSocket() {
+    if (stompClient && stompClient.connected) {
         try {
             stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
                 sender: currentUsername,
                 type: 'LEAVE',
                 content: `${currentUsername} left the room`
             }));
-
             stompClient.disconnect();
-            console.log('✅ WebSocket disconnected');
-        } catch (error) {
-            console.error('❌ Error during WebSocket cleanup:', error);
-        }
-    }
-
-    logoutUser();
-    clearSessionData();
-}
-
-// ==================== LOGOUT FUNCTION ====================
-
-async function logoutUser() {
-    try {
-        console.log('🚪 Calling logout API for user:', currentUsername);
-
-        const response = await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${jwtToken}`,
-                'Content-Type': 'application/json'
-            },
-            keepalive: true
-        });
-
-        console.log('✅ User logged out successfully');
-    } catch (error) {
-        console.error('❌ Logout error:', error);
+        } catch (_) {}
     }
 }
 
-// ==================== CLEAR SESSION DATA ====================
-
-function clearSessionData() {
-    console.log('🧹 Clearing session data...');
-
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('username');
-    localStorage.removeItem('currentRoom');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userSession');
-
-    sessionStorage.clear();
-
-    document.cookie = 'jwtToken=; path=/; max-age=0; SameSite=Lax';
-
-    console.log('✅ Session data cleared');
-}
 
 // ==================== LOGOUT BUTTON HANDLER ====================
-function handleBackButton() {
-    // No popup for back: just leave the room and go to dashboard
-    allowUnload = true;         // prevents beforeunload warning
-    isClosing = true;
-
-    if (participantRefreshInterval) {
-        clearInterval(participantRefreshInterval);
-    }
-
+async function handleBack() {
     try {
-        if (stompClient && stompClient.connected) {
-            stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'LEAVE',
-                content: `${currentUsername} left the room`
-            }));
-            stompClient.disconnect();
+        allowUnload = true;
+        isClosing = true;
+
+        if (participantRefreshInterval) clearInterval(participantRefreshInterval);
+
+        safeDisconnectWebSocket();
+
+        if (currentRoomName && currentUsername) {
+            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${jwtToken}` },
+                keepalive: true
+            });
         }
-    } catch (err) {
-        console.error('Error during back-button cleanup:', err);
+
+        await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
+
+    } finally {
+        // Stay logged in → go to dashboard
+        window.location.href = '/app/music/dashboard';
     }
-
-    // Inform server we left the room (keep session/token for dashboard)
-    fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${jwtToken}` },
-        keepalive: true
-    }).catch(() => { /* non-blocking */ });
-
-    // Go to dashboard (still logged in)
-    window.location.href = '/app/music/dashboard';
 }
 
+async function logout() {
+    if (logoutInProgress) return;
+    logoutInProgress = true;
 
-function setupLogoutButton() {
-    const logoutBtn = document.querySelector('.logout-btn');
+    try {
+        allowUnload = true;
+        isClosing = true;
 
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async function(e) {
-            e.preventDefault();
+        safeDisconnectWebSocket();
 
-            // Custom confirm popup for logout
-            const confirmed = confirm('Are you sure you want to logout and leave the room?');
-            if (!confirmed) return;
 
-            allowUnload = true;   // no beforeunload prompt
-            console.log('👤 Logout confirmed');
+        if (currentRoomName && currentUsername) {
+            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${jwtToken}` },
+                keepalive: true
+            });
+        }
 
-            isClosing = true;
+        // Clear just the roomName in UserSession (backend will also delete the session on /public/logout)
+        await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
 
-            if (participantRefreshInterval) {
-                clearInterval(participantRefreshInterval);
-            }
-
-            if (stompClient && stompClient.connected) {
-                try {
-                    stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                        sender: currentUsername,
-                        type: 'LEAVE',
-                        content: `${currentUsername} left the room`
-                    }));
-                    stompClient.disconnect();
-                } catch (error) {
-                    console.error('Error sending LEAVE message:', error);
-                }
-            }
-
-            try {
-                await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${jwtToken}` }
-                });
-            } catch (error) {
-                console.error('Error leaving room:', error);
-            }
-
-            clearSessionData(); // logout path clears session
-
-            window.location.href = '/app/music/public/login';
-        });
+    } finally {
+        // This endpoint clears the HttpOnly jwt cookie and deletes UserSession on server
+        window.location.href = '/app/music/public/logout';
     }
 }
 

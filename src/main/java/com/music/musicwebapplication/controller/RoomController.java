@@ -6,14 +6,16 @@ import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
+import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RoomService;
+import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.ColorUsageUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,12 +32,14 @@ import java.util.List;
 public class RoomController {
     private final RoomService rService;
     private final ColorUsageUtil colorUsageUtil;
-    private final SimpMessagingTemplate messagingTemplate;
-    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, SimpMessagingTemplate messagingTemplate){
+    private final PublicLoginService loginService;
+    private final UserSessionService sessionService;
+    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, PublicLoginService loginService, UserSessionService sessionService){
 
         this.rService = rService;
         this.colorUsageUtil = colorUsageUtil;
-        this.messagingTemplate = messagingTemplate;
+        this.loginService = loginService;
+        this.sessionService = sessionService;
     }
 
     @GetMapping("/chat")
@@ -48,7 +52,7 @@ public class RoomController {
         model.addAttribute("totalCount", rService.getRoomDetails(roomName).getMaxCount());
         model.addAttribute("userColor",colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
         model.addAttribute("darkerColor",colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
-        model.addAttribute("jwtToken",session.getAttribute("jwtToken"));
+        model.addAttribute("jwtToken",sessionService.getToken(authentication.getName()).orElse(null));
         model.addAttribute("isOrganizer",rService.isUserOrganizer(roomName,authentication.getName()));
         return "chat";
     }
@@ -71,6 +75,7 @@ public class RoomController {
             if(response.getStatusCode().equals(HttpStatus.OK)){
                 log.info("{} room is created successfully !", newRoom);
                 redirectAttributes.addFlashAttribute("roomCreatedSuccessful","Room Created successfully"); // need to show in the chat.html
+                sessionService.updateRoomName(auth.getName(), newRoom.getRoomName());
                 return new ModelAndView("redirect:/app/music/chat?roomName="+newRoom.getRoomName());
             }else{
                 log.error("room created failed! data : {}", response);
@@ -122,6 +127,7 @@ public class RoomController {
             if(response.getStatusCode().equals(HttpStatus.OK)) {
                 log.info("Successfully logged-in! {}",joinRoom);
                 redirectAttributes.addFlashAttribute("roomJoinedSuccessful","Joined the room successfully");
+                sessionService.updateRoomName(auth.getName(), joinRoom.getRoomName());
                 return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomName());
             }else{
                 log.error("room joined failed! data : {}", response);
@@ -141,19 +147,6 @@ public class RoomController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
     }
-//
-//    private void broadcastParticipantUpdate(String roomName) {
-//        try {
-//            Room room = rService.getRoomDetails(roomName);
-//            messagingTemplate.convertAndSend(
-//                    "/topic/chat/" + roomName + "/participants",
-//                    room.getParticipant()
-//            );
-//        } catch (Exception e) {
-//            log.error("Error broadcasting participant update", e);
-//        }
-//    }
-//
 
 //    API
     private ResponseEntity<Participant> joinRoomApi(JoinRoom joinRoom) throws Exception{
@@ -166,8 +159,8 @@ public class RoomController {
 
     //upon logout or participant leave from the room
     @DeleteMapping("/room/leave")
-    public ResponseEntity<Boolean> leaveRoom(@RequestParam String roomName, @RequestParam String username){
-        boolean isLeft = rService.exitFromRoom(roomName,username);
+    public ResponseEntity<Boolean> leaveRoom(@RequestParam String roomName, Authentication auth) {
+        boolean isLeft = rService.exitFromRoom(roomName, auth.getName());
         return ResponseEntity.ok(isLeft);
     }
 
@@ -209,15 +202,6 @@ public class RoomController {
         return ResponseEntity.ok(availableCount);
     }
 
-//    private List<Participant> getParticipants(String roomName){
-//        ResponseEntity<List<Participant>> participants = getAllParticipants(roomName);
-//        List<Participant> availableParticipants = null;
-//        if(participants.getStatusCode().equals(HttpStatus.OK)){
-//            availableParticipants = participants.getBody();
-//
-//        }
-//        return availableParticipants;
-//    }
 
 //    API to get all participants in a room
     @GetMapping("/room/getAllParticipants")
@@ -226,6 +210,19 @@ public class RoomController {
         List<Participant> participants = room.getParticipant();
         return ResponseEntity.ok(participants);
     }
+
+    @PostMapping("/room/clearRoomSession")
+    public ResponseEntity<?> clearRoomSession(HttpServletRequest request) {
+
+        String username = loginService.extractUsernameFromJwt(request);
+
+        if (username != null) {
+            sessionService.updateRoomName(username, null);
+        }
+
+        return ResponseEntity.ok("Room cleared");
+    }
+
 
 
 
