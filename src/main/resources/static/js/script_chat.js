@@ -18,9 +18,230 @@ let currentPage = 0;
 let totalPages = 1;
 let currentParticipants = [];
 let lastUserLeft = null;
-let boundAudioRole = null; // 'organizer' | 'participant' | null
+let boundAudioRole = null;
 let logoutInProgress = false;
 let lastKnownOrganizer = null;
+
+// ==================== SHARED ROOM FAVORITES ====================
+let roomFavorites = []; // Shared across all participants in the room
+let isPlayingFavorites = false;
+let currentFavoriteIndex = 0;
+
+function toggleFavorite(song, heartIcon) {
+    const songId = song.fileName;
+    const existingFavorite = roomFavorites.find(f => f.fileName === songId);
+
+    if (existingFavorite) {
+        // Remove from favorites
+        const updatedFavorites = roomFavorites.filter(f => f.fileName !== songId);
+        broadcastFavorites(updatedFavorites, 'REMOVE', song, currentUsername);
+        ToastNotification.info(`Removed "${song.songName}" from room favorites`);
+    } else {
+        // Add to favorites with requester info
+        const favoriteItem = {
+            ...song,
+            requestedBy: currentUsername,
+            requestedAt: Date.now()
+        };
+        const updatedFavorites = [...roomFavorites, favoriteItem];
+        broadcastFavorites(updatedFavorites, 'ADD', favoriteItem, currentUsername);
+        ToastNotification.success(`Added "${song.songName}" to room favorites`);
+    }
+}
+
+function broadcastFavorites(favorites, action, song, username) {
+    if (!stompClient || !stompClient.connected) {
+        console.error('Cannot broadcast favorites - WebSocket not connected');
+        return;
+    }
+
+    const message = {
+        action: action, // 'ADD', 'REMOVE', 'SYNC'
+        favorites: favorites,
+        song: song,
+        username: username,
+        timestamp: Date.now()
+    };
+
+    try {
+        stompClient.send(
+            `/app/music/chat/${currentRoomName}/favorites`,
+            {},
+            JSON.stringify(message)
+        );
+        console.log('📤 Broadcast favorites:', action, song?.songName);
+    } catch (error) {
+        console.error('Error broadcasting favorites:', error);
+    }
+}
+
+function handleFavoritesUpdate(message) {
+    console.log('📥 Received favorites update:', message.action, 'from:', message.username);
+
+    roomFavorites = message.favorites || [];
+    updateFavoritesDisplay();
+    updateAllHeartIcons();
+
+    // Show toast notification for others (not the person who made the change)
+    if (message.username !== currentUsername) {
+        if (message.action === 'ADD' && message.song) {
+            ToastNotification.info(`${message.username} added "${message.song.songName}" to favorites`, 2000);
+        } else if (message.action === 'REMOVE' && message.song) {
+            ToastNotification.info(`${message.username} removed "${message.song.songName}" from favorites`, 2000);
+        } else if (message.action === 'CLEAR') {
+            ToastNotification.warning(`${message.username} cleared all favorites`, 2000);
+        }
+    }
+}
+
+function updateFavoritesDisplay() {
+    const favoritesList = document.getElementById('favoritesList');
+    const favoritesCount = document.getElementById('favoritesCount');
+
+    if (!favoritesList) return;
+
+    favoritesCount.textContent = roomFavorites.length;
+
+    if (roomFavorites.length === 0) {
+        favoritesList.innerHTML = `
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; color: #a0a0a0; text-align: center; padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">♥</div>
+                <p>No song requests yet</p>
+                <p style="font-size: 12px; opacity: 0.7;">Anyone can add songs by clicking the ♥ icon</p>
+            </div>
+        `;
+        return;
+    }
+
+    favoritesList.innerHTML = '';
+
+    roomFavorites.forEach((favorite, index) => {
+        const songItem = document.createElement('div');
+        songItem.className = 'favorite-song-item';
+
+        const isMyRequest = favorite.requestedBy === currentUsername;
+
+        songItem.innerHTML = `
+            <div class="favorite-song-number">${index + 1}</div>
+            <div class="favorite-song-info">
+                <div class="favorite-song-title">${favorite.songName}</div>
+                <div class="favorite-song-details">
+                    ${favorite.hero || favorite.singer || 'Unknown'} • ${favorite.language || 'Unknown'}
+                    <span style="color: ${isMyRequest ? '#10b981' : '#ec4899'}; font-weight: 500; margin-left: 8px;">
+                        • by ${favorite.requestedBy}
+                    </span>
+                </div>
+            </div>
+            <button class="favorite-remove-btn" onclick="removeFavorite('${favorite.fileName}')" title="Remove from favorites">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        `;
+
+        songItem.onclick = (e) => {
+            if (!e.target.closest('.favorite-remove-btn')) {
+                if (isOrganizer) {
+                    playSong(favorite);
+                } else {
+                    ToastNotification.warning('Only the organizer can play songs');
+                }
+            }
+        };
+
+        favoritesList.appendChild(songItem);
+    });
+}
+
+function updateAllHeartIcons() {
+    // Update heart icons in main song list
+    const songItems = document.querySelectorAll('.song-item');
+    songItems.forEach(item => {
+        const fileName = item.dataset.filename;
+        const heartIcon = item.querySelector('.favorite-heart');
+        if (heartIcon && fileName) {
+            const isFavorite = roomFavorites.some(f => f.fileName === fileName);
+            heartIcon.classList.remove('bi-heart', 'bi-heart-fill');
+            heartIcon.classList.add(isFavorite ? 'bi-heart-fill' : 'bi-heart');
+        }
+    });
+
+    // Update heart icons in search results
+    const searchItems = document.querySelectorAll('#searchResults .song-item');
+    searchItems.forEach(item => {
+        const fileName = item.dataset.filename;
+        const heartIcon = item.querySelector('.favorite-heart');
+        if (heartIcon && fileName) {
+            const isFavorite = roomFavorites.some(f => f.fileName === fileName);
+            heartIcon.classList.remove('bi-heart', 'bi-heart-fill');
+            heartIcon.classList.add(isFavorite ? 'bi-heart-fill' : 'bi-heart');
+        }
+    });
+}
+
+function removeFavorite(fileName) {
+    const favorite = roomFavorites.find(f => f.fileName === fileName);
+    if (!favorite) return;
+
+    const updatedFavorites = roomFavorites.filter(f => f.fileName !== fileName);
+    broadcastFavorites(updatedFavorites, 'REMOVE', favorite, currentUsername);
+    ToastNotification.info(`Removed "${favorite.songName}" from favorites`);
+}
+
+function playFavoritesPlaylist() {
+    if (!isOrganizer) {
+        ToastNotification.warning('Only the organizer can play songs');
+        return;
+    }
+
+    if (roomFavorites.length === 0) {
+        ToastNotification.warning('No songs in favorites playlist');
+        return;
+    }
+
+    isPlayingFavorites = true;
+    currentFavoriteIndex = 0;
+
+    ToastNotification.success(`Starting room favorites (${roomFavorites.length} songs)`);
+    playSong(roomFavorites[currentFavoriteIndex]);
+}
+
+function playNextFavorite() {
+    if (!isPlayingFavorites || !isOrganizer) return;
+
+    currentFavoriteIndex++;
+
+    if (currentFavoriteIndex >= roomFavorites.length) {
+        isPlayingFavorites = false;
+        currentFavoriteIndex = 0;
+        ToastNotification.info('Room favorites playlist ended');
+        return;
+    }
+
+    ToastNotification.info(`Playing ${currentFavoriteIndex + 1}/${roomFavorites.length} from favorites`);
+    playSong(roomFavorites[currentFavoriteIndex]);
+}
+
+function stopFavoritesPlaylist() {
+    isPlayingFavorites = false;
+    currentFavoriteIndex = 0;
+    ToastNotification.info('Stopped favorites playlist');
+}
+
+function openFavoritesDrawer() {
+    document.getElementById('favoritesDrawer').classList.add('open');
+}
+
+function closeFavoritesDrawer() {
+    document.getElementById('favoritesDrawer').classList.remove('open');
+}
+
+function clearAllFavorites() {
+    if (roomFavorites.length === 0) return;
+
+    if (confirm(`Are you sure you want to clear all ${roomFavorites.length} favorite songs? This will affect all participants.`)) {
+        broadcastFavorites([], 'CLEAR', null, currentUsername);
+        ToastNotification.success('Cleared all room favorites');
+    }
+}
 
 
 function syncAudioWrapperClass() {
@@ -34,7 +255,7 @@ function syncAudioWrapperClass() {
 const onOrganizerPause = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
-    if (!isOrganizer) return; // guard if role changed mid-flight
+    if (!isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
         const playbackMessage = {
             action: 'PAUSE',
@@ -69,7 +290,7 @@ const onOrganizerPlay = (e) => {
 const onParticipantPlay = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
-    if (isOrganizer) return; // guard if role changed
+    if (isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted) {
         console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
         e.preventDefault();
@@ -86,7 +307,6 @@ const onParticipantPause = (e) => {
         console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
         e.preventDefault();
         audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
-        // ToastNotification.warning('Only the organizer can control playback');
     }
 };
 
@@ -94,15 +314,16 @@ function bindAudioHandlersForRole(role) {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
 
-    // Unbind any previously bound handlers (safe even if not present)
     audioPlayer.removeEventListener('pause', onOrganizerPause);
     audioPlayer.removeEventListener('play',  onOrganizerPlay);
     audioPlayer.removeEventListener('play',  onParticipantPlay, true);
     audioPlayer.removeEventListener('pause', onParticipantPause, true);
+    audioPlayer.removeEventListener('ended', onSongEnded);
 
     if (role === 'organizer') {
         audioPlayer.addEventListener('pause', onOrganizerPause);
         audioPlayer.addEventListener('play',  onOrganizerPlay);
+        audioPlayer.addEventListener('ended', onSongEnded);
     } else {
         audioPlayer.addEventListener('play',  onParticipantPlay, true);
         audioPlayer.addEventListener('pause', onParticipantPause, true);
@@ -112,42 +333,46 @@ function bindAudioHandlersForRole(role) {
     console.log('🎛️ Rebound audio handlers for role:', role);
 }
 
+function onSongEnded() {
+    console.log('🎵 Song ended');
+
+    if (isPlayingFavorites && isOrganizer) {
+        console.log('📀 Auto-playing next song from favorites playlist');
+        setTimeout(() => playNextFavorite(), 1000);
+    }
+}
+
 function onRoleChange() {
-    // 1) Update global UI/flags
     updatePermissionNotice();
     syncAudioWrapperClass();
     updateAudioControls();
 
-    // 2) Rebind audio listeners only if role actually changed
     const desired = isOrganizer ? 'organizer' : 'participant';
     if (boundAudioRole !== desired) {
         bindAudioHandlersForRole(desired);
     }
 }
+
 function resetAudioOnOrganizerLeave() {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
 
     console.log("🎶 Organizer left - resetting audio");
 
-    // Stop playback
     try { audioPlayer.pause(); } catch(e) {}
 
-    // Remove audio source completely
     audioPlayer.src = "";
     audioPlayer.removeAttribute("src");
 
-    // Reset UI text
     document.getElementById('currentSongTitle').textContent = "No song playing";
     document.getElementById('currentSongDetails').textContent = "Select a song to play";
 
-    // Clear current song data
     currentSongData = null;
-
-    // Reset local event state
     ignoreLocalEvents = false;
-}
 
+    isPlayingFavorites = false;
+    currentFavoriteIndex = 0;
+}
 
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
@@ -170,8 +395,6 @@ function initializePage() {
 
     console.log('✅ Initialized chat for:', currentUsername, 'in room:', currentRoomName);
     console.log('✅ Is organizer:', isOrganizer);
-
-
 
     updatePermissionNotice();
     setupAudioPlayerListeners();
@@ -196,8 +419,6 @@ async function loadSongsForPage(pageNumber) {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const data = await response.json();
-
-        // ✅ Handle both formats (wrapped or unwrapped)
         const pageData = data.page || data;
 
         currentPage = pageData.number ?? pageNumber;
@@ -226,6 +447,7 @@ function previousPage() {
         loadSongsForPage(currentPage - 1);
     }
 }
+
 function updatePaginationUI() {
     const displayPage = currentPage + 1;
 
@@ -334,7 +556,7 @@ function initializeToastNotifications() {
 function updateCurrentSongDisplay(songName, hero, language, movie, singer) {
     document.getElementById('currentSongTitle').textContent = songName;
     const details = [hero || movie, singer || movie, language]
-        .filter(Boolean) // remove empty, null, undefined
+        .filter(Boolean)
         .join(' • ');
 
     document.getElementById('currentSongDetails').textContent = details || 'Unknown details';
@@ -347,7 +569,6 @@ function setupAudioPlayerListeners() {
         console.error('❌ Audio player not found!');
         return;
     }
-    // Apply initial UI + listeners for current role
     syncAudioWrapperClass();
     updateAudioControls();
     bindAudioHandlersForRole(isOrganizer ? 'organizer' : 'participant');
@@ -356,7 +577,6 @@ function setupAudioPlayerListeners() {
 
 // ==================== PLAYBACK HANDLING ====================
 function handlePlaybackCommand(playbackMsg) {
-
     const audioPlayer = document.getElementById('audioPlayer');
 
     if (!audioPlayer) {
@@ -377,25 +597,22 @@ function handlePlaybackCommand(playbackMsg) {
         return;
     }
 
-    console.log('📥 [' + currentUsername + '] Received playback command:', playbackMsg.action, 'from:', playbackMsg.controller);
+    console.log('🔥 [' + currentUsername + '] Received playback command:', playbackMsg.action, 'from:', playbackMsg.controller);
 
     const controller = playbackMsg.controller;
 
-// ✅ NEW FIX: ignore playback from someone who just left (race condition fix)
     if (controller === lastUserLeft) {
         console.warn("⏭️ Ignoring playback from user who just left:", controller);
         ignoreLocalEvents = false;
         return;
     }
 
-// ✅ If I am organizer now, ignore all playback from anyone else
     if (isOrganizer && controller !== currentUsername) {
         console.warn("⏭️ Ignoring playback event because I am the organizer now:", controller);
         ignoreLocalEvents = false;
         return;
     }
 
-// ✅ If I am NOT organizer, ignore playback for users no longer in room
     const stillInRoom = currentParticipants.some(p => p.userName === controller);
 
     if (!stillInRoom) {
@@ -446,7 +663,6 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
     console.log('   Audio source URL:', newSrc);
     updateCurrentSongDisplay(playbackMsg.songName, playbackMsg.hero, playbackMsg.language, playbackMsg.movie, playbackMsg.singer);
 
-    // Toast notification for all users
     const isOwnAction = playbackMsg.controller === currentUsername;
     if (isOwnAction) {
         ToastNotification.info(`🎵 Now Playing: ${playbackMsg.songName}`);
@@ -454,15 +670,12 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         ToastNotification.info(`🎵 ${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
     }
 
-    // const sourceChanged = audioPlayer.src !== newSrc;
     let sourceChanged = true;
     try {
-        // compare pathnames so relative / absolute mismatch won't confuse us
         const existingPath = audioPlayer.src ? new URL(audioPlayer.src).pathname : '';
         const newPath = new URL(newSrc, window.location.origin).pathname;
         sourceChanged = existingPath !== newPath;
     } catch (err) {
-        // fallback to simple compare
         sourceChanged = audioPlayer.src !== newSrc;
     }
 
@@ -509,7 +722,6 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
 
         audioPlayer.addEventListener('loadedmetadata', metadataHandler, {once: true});
 
-        // ✅ INCREASED TIMEOUT: More time for slower connections
         audioLoadTimeout = setTimeout(() => {
             if (!metadataLoaded) {
                 console.warn('   ⚠️ Metadata loading timeout (8s), attempting to play anyway');
@@ -532,7 +744,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
                     ignoreLocalEvents = false;
                 }
             }
-        }, 8000); // Changed from 5000ms to 8000ms
+        }, 8000);
     } else {
         console.log('   Same source, seeking and playing');
         audioPlayer.currentTime = startTime;
@@ -554,7 +766,6 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
     }
 }
 
-
 function handlePauseCommand(audioPlayer, playbackMsg) {
     console.log('⏸️ Pausing at timestamp:', (playbackMsg.timestamp / 1000).toFixed(2), 'seconds');
     audioPlayer.currentTime = playbackMsg.timestamp / 1000;
@@ -567,9 +778,6 @@ function handlePauseCommand(audioPlayer, playbackMsg) {
         ToastNotification.warning(`⏸️ ${playbackMsg.controller} paused the music`);
     }
 
-    // displaySystemMessage(`${playbackMsg.controller} paused the music`);
-
-    // ✅ IMPORTANT: Reset flag only after action completes
     setTimeout(() => {
         ignoreLocalEvents = false;
     }, 50);
@@ -602,8 +810,6 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
     } else {
         ToastNotification.success(`▶️ ${playbackMsg.controller} resumed the music`);
     }
-
-    // displaySystemMessage(`${playbackMsg.controller} resumed the music`);
 }
 
 function playSong(song) {
@@ -654,8 +860,6 @@ function playSong(song) {
     }
 }
 
-
-
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
     const socket = new SockJS('/app/music/ws');
@@ -670,7 +874,7 @@ function connectWebSocket(token) {
             stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
                 const msg = JSON.parse(message.body);
 
-                console.log("📥 CHAT message received:", msg);
+                console.log("🔥 CHAT message received:", msg);
 
                 if (msg.type === "LEAVE") {
                     lastUserLeft = msg.sender;
@@ -685,13 +889,10 @@ function connectWebSocket(token) {
                     return;
                 }
 
-
-                // ✅ Only actual user chat messages go here
                 if (msg.type === "CHAT") {
                     displayMessage(msg);
                 }
             });
-
 
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
                 const playbackMsg = JSON.parse(message.body);
@@ -703,11 +904,20 @@ function connectWebSocket(token) {
                 updateParticipantsDisplay(participants);
             });
 
+            // Subscribe to shared room favorites
+            stompClient.subscribe(`/topic/chat/${currentRoomName}/favorites`, (message) => {
+                const favoritesMsg = JSON.parse(message.body);
+                handleFavoritesUpdate(favoritesMsg);
+            });
+
             stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
                 sender: currentUsername,
                 type: 'JOIN',
                 content: `${currentUsername} joined the room`
             }));
+
+            // Request current favorites state
+            requestFavoritesSync();
 
             startParticipantRefreshInterval();
         },
@@ -722,6 +932,18 @@ function connectWebSocket(token) {
             }, 3000);
         }
     );
+}
+
+function requestFavoritesSync() {
+    // Request current favorites state from server
+    if (stompClient && stompClient.connected) {
+        stompClient.send(
+            `/app/music/chat/${currentRoomName}/favorites/sync`,
+            {},
+            JSON.stringify({ username: currentUsername })
+        );
+        console.log('🔄 Requested favorites sync');
+    }
 }
 
 function startParticipantRefreshInterval() {
@@ -762,10 +984,8 @@ function updateParticipantsDisplay(participants) {
     participantsList.innerHTML = '';
     participantCount.textContent = `${participants.length} / ${PAGE_DATA.totalCount} participants`;
 
-    // ✅ Determine current organizer in room
     const currentOrganizerUser = participants.find(p => p.organizer)?.userName || null;
 
-    // ✅ Detect if organizer changed OR organizer left
     if (lastKnownOrganizer !== null) {
         const organizerStillExists = participants.some(p => p.userName === lastKnownOrganizer);
 
@@ -775,10 +995,8 @@ function updateParticipantsDisplay(participants) {
         }
     }
 
-// ✅ Update the new organizer
     lastKnownOrganizer = currentOrganizerUser;
 
-    // ===== Render Participant List =====
     participants.forEach(p => {
         const item = document.createElement('div');
         item.className = 'participant-item';
@@ -800,13 +1018,11 @@ function updateParticipantsDisplay(participants) {
         `;
         participantsList.appendChild(item);
 
-        // ✅ LOCAL organizer role changed (self only)
         const wasOrganizer = isOrganizer;
         if (p.userName === currentUsername) {
             isOrganizer = p.organizer;
             onRoleChange();
 
-            // Self lost organizer → reset audio also
             if (wasOrganizer && !isOrganizer) {
                 resetAudioOnOrganizerLeave();
             }
@@ -828,16 +1044,11 @@ function updateAudioControls() {
     if (!audioPlayer) return;
 
     if (isOrganizer) {
-        // Organizers get full native controls
         audioPlayer.controls = true;
-        // Remove pointer-block overlay if present
         const overlay = document.getElementById('controlsOverlay');
         if (overlay) overlay.remove();
     } else {
-        // Non-organizers: hide native controls to avoid accidental clicks.
-        // Native controls are hidden so we rely on server events to update playback.
-        audioPlayer.controls = true; // keep controls visible if you want them, but disable pointer events instead:
-        // create small overlay to intercept pointer events over the control area
+        audioPlayer.controls = true;
         let overlay = document.getElementById('controlsOverlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -850,7 +1061,6 @@ function updateAudioControls() {
             overlay.style.height = '100%';
             overlay.style.zIndex = 50;
             overlay.style.background = 'transparent';
-            // Add a small tooltip on hover (optional)
             overlay.title = 'Only the organizer can control playback';
             const wrapper = document.getElementById('audioPlayerWrapper') || document.body;
             wrapper.style.position = wrapper.style.position || 'relative';
@@ -860,7 +1070,6 @@ function updateAudioControls() {
         }
     }
 }
-
 
 // ==================== CHAT MESSAGING ====================
 function sendMessage() {
@@ -925,7 +1134,6 @@ function displayMessage(message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-
 // ==================== SONG MANAGEMENT ====================
 function displaySongs(songs) {
     const songList = document.getElementById('songList');
@@ -946,11 +1154,28 @@ function displaySongs(songs) {
         songItem.dataset.movie = song.movie;
         songItem.dataset.heroine = song.heroine;
         songItem.dataset.language = song.language;
-        songItem.onclick = () => handleSongClick(songItem);
+
+        const isFavorite = roomFavorites.some(f => f.fileName === song.fileName);
+
         songItem.innerHTML = `
-            <div class="song-item-title">${song.songName} * ${song.language}</div>
-            <div class="song-item-info">${song.hero || song.singer} • ${song.movie || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            <div class="song-item-content" onclick="handleSongClick(this.parentElement)">
+                <div class="song-item-title">${song.songName} • ${song.language}</div>
+                <div class="song-item-info">${song.hero || song.singer} • ${song.movie || 'Unknown'} • ${song.language || 'Unknown'}</div>
+            </div>
+            <button class="favorite-heart ${isFavorite ? 'bi bi-heart-fill' : 'bi bi-heart'}" 
+                    onclick="event.stopPropagation(); toggleFavorite({
+                        fileName: '${song.fileName}',
+                        songName: '${song.songName}',
+                        hero: '${song.hero || ''}',
+                        heroine: '${song.heroine || ''}',
+                        singer: '${song.singer || ''}',
+                        movie: '${song.movie || ''}',
+                        language: '${song.language || ''}'
+                    }, this)"
+                    title="Add to room favorites">
+            </button>
         `;
+
         songList.appendChild(songItem);
     });
 
@@ -970,6 +1195,10 @@ function handleSongClick(element) {
         heroine: element.dataset.heroine,
         language: element.dataset.language
     };
+
+    if (isPlayingFavorites) {
+        stopFavoritesPlaylist();
+    }
 
     playSong(song);
 }
@@ -1020,18 +1249,28 @@ function displaySearchResults(songs) {
         songItem.dataset.hero = song.hero;
         songItem.dataset.heroine = song.heroine;
         songItem.dataset.language = song.language;
-        songItem.onclick = () => {
-            if (isOrganizer) {
-                handleSongClick(songItem);
-                closeSearchDrawer();
-            } else {
-                ToastNotification.warning('Only the organizer can play songs');
-            }
-        };
+
+        const isFavorite = roomFavorites.some(f => f.fileName === song.fileName);
+
         songItem.innerHTML = `
-            <div class="song-item-title">${song.songName} * ${song.language}</div>
-            <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
+            <div class="song-item-content" onclick="if(${isOrganizer}) { handleSongClick(this.parentElement); closeSearchDrawer(); } else { ToastNotification.warning('Only the organizer can play songs'); }">
+                <div class="song-item-title">${song.songName} • ${song.language}</div>
+                <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
+            </div>
+            <button class="favorite-heart ${isFavorite ? 'bi bi-heart-fill' : 'bi bi-heart'}" 
+                    onclick="event.stopPropagation(); toggleFavorite({
+                        fileName: '${song.fileName}',
+                        songName: '${song.songName}',
+                        hero: '${song.hero || ''}',
+                        heroine: '${song.heroine || ''}',
+                        singer: '${song.singer || ''}',
+                        movie: '${song.movie || ''}',
+                        language: '${song.language || ''}'
+                    }, this)"
+                    title="Add to room favorites">
+            </button>
         `;
+
         searchResults.appendChild(songItem);
     });
 }
@@ -1112,15 +1351,13 @@ window.addEventListener('pagehide', function(event) {
 });
 
 // ==================== HANDLE TAB CLOSE ====================
-
 function handleTabClose() {
-    console.log('🔌 Tab/Window is closing - Initiating logout...');
+    console.log('📌 Tab/Window is closing - Initiating logout...');
 
     if (isReload()) {
         console.log("🔄 Page reload detected — skipping LEAVE + logout");
         return;
     }
-
 
     if (isClosing) {
         console.log('⚠️ Already closing, skipping duplicate handleTabClose');
@@ -1134,7 +1371,6 @@ function handleTabClose() {
     }
 
     safeDisconnectWebSocket();
-
 }
 
 function safeDisconnectWebSocket() {
@@ -1149,7 +1385,6 @@ function safeDisconnectWebSocket() {
         } catch (_) {}
     }
 }
-
 
 // ==================== LOGOUT BUTTON HANDLER ====================
 async function handleBack() {
@@ -1172,7 +1407,6 @@ async function handleBack() {
         await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
 
     } finally {
-        // Stay logged in → go to dashboard
         window.location.href = '/app/music/dashboard';
     }
 }
@@ -1187,7 +1421,6 @@ async function logout() {
 
         safeDisconnectWebSocket();
 
-
         if (currentRoomName && currentUsername) {
             await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
                 method: 'DELETE',
@@ -1196,12 +1429,9 @@ async function logout() {
             });
         }
 
-        // Clear just the roomName in UserSession (backend will also delete the session on /public/logout)
         await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
 
     } finally {
-        // This endpoint clears the HttpOnly jwt cookie and deletes UserSession on server
         window.location.href = '/app/music/public/logout';
     }
 }
-

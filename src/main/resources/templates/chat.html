@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
     <link rel="stylesheet" th:href="@{/css/style_chat.css}">
     <title>Connecting Notes ∞</title>
 </head>
@@ -34,9 +35,16 @@
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
             <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
-                <audio id="audioPlayer" controls  controlsList="nodownload noplaybackrate"></audio>
+                <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
             </div>
-            <button class="search-btn" onclick="openSearchDrawer()">Search Songs</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="search-btn" onclick="openSearchDrawer()" style="flex: 1;">
+                    <i class="bi bi-search"></i> Search Songs
+                </button>
+                <button class="search-btn" onclick="openFavoritesDrawer()" style="flex: 1; background: linear-gradient(135deg, #ec4899, #be185d);">
+                    <i class="bi bi-heart-fill"></i> Favorites (<span id="favoritesCount">0</span>)
+                </button>
+            </div>
         </div>
 
         <div id="permissionNotice" class="permission-notice" style="display: none;">
@@ -95,6 +103,7 @@
     </div>
 </div>
 
+<!-- Search Drawer -->
 <div class="search-drawer" id="searchDrawer">
     <div class="drawer-header">
         <h2>Search Songs</h2>
@@ -105,6 +114,27 @@
         <button class="search-btn" onclick="searchSongs()" style="margin-top: 10px; width: 100%;">Search</button>
     </div>
     <div class="drawer-results" id="searchResults"></div>
+</div>
+
+<!-- Favorites Drawer -->
+<div class="search-drawer" id="favoritesDrawer">
+    <div class="drawer-header" style="background: linear-gradient(135deg, #ec4899, #be185d);">
+        <h2><i class="bi bi-heart-fill"></i> Favorite Songs</h2>
+        <button class="drawer-close" onclick="closeFavoritesDrawer()">&times;</button>
+    </div>
+    <div class="drawer-search">
+        <button class="search-btn" onclick="playFavoritesPlaylist()"
+                style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px;">
+            <i class="bi bi-play-circle-fill"></i> Play All Favorites
+        </button>
+        <button class="search-btn" onclick="clearAllFavorites()"
+                style="width: 100%; background: linear-gradient(135deg, #ef4444, #dc2626);">
+            <i class="bi bi-trash"></i> Clear All
+        </button>
+    </div>
+    <div class="drawer-results" id="favoritesList" style="padding-top: 10px;">
+        <!-- Favorites loaded dynamically via JavaScript -->
+    </div>
 </div>
 
 <!-- Toast Container -->
