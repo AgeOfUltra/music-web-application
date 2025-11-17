@@ -1,6 +1,5 @@
     package com.music.musicwebapplication.dto;
 
-    import com.music.musicwebapplication.support.MessageType;
     import lombok.AllArgsConstructor;
     import lombok.Builder;
     import lombok.Data;
