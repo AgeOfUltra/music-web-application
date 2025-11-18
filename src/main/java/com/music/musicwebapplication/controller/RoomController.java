@@ -45,7 +45,7 @@ public class RoomController {
     @GetMapping("/chat")
     public String chatRoom(@RequestParam String roomName,
                            Authentication authentication,
-                           Model model, HttpSession session) {
+                           Model model) {
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomName", roomName);
         model.addAttribute("roomCount", currentParticipantCount(roomName));

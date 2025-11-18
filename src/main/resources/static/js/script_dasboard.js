@@ -52,7 +52,7 @@ class ToastNotifier {
 // Initialize notifier
 const notifier = new ToastNotifier();
 
-// Modal functions
+// Modal functions for Create Room
 function openCreateModal() {
     document.getElementById('createModal').classList.add('active');
 }
@@ -62,6 +62,7 @@ function closeCreateModal() {
     document.getElementById('createRoomForm').reset();
 }
 
+// Modal functions for Join Room
 function openJoinModal() {
     document.getElementById('joinModal').classList.add('active');
 }
@@ -71,8 +72,37 @@ function closeJoinModal() {
     document.getElementById('joinRoomForm').reset();
 }
 
-function logout() {
+// Modal Functions for Send Confess
+function openSendConfessModal() {
+    document.getElementById('sendConfess').classList.add('active');
+}
 
+function closeSendConfessModal() {
+    document.getElementById('sendConfess').classList.remove('active');
+    document.getElementById('sendConfessForm').reset();
+    // Reset the "Other" input field visibility
+    document.getElementById('otherConfessTypeDiv').style.display = 'none';
+    document.getElementById('otherConfessType').required = false;
+}
+
+// Toggle "Other" input field for confess type
+function toggleOtherInput() {
+    const confessType = document.getElementById('confessType').value;
+    const otherDiv = document.getElementById('otherConfessTypeDiv');
+    const otherInput = document.getElementById('otherConfessType');
+
+    if (confessType === 'other') {
+        otherDiv.style.display = 'block';
+        otherInput.required = true;
+    } else {
+        otherDiv.style.display = 'none';
+        otherInput.required = false;
+        otherInput.value = '';
+    }
+}
+
+// Logout function
+function logout() {
     window.location.href = '/app/music/public/logout';
 }
 
@@ -80,6 +110,7 @@ function logout() {
 window.onclick = function(event) {
     const createModal = document.getElementById('createModal');
     const joinModal = document.getElementById('joinModal');
+    const sendConfessModal = document.getElementById('sendConfess');
 
     if (event.target === createModal) {
         closeCreateModal();
@@ -87,46 +118,103 @@ window.onclick = function(event) {
     if (event.target === joinModal) {
         closeJoinModal();
     }
+    if (event.target === sendConfessModal) {
+        closeSendConfessModal();
+    }
 }
 
 // Handle error and success messages on page load
 window.addEventListener('DOMContentLoaded', function() {
     let hasErrors = false;
+    let hasConfessErrors = false;
 
-    // Handle field validation errors
+    // Handle field validation errors for Create Room
     const fieldErrorsContainer = document.getElementById('fieldErrors');
-    const errorItems = fieldErrorsContainer.querySelectorAll('.error-item');
-    errorItems.forEach(item => {
-        const errorMessage = item.textContent.trim();
-        if (errorMessage) {
-            notifier.error(errorMessage);
-            hasErrors = true;
-        }
-    });
+    if (fieldErrorsContainer) {
+        const errorItems = fieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasErrors = true;
+            }
+        });
+    }
+
+    // Handle field validation errors for Confess Form
+    const confessFieldErrorsContainer = document.getElementById('confessFieldErrors');
+    if (confessFieldErrorsContainer) {
+        const errorItems = confessFieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasConfessErrors = true;
+            }
+        });
+    }
 
     // Handle creation error
     const creationErrorContainer = document.getElementById('creationError');
-    const creationError = creationErrorContainer.textContent.trim();
-    if (creationError) {
-        notifier.error(creationError);
-        openCreateModal();
-        hasErrors = true;
+    if (creationErrorContainer) {
+        const creationError = creationErrorContainer.textContent.trim();
+        if (creationError) {
+            notifier.error(creationError);
+            openCreateModal();
+            hasErrors = true;
+        }
     }
 
     // Handle join error
     const joinErrorContainer = document.getElementById('joinError');
-    const joinError = joinErrorContainer.textContent.trim();
-    if (joinError) {
-        notifier.error(joinError);
-        openJoinModal();
-        hasErrors = true;
+    if (joinErrorContainer) {
+        const joinError = joinErrorContainer.textContent.trim();
+        if (joinError) {
+            notifier.error(joinError);
+            openJoinModal();
+            hasErrors = true;
+        }
+    }
+
+    // Handle email status from Send Confess form
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+
+    // Check if there's an emailStatus attribute from Thymeleaf
+    const emailStatusElement = document.getElementById('emailStatus');
+    if (emailStatusElement) {
+        const emailStatus = emailStatusElement.textContent.trim();
+        if (emailStatus) {
+            if (emailStatus.toLowerCase().includes('success')) {
+                notifier.success(emailStatus);
+            } else {
+                notifier.error(emailStatus);
+                hasConfessErrors = true;
+            }
+        }
+    }
+
+    // Also check URL parameter for status
+    if (status === 'sentSuccess') {
+        notifier.success('Successfully sent your confession!');
+    } else if (status === 'failed') {
+        notifier.error('Failed to send confession. Please try again.');
+        hasConfessErrors = true;
+    }
+
+    // Open the appropriate modal if there are errors
+    if (hasConfessErrors) {
+        openSendConfessModal();
     }
 
     // Clear fields ONLY if there are actual errors
     if (hasErrors) {
-        document.getElementById('roomName').value = '';
-        document.getElementById('maxCount').value = '';
-        document.getElementById('joinRoomName').value = '';
-    }
+        const roomNameField = document.getElementById('roomName');
+        const maxCountField = document.getElementById('maxCount');
+        const joinRoomNameField = document.getElementById('joinRoomName');
 
+        if (roomNameField) roomNameField.value = '';
+        if (maxCountField) maxCountField.value = '';
+        if (joinRoomNameField) joinRoomNameField.value = '';
+    }
 });

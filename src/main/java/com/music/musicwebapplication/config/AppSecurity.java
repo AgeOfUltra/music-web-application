@@ -67,69 +67,6 @@ public class AppSecurity {
     }
 
 
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//
-//        http
-//                // Disable CSRF for API usage (your app uses JWT)
-//                .csrf(AbstractHttpConfigurer::disable)
-//
-//                // H2 console support
-//                .headers(headers -> headers
-//                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
-//                )
-//
-//                // Authorization rules
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(
-//                                "/", "/h2-console/**",
-//                                "/api/music/**",
-//                                "/app/music/ws/**",
-//                                "/app/music/public/**",
-//                                "/app/music/audio/public/streamSong/**",
-//                                "/favicon.ico",
-//                                "/app_logo.png",
-//                                "/css/**",
-//                                "/js/**"
-//                        ).permitAll()
-//
-//                        .requestMatchers("/app/music/admin/**").hasRole("ADMIN")
-//
-//                        .requestMatchers(
-//                                "/app/music/room/**",
-//                                "/app/music/chat/**",
-//                                "/app/music/dashboard",
-//                                "/app/music/audio/searchSong",
-//                                "/app/music/audio/fetchAllSongs"
-//                        ).authenticated()
-//
-//                        .anyRequest().authenticated()
-//                )
-//
-//                // Login config
-//                .formLogin(form -> form
-//                        .loginPage("/app/music/public/login")
-//                        .defaultSuccessUrl("/app/music/dashboard", true)
-//                        .failureUrl("/app/music/public/login?error=true")
-//                        .permitAll()
-//                )
-//
-//                // Logout config
-//                .logout(logout -> logout
-//                        .logoutUrl("/app/music/public/logout")
-//                        .logoutSuccessUrl("/app/music/public/login?logout=true").invalidateHttpSession(true)
-//                        .permitAll()
-//                )
-//
-//                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
-//
-//                .sessionManagement(session ->
-//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                );
-//
-//        return http.build();
-//    }
-
-
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

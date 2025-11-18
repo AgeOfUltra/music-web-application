@@ -5,41 +5,44 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor(force = true)
-public class ConfessDto {
+@NoArgsConstructor
+@Builder
+public class ConfessContainerRequest {
 
-    private final String initiatedBy;
+    private String initiatedBy;
 
-    private final String senderOriginalName;
+    @NotBlank(message = "Please enter you name to identification to recipient")
+    private String senderOriginalName;
 
-    private final String senderEmail;
+    private String senderEmail;
 
     @NotBlank(message = "Please enter room name")
-    private final String roomName;
+    private String roomName;
 
     @NotBlank(message = "Please enter alias name")
-    private final String receiverAlias;
+    private String receiverAlias;
 
-    private final String confessType;
+    private String confessType;
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "provide an valid fieldName address")
-    private final String email;
+    private String email;
 
     @NotBlank(message = "Please enter your favourite song")
-    private final String songName;
+    private String songName;
 
     @NotBlank(message = "Please enter singer name to identify the above song")
-    private final String singerName;
+    private String singerName;
 
     @NotBlank(message = "Please enter singer name to identify the song")
-    @Size(min= 10,message = "Provide atleast 10 letters")
-    private final String Message;
+    @Size(min= 20,message = "Provide at-least 20 letters to express")
+    private String message;
 
-    private final Status status;
+    private Status status;
 }

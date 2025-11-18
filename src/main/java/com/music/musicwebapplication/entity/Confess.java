@@ -11,45 +11,43 @@ import java.time.Duration;
 @Data
 @Entity
 @AllArgsConstructor
-@Setter
-@Getter
-@NoArgsConstructor(force = true)
+@NoArgsConstructor
 public class Confess {
     @Id
     private long id;
 
-    private final String initiatedBy;
+    private  String initiatedBy;
 
-    private final String senderOriginalName;
+    private  String senderOriginalName;
 
-    private final String senderEmail;
+    private   String senderEmail;
 
-    private final String receiverAlias;
+    private   String receiverAlias;
 
-    private final String confessType;
+    private   String confessType;
 
-    private final String email;
+    private   String email;
 
     @Column(unique = true)
-    private final String passcode;
+    private   String passcode;
 
-    private final String songName;
+    private   String songName;
 
-    private final String singerName;
+    private   String singerName;
 
-    private final String Message;
+    private   String Message;
 
-    private final Duration activeTime;
+    private   Duration activeTime;
 
-    private final Timestamp createdAt;
+    private   Timestamp createdAt;
 
     @Enumerated(EnumType.STRING)
-    private final Status status;
+    private   Status status;
 
-    private final String roomName;
+    private   String roomName;
 
     @Column(unique = true)
-    private final String roomHash;
+    private   String roomHash;
 
     @Enumerated(EnumType.STRING)
     private Role role;
