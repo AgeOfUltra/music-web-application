@@ -14,6 +14,7 @@ import java.time.Duration;
 @NoArgsConstructor
 public class Confess {
     @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
     private  String initiatedBy;

@@ -195,12 +195,12 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     // Also check URL parameter for status
-    if (status === 'sentSuccess') {
-        notifier.success('Successfully sent your confession!');
-    } else if (status === 'failed') {
-        notifier.error('Failed to send confession. Please try again.');
-        hasConfessErrors = true;
-    }
+    // if (status === 'sentSuccess') {
+    //     notifier.success('Successfully sent your confession!');
+    // } else if (status === 'failed') {
+    //     notifier.error('Failed to send confession. Please try again.');
+    //     hasConfessErrors = true;
+    // }
 
     // Open the appropriate modal if there are errors
     if (hasConfessErrors) {

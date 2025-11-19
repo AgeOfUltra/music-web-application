@@ -132,40 +132,40 @@
 
         <form th:action="@{/app/music/connect/sendRequest}" id="sendConfessForm" th:method="POST" th:object="${requestData}">
             <!-- Hidden Fields -->
-            <div class="form-group">
+            <div class="form-group" style="display: none;">
                 <label for="initiatedBy">
-                    <input type="text" id="initiatedBy" th:field="*{initiatedBy}" th:value="${currentUser}" readonly>
+                    <input type="text" id="initiatedBy" th:field="*{initiatedBy}" readonly>
                 </label>
             </div>
-            <div class="form-group" >
-<!--                style="display: none;"-->
+
+            <div class="form-group" style="display: none;">
                 <label for="senderEmail">
-                    <input type="text" id="senderEmail" th:field="*{senderEmail}" th:value="${currentUserEmail}" readonly>
+                    <input type="text" id="senderEmail" th:field="*{senderEmail}" readonly>
                 </label>
             </div>
 
             <!-- Sender Original Name -->
             <div class="form-group">
                 <label for="senderOriginalName">Your Original Name(for Identification)</label>
-                <input type="text" id="senderOriginalName" th:field="*{senderOriginalName}" placeholder="Enter your name" required>
+                <input type="text" id="senderOriginalName" th:field="*{senderOriginalName}" placeholder="Enter your name">
             </div>
 
             <!-- Room Name -->
             <div class="form-group">
                 <label for="confessRoomName">Room Name</label>
-                <input type="text" id="confessRoomName" th:field="*{confessRoomName}" placeholder="Enter room name" required>
+                <input type="text" id="confessRoomName" th:field="*{confessRoomName}" placeholder="Enter room name" >
             </div>
 
             <!-- Receiver Alias -->
             <div class="form-group">
                 <label for="receiverAlias">Receiver's Alias/Nickname</label>
-                <input type="text" id="receiverAlias" th:field="*{receiverAlias}" placeholder="Enter receiver's name or nickname" required>
+                <input type="text" id="receiverAlias" th:field="*{receiverAlias}" placeholder="Enter receiver's name or nickname" >
             </div>
 
             <!-- Confess Type -->
             <div class="form-group">
                 <label for="confessType">Confess Type</label>
-                <select id="confessType" th:field="*{confessType}" onchange="toggleOtherInput()" required>
+                <select id="confessType" th:field="*{confessType}" onchange="toggleOtherInput()" >
                     <option value="">Select confess type</option>
                     <option value="love confess">Love Confess</option>
                     <option value="feeling confess">Feeling Confess</option>
@@ -182,25 +182,25 @@
             <!-- Receiver Email -->
             <div class="form-group">
                 <label for="receiverEmail">Receiver's Email</label>
-                <input type="email" id="receiverEmail" th:field="*{email}" placeholder="Enter valid email address" required>
+                <input type="email" id="receiverEmail" th:field="*{email}" placeholder="Enter valid email address" >
             </div>
 
             <!-- Song Name -->
             <div class="form-group">
                 <label for="songName">Song Name</label>
-                <input type="text" id="songName" th:field="*{songName}" placeholder="Enter song name" required>
+                <input type="text" id="songName" th:field="*{songName}" placeholder="Enter song name" >
             </div>
 
             <!-- Singer Name -->
             <div class="form-group">
                 <label for="singerName">Singer Name</label>
-                <input type="text" id="singerName" th:field="*{singerName}" placeholder="Enter singer name" required>
+                <input type="text" id="singerName" th:field="*{singerName}" placeholder="Enter singer name" >
             </div>
 
             <!-- Message -->
             <div class="form-group">
                 <label for="confessMessage">Your Message</label>
-                <textarea id="confessMessage" th:field="*{message}" rows="6" placeholder="Write your heartfelt message here..." required></textarea>
+                <textarea id="confessMessage" th:field="*{message}" rows="6" placeholder="Write your heartfelt message here..." ></textarea>
             </div>
 
             <button type="submit" class="submit-btn btn-create">Send Confession</button>
