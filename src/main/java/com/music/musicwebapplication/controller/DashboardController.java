@@ -30,6 +30,7 @@ public class DashboardController {
         String currentUser = authentication.getName();
 
         Optional<User> user = repo.findByUsername(currentUser);
+        log.info("Current user: {} and email {}", currentUser, user.get().getEmail());
 
         model.addAttribute("currentUser",currentUser);
         user.ifPresent(value -> model.addAttribute("currentUserEmail", value.getEmail()));

@@ -23,7 +23,7 @@ public class ConfessContainerRequest {
     private String senderEmail;
 
     @NotBlank(message = "Please enter room name")
-    private String roomName;
+    private String confessRoomName;
 
     @NotBlank(message = "Please enter alias name")
     private String receiverAlias;

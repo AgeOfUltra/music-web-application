@@ -132,23 +132,28 @@
 
         <form th:action="@{/app/music/connect/sendRequest}" id="sendConfessForm" th:method="POST" th:object="${requestData}">
             <!-- Hidden Fields -->
-            <div class="form-group" style="display: none;">
-                <input type="text" th:field="*{initiatedBy}" th:value="${currentUser}" readonly>
+            <div class="form-group">
+                <label for="initiatedBy">
+                    <input type="text" id="initiatedBy" th:field="*{initiatedBy}" th:value="${currentUser}" readonly>
+                </label>
             </div>
-            <div class="form-group" style="display: none;">
-                <input type="text" th:field="*{senderEmail}" th:value="${currentUserEmail}" readonly>
+            <div class="form-group" >
+<!--                style="display: none;"-->
+                <label for="senderEmail">
+                    <input type="text" id="senderEmail" th:field="*{senderEmail}" th:value="${currentUserEmail}" readonly>
+                </label>
             </div>
 
             <!-- Sender Original Name -->
             <div class="form-group">
-                <label for="senderOriginalName">Your Name</label>
+                <label for="senderOriginalName">Your Original Name(for Identification)</label>
                 <input type="text" id="senderOriginalName" th:field="*{senderOriginalName}" placeholder="Enter your name" required>
             </div>
 
             <!-- Room Name -->
             <div class="form-group">
                 <label for="confessRoomName">Room Name</label>
-                <input type="text" id="confessRoomName" th:field="*{roomName}" placeholder="Enter room name" required>
+                <input type="text" id="confessRoomName" th:field="*{confessRoomName}" placeholder="Enter room name" required>
             </div>
 
             <!-- Receiver Alias -->

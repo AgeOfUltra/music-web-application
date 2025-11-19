@@ -33,7 +33,6 @@ public class ConfessController {
            attribute.addFlashAttribute("org.springframework.validation.BindingResult.newRoom", error);
            attribute.addFlashAttribute("requestData", requestData);
            attribute.addFlashAttribute("emailStatus", "failed to Send Email");
-           log.info("entered data {} ",requestData);
            return new ModelAndView("redirect:/app/music/dashboard");
        }
 

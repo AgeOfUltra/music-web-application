@@ -29,7 +29,7 @@ public class ConfessService {
 
     public String buildSaveConfessData(ConfessContainerRequest cr){
         //generate : room-name
-        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getRoomName(),6);
+        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getConfessRoomName(),8);
 //        passcode generate
         String passCode = generatePassCode(5);
 //        created time stamp need to update and duration will be handled later upon open.
@@ -49,7 +49,7 @@ public class ConfessService {
         entity.setMessage(cr.getMessage());
 
         entity.setCreatedAt(Timestamp.from(Instant.now()));
-
+        entity.setRoomName(cr.getConfessRoomName());
         entity.setStatus(status);
         entity.setRoomHash(roomHash);
         entity.setRole(Role.GUEST);
@@ -59,12 +59,11 @@ public class ConfessService {
     }
 
     private String generateRoomName(String message,String alias,String type,String sender,String song,String roomName,int length){
-        String newStr = message+alias+type+sender+song+roomName;
-        SecureRandom random = new SecureRandom();
+        String newStr = (message+alias+type+sender+song+roomName).replace(" ","");
         StringBuilder sb = new StringBuilder(length);
-
         for (int i = 0; i < length; i++) {
-            sb.append(newStr.charAt(random.nextInt(newStr.length())));
+            int index = RNG.nextInt(newStr.length());
+            sb.append(newStr.charAt(index));
         }
 
         String hash= sb.toString();
