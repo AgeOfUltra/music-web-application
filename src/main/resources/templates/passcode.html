@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONNECTING NODES ∞ - Join Confession Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Alan Sans", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            width: 80px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .app-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            letter-spacing: 1px;
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-text {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .info-text h2 {
+            color: #667eea;
+            font-size: 26px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .info-text p {
+            color: #555;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            color: #ff6b9d;
+            font-weight: 600;
+        }
+
+        /* Form */
+        .join-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="hidden"] {
+            display: none;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Floating Hearts Animation */
+        .heart {
+            position: absolute;
+            font-size: 30px;
+            opacity: 0;
+            bottom: -50px;
+            animation: floatHeart 6s infinite ease-in;
+        }
+
+        @keyframes floatHeart {
+            0% {
+                opacity: 0;
+                transform: translateY(0) rotate(0deg);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-110vh) rotate(360deg);
+            }
+        }
+
+        /* Chat Bubbles Animation */
+        .chat-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 20px;
+            bottom: -50px;
+            animation: floatBubble 8s infinite ease-in-out;
+            opacity: 0;
+        }
+
+        @keyframes floatBubble {
+            0% {
+                opacity: 0;
+                transform: translateY(0) translateX(0);
+            }
+            20% {
+                opacity: 0.6;
+            }
+            80% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-110vh) translateX(20px);
+            }
+        }
+
+        /* Love Symbol */
+        .love-symbol {
+            position: absolute;
+            font-size: 40px;
+            bottom: -50px;
+            opacity: 0;
+            animation: pulsefloat 5s infinite ease-in-out;
+        }
+
+        @keyframes pulsefloat {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(0.8);
+            }
+            20% {
+                opacity: 0.4;
+                transform: translateY(-20vh) scale(1.2);
+            }
+            40% {
+                opacity: 0.4;
+                transform: translateY(-40vh) scale(0.9);
+            }
+            60% {
+                opacity: 0.4;
+                transform: translateY(-60vh) scale(1.1);
+            }
+            80% {
+                opacity: 0.4;
+                transform: translateY(-80vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-110vh) scale(0.8);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            header {
+                padding: 15px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+            }
+
+            .app-name {
+                font-size: 20px;
+            }
+
+            .content-card {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .info-text h2 {
+                font-size: 22px;
+            }
+
+            .info-text p {
+                font-size: 14px;
+            }
+
+            .submit-btn {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content-card {
+                padding: 25px 15px;
+            }
+
+            .info-text h2 {
+                font-size: 20px;
+            }
+
+            .heart, .love-symbol {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header>
+    <div class="logo">
+        <img th:src="@{/app_logo.png}" alt="Connecting Nodes Logo">
+    </div>
+    <div class="app-name">CONNECTING NODES</div>
+</header>
+
+<!-- Main Container -->
+<div class="main-container">
+    <div class="content-card">
+        <div class="info-text">
+            <h2>💕 Someone Wants to Share</h2>
+            <p><span class="highlight" th:text="${sender}">A special someone</span> wants you to join this room to confess their feelings.</p>
+            <p>Please enter the <span class="highlight">passcode</span> you received in your email to continue.</p>
+        </div>
+
+        <form class="join-form" method="post" th:action="@{/app/music/nodes/connect}" th:object="${roomLogin}">
+            <!-- Hidden roomId field -->
+            <input type="hidden" th:field="*{roomId}" th:value="${roomId}">
+            <input type="hidden" th:field="*{sender}" th:value="${sender}">
+
+            <div class="form-group">
+                <label for="passcode">Enter Passcode</label>
+                <input
+                        type="password"
+                        id="passcode"
+                        th:field="*{passcode}"
+                        placeholder="••••••"
+                        required
+                >
+            </div>
+
+            <button type="submit" class="submit-btn">
+                Join Room 💗
+            </button>
+        </form>
+    </div>
+
+    <!-- Animated Elements -->
+    <div class="heart" style="left: 10%; animation-delay: 0s;">❤️</div>
+    <div class="heart" style="left: 85%; animation-delay: 2s;">💕</div>
+    <div class="heart" style="left: 30%; animation-delay: 4s;">💖</div>
+    <div class="heart" style="left: 70%; animation-delay: 1s;">💗</div>
+    <div class="heart" style="left: 50%; animation-delay: 3s;">💝</div>
+
+    <div class="chat-bubble" style="left: 15%; animation-delay: 1s;">💬</div>
+    <div class="chat-bubble" style="right: 15%; animation-delay: 3s;">💭</div>
+    <div class="chat-bubble" style="left: 20%; animation-delay: 5s;">💬</div>
+
+    <div class="love-symbol" style="right: 10%; animation-delay: 0s;">💞</div>
+    <div class="love-symbol" style="left: 8%; animation-delay: 1.5s;">💓</div>
+</div>
+</body>
+</html>

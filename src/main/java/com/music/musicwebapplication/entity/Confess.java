@@ -17,38 +17,38 @@ public class Confess {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
-    private  String initiatedBy;
+    private String initiatedBy;
 
-    private  String senderOriginalName;
+    private String senderOriginalName;
 
-    private   String senderEmail;
+    private String senderEmail;
 
-    private   String receiverAlias;
+    private String receiverAlias;
 
-    private   String confessType;
+    private String confessType;
 
-    private   String email;
+    private String email;
 
     @Column(unique = true)
-    private   String passcode;
+    private String passcode;
 
-    private   String songName;
+    private String songName;
 
-    private   String singerName;
+    private String singerName;
 
-    private   String Message;
+    private String Message;
 
-    private   Duration activeTime;
+    private Duration activeTime;
 
-    private   Timestamp createdAt;
+    private Timestamp createdAt;
 
     @Enumerated(EnumType.STRING)
-    private   Status status;
+    private Status status;
 
-    private   String roomName;
+    private String roomName;
 
     @Column(unique = true)
-    private   String roomHash;
+    private String roomHash;
 
     @Enumerated(EnumType.STRING)
     private Role role;

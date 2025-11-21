@@ -3,8 +3,10 @@ package com.music.musicwebapplication.exception;
 import com.music.musicwebapplication.utils.ErrorResponseUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.time.LocalDateTime;
 
@@ -30,5 +32,14 @@ public class GlobalExceptionHandler {
                 e.getMessage());
 
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(ConfessRoomException.class)
+    public ModelAndView handleConfessRoomException(ConfessRoomException ex, Model model){
+        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),ex.getMessage().contains("invalid request") ? HttpStatus.BAD_REQUEST.toString(): HttpStatus.FORBIDDEN.toString(),
+                ex.getMessage()
+        );
+        model.addAttribute("errorObject",error);
+        return new ModelAndView("error");
     }
 }

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONNECTING NODES ∞ - Error</title>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 200% 200%;
+            animation: gradient-shift 15s ease infinite;
+            font-family: "Alan Sans", sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            width: 100px;
+            height: 80px;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .app-name {
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Background notes */
+        .background-notes {
+            position: fixed;
+            inset: 0;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .note {
+            position: absolute;
+            color: white;
+            font-size: 2rem;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Glassmorphism Card */
+        .content-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
+            border-radius: 30px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease forwards;
+            text-align: center;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chat Animation Container */
+        .chat-animation-container {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        /* Chat Bubbles */
+        .chat-bubble {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-bubble-left {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            animation: separateLeft 3s ease-in-out infinite;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .chat-bubble-right {
+            background: linear-gradient(135deg, #f093fb, #4facfe);
+            animation: separateRight 3s ease-in-out infinite;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        @keyframes separateLeft {
+            0% {
+                left: 50%;
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+            50% {
+                left: 20%;
+                transform: translateX(-50%) scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                left: 50%;
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes separateRight {
+            0% {
+                left: 50%;
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+            50% {
+                left: 80%;
+                transform: translateX(-50%) scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                left: 50%;
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Musical Notes in bubbles */
+        .chat-note {
+            font-size: 2.5rem;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Infinity Symbol Breaking */
+        .infinity-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .infinity-symbol {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.4);
+            animation: breakInfinity 3s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes breakInfinity {
+            0% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+            50% {
+                opacity: 0.2;
+                transform: scale(1.3) rotate(180deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        /* Connection Line Breaking */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.6),
+            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.6)
+            );
+            transform: translate(-50%, -50%);
+            animation: connectionBreak 3s ease-in-out infinite;
+            border-radius: 2px;
+        }
+
+        @keyframes connectionBreak {
+            0% {
+                width: 0;
+                opacity: 0;
+            }
+            25% {
+                width: 150px;
+                opacity: 1;
+            }
+            50% {
+                width: 200px;
+                opacity: 0.3;
+            }
+            75% {
+                width: 150px;
+                opacity: 1;
+            }
+            100% {
+                width: 0;
+                opacity: 0;
+            }
+        }
+
+        /* Error icon */
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            color: #f87171;
+            filter: drop-shadow(0 0 10px rgba(248, 113, 113, 0.5));
+        }
+
+        .error-icon-wrapper {
+            display: inline-block;
+            position: relative;
+        }
+
+        .ping-effect {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: #f87171;
+            opacity: 0.2;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .error-title {
+            color: white;
+            text-shadow: 2px 2px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-subtitle {
+            color: #e9d5ff;
+            text-shadow: 1px 1px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .error-description {
+            color: #f3f4f6;
+        }
+
+        .error-details {
+            background: rgba(17, 24, 39, 0.5);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #f87171;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            text-align: left;
+        }
+
+        .detail-label {
+            color: #d1d5db;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-value {
+            color: #f3f4f6;
+        }
+
+        .error-message {
+            color: #fca5a5;
+        }
+
+        .music-note {
+            width: 60px;
+            height: 60px;
+            color: #e9d5ff;
+            filter: drop-shadow(0 0 8px rgba(233, 213, 255, 0.5));
+        }
+
+        .btn-custom {
+            background: linear-gradient(135deg, #9333ea, #db2777);
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 12px 32px;
+            border-radius: 50px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-custom:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        .error-code {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .icon-stroke {
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                width: 60px;
+                height: 60px;
+            }
+
+            .app-name {
+                font-size: 20px;
+                letter-spacing: 1px;
+            }
+
+            .error-title {
+                font-size: 2.5rem;
+            }
+
+            .error-subtitle {
+                font-size: 1.5rem;
+            }
+
+            .chat-animation-container {
+                height: 150px;
+            }
+
+            .chat-bubble {
+                width: 70px;
+                height: 70px;
+            }
+
+            .chat-note {
+                font-size: 2rem;
+            }
+
+            .infinity-symbol {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .app-name {
+                font-size: 18px;
+            }
+
+            .error-title {
+                font-size: 2rem;
+            }
+
+            .error-subtitle {
+                font-size: 1.25rem;
+            }
+
+            .chat-animation-container {
+                height: 130px;
+            }
+
+            .chat-bubble {
+                width: 60px;
+                height: 60px;
+            }
+
+            .chat-note {
+                font-size: 1.75rem;
+            }
+
+            .infinity-symbol {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Header with Bootstrap -->
+<header class="py-3 px-4">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="logo">
+                    <img th:src="@{/app_logo.png}" alt="Connecting Nodes Logo">
+                </div>
+            </div>
+            <div class="col text-center">
+                <div class="app-name">CONNECTING NODES</div>
+            </div>
+            <div class="col-auto d-none d-md-block" style="width: 80px;"></div>
+        </div>
+    </div>
+</header>
+
+<!-- Background notes -->
+<div class="background-notes">
+    <div class="note" style="left: 5%; top: 10%; animation-delay: 0s;">♪</div>
+    <div class="note" style="left: 15%; top: 25%; animation-delay: 0.5s;">♪</div>
+    <div class="note" style="left: 25%; top: 40%; animation-delay: 1s;">♪</div>
+    <div class="note" style="left: 45%; top: 35%; animation-delay: 0.3s;">♪</div>
+    <div class="note" style="left: 65%; top: 20%; animation-delay: 1.2s;">♪</div>
+    <div class="note" style="left: 85%; top: 30%; animation-delay: 1.8s;">♪</div>
+    <div class="note" style="left: 30%; top: 80%; animation-delay: 0.9s;">♪</div>
+    <div class="note" style="left: 70%; top: 75%; animation-delay: 0.4s;">♪</div>
+</div>
+
+<!-- Main Content -->
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="content-card p-4 p-md-5">
+                <!-- Chat Animation with Breaking Connection -->
+                <div class="mb-4">
+                    <div class="chat-animation-container">
+                        <!-- Connection Line Breaking -->
+                        <div class="connection-line"></div>
+
+                        <!-- Infinity Symbol Breaking -->
+                        <div class="infinity-container">
+                            <div class="infinity-symbol">∞</div>
+                        </div>
+
+                        <!-- Left Chat Bubble with Note -->
+                        <div class="chat-bubble chat-bubble-left">
+                            <div class="chat-note">♪</div>
+                        </div>
+
+                        <!-- Right Chat Bubble with Different Note -->
+                        <div class="chat-bubble chat-bubble-right">
+                            <div class="chat-note">♫</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Icon -->
+                <div class="mb-4">
+                    <div class="error-icon-wrapper">
+                        <svg class="error-icon" viewBox="0 0 24 24">
+                            <circle class="icon-stroke" cx="12" cy="12" r="10"></circle>
+                            <line class="icon-stroke" x1="12" y1="8" x2="12" y2="12"></line>
+                            <line class="icon-stroke" x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <div class="ping-effect"></div>
+                    </div>
+                </div>
+
+                <!-- Error Messages -->
+                <h1 class="error-title display-3 fw-bold mb-3">Connection Lost!</h1>
+                <h2 class="error-subtitle h3 fw-semibold mb-3">The Musical Connection Broke</h2>
+                <p class="error-description lead mb-4">
+                    The harmony between your chats has been disrupted. Let's reconnect and get the music flowing again!
+                </p>
+
+                <!-- Error Details -->
+                <div class="error-details rounded p-3 p-md-4 mb-4">
+                    <div class="detail-label fw-bold mb-2">🕐 Timestamp</div>
+                    <div class="detail-value mb-3" th:text="${#temporals.format(errorObject.dateTime, 'EEEE, dd MMMM yyyy • hh:mm:ss a')}">
+                        Sunday, November 09, 2025 • 02:30:45 PM
+                    </div>
+
+                    <div class="detail-label fw-bold mb-2">📊 Status Code</div>
+                    <div class="detail-value mb-3" th:text="${errorObject.errorCode}">
+                        500
+                    </div>
+
+                    <div class="detail-label fw-bold mb-2">💬 Error Message</div>
+                    <div class="error-message fw-medium" th:text="${errorObject.errorDetails}">
+                        Something went wrong with your music chat session.
+                    </div>
+                </div>
+
+                <!-- Music Note Icon -->
+                <div class="mb-4 d-flex justify-content-center">
+                    <svg class="music-note" viewBox="0 0 24 24">
+                        <path class="icon-stroke" d="M9 18V5l12-2v13"></path>
+                        <circle class="icon-stroke" cx="6" cy="18" r="3"></circle>
+                        <circle class="icon-stroke" cx="18" cy="16" r="3"></circle>
+                    </svg>
+                </div>
+
+                <!-- Back Button -->
+                <div class="mb-4">
+                    <a th:href="@{/app/music/public/login}" class="btn-custom">
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                            <line class="icon-stroke" x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline class="icon-stroke" points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Reconnect Now</span>
+                    </a>
+                </div>
+
+                <!-- Error Code -->
+                <div class="error-code mt-4">
+                    <p class="mb-0">Error Code: CONNECTION_BREAK</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

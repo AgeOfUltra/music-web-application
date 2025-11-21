@@ -95,10 +95,22 @@ public class ConfessService {
 
         log.info("confess status result:{}",confessStatus);
 
-        List<ConfessContainerRequest> result = new ArrayList<>();
-        result.addAll(confessStatus.stream().map(c -> modelMapper.map(c, ConfessContainerRequest.class)).toList());
+        List<ConfessContainerRequest> result = new ArrayList<>(confessStatus.stream().map(c -> modelMapper.map(c, ConfessContainerRequest.class)).toList());
 
         log.info("confess data result:{}",result);
         return Optional.of(result);
+    }
+
+    public boolean validateRoomHash(String roomHash,String sender){
+        Optional<List<Confess>> availableRequest = repo.findByRoomHash((roomHash));
+        if(availableRequest.isEmpty()){
+            return false;
+        }
+        if(availableRequest.get().size()>1){
+            log.error("Duplicate Rooms available");
+//            not providing failing condition
+        }
+
+        return availableRequest.get().stream().allMatch(c -> c.getRoomHash().equals(roomHash) && c.getInitiatedBy().equals(sender));
     }
 }

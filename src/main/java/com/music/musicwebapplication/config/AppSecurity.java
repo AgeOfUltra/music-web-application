@@ -49,6 +49,7 @@ public class AppSecurity {
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
                                 "/app/music/audio/public/streamSong/**",
+                                "app/music/node/**",
                                 "/favicon.ico",
                                 "/app_logo.png",
                                 "/css/**",
