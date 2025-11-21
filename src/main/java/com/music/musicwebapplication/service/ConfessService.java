@@ -6,12 +6,16 @@ import com.music.musicwebapplication.repo.ConfessRepo;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.support.Status;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
 import java.util.random.RandomGenerator;
 
 @Slf4j
@@ -21,10 +25,12 @@ public class ConfessService {
     private final ConfessRepo repo;
     private static final RandomGenerator RNG = RandomGenerator.of("L128X256MixRandom");
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private final ModelMapper modelMapper;
 
 
-    public ConfessService(ConfessRepo repo) {
+    public ConfessService(ConfessRepo repo, ModelMapper modelMapper) {
         this.repo = repo;
+        this.modelMapper = modelMapper;
     }
 
     public String buildSaveConfessData(ConfessContainerRequest cr){
@@ -80,5 +86,19 @@ public class ConfessService {
         String passCode = sb.toString();
         log.info("passcode generated {}",passCode);
         return passCode;
+    }
+
+    public Optional<List<ConfessContainerRequest>> getConfessData(Status status){
+
+        log.info("confss request type {}",status.toString());
+        List<Confess> confessStatus = repo.findAll().stream().filter(c -> c.getStatus().equals(status)).toList();
+
+        log.info("confess status result:{}",confessStatus);
+
+        List<ConfessContainerRequest> result = new ArrayList<>();
+        result.addAll(confessStatus.stream().map(c -> modelMapper.map(c, ConfessContainerRequest.class)).toList());
+
+        log.info("confess data result:{}",result);
+        return Optional.of(result);
     }
 }
