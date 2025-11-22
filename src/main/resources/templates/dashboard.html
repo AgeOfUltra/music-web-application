@@ -59,6 +59,13 @@
             <p>Send your music and feeling to loved once's</p>
             <button type="button" class="option-btn btn-create">Send Request</button>
         </div>
+        <div class="option-card" sec:authorize="hasRole('ADMIN')">
+            <h2>View Pending request</h2>
+            <p>View all your pending Request and update</p>
+            <button type="button" class="option-btn btn-create">
+                <a th:href="@{/app/music/connect/requestDashboard/admin}">View</a>
+            </button>
+        </div>
     </div>
 </div>
 

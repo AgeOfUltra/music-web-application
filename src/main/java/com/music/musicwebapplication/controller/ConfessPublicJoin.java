@@ -1,15 +1,21 @@
 package com.music.musicwebapplication.controller;
 
+import com.music.musicwebapplication.dto.ConfessContainerRequest;
 import com.music.musicwebapplication.dto.GuestLogin;
 import com.music.musicwebapplication.exception.ConfessRoomException;
 import com.music.musicwebapplication.service.ConfessService;
+import com.music.musicwebapplication.support.Status;
 import org.modelmapper.internal.bytebuddy.implementation.bytecode.Throw;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.ModelAndView;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 
 @Controller()
 @RequestMapping("/app/music/node")
@@ -41,6 +47,16 @@ public class ConfessPublicJoin {
        }
 
     }
+
+//    public List<ConfessContainerRequest> getAllInProgressRequest(){
+//        Optional<List<ConfessContainerRequest>> inProgressList = service.getConfessData(Status.IN_PROGRESS);
+//
+//       if(inProgressList.isPresent()){
+//
+//       }
+//
+//    }
+
 
 //   redirected to
 
