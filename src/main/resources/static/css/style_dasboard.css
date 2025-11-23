@@ -565,7 +565,7 @@ textarea {
     line-height: 1.6;
 }
 
-.btn-upload {
+.btn-upload,.btn-view {
     background: rgba(255, 255, 255, 0.25);
     color: white;
     border: 2px solid rgba(255, 255, 255, 0.4);
@@ -579,7 +579,7 @@ textarea {
     cursor: pointer;
 }
 
-.btn-upload:hover {
+.btn-upload:hover,.btn-view:hover {
     background: white;
     color: #667eea;
     border-color: white;

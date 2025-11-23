@@ -5,13 +5,17 @@ import com.music.musicwebapplication.support.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
-import java.time.Duration;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
 
 @Data
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Confess {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -36,11 +40,17 @@ public class Confess {
 
     private String singerName;
 
-    private String Message;
+    @Column(columnDefinition = "TEXT")
+    private String message;
 
-    private Duration activeTime;
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    private Timestamp createdAt;
+
+    @LastModifiedDate
+    @Column(insertable = false)
+    private LocalDateTime modifiedAt;
 
     @Enumerated(EnumType.STRING)
     private Status status;

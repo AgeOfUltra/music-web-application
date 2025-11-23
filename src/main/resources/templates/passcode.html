@@ -330,10 +330,10 @@
             <p>Please enter the <span class="highlight">passcode</span> you received in your email to continue.</p>
         </div>
 
-        <form class="join-form" method="post" th:action="@{/app/music/nodes/connect}" th:object="${roomLogin}">
+        <form class="join-form" method="post" th:action="@{/app/music/nodes/connect/node}" th:object="${nodeLogin}">
             <!-- Hidden roomId field -->
-            <input type="hidden" th:field="*{roomId}" th:value="${roomId}">
-            <input type="hidden" th:field="*{sender}" th:value="${sender}">
+            <input type="hidden" name="roomId" th:value="${roomId}">
+            <input type="hidden" name="sender" th:value="${sender}">
 
             <div class="form-group">
                 <label for="passcode">Enter Passcode</label>

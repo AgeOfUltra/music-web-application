@@ -23,7 +23,7 @@ public class ConfessContainerRequest {
     private String senderEmail;
 
     @NotBlank(message = "Please enter room name")
-    private String confessRoomName;
+    private String roomName;
 
     @NotBlank(message = "Please enter alias name")
     private String receiverAlias;
@@ -45,4 +45,6 @@ public class ConfessContainerRequest {
     private String message;
 
     private Status status;
+//to handle while repose return not for the request
+    private String roomHash;
 }

@@ -1,24 +1,22 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.dto.ConfessContainerRequest;
-import com.music.musicwebapplication.dto.GuestLogin;
+import com.music.musicwebapplication.dto.NodeLogin;
+import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.exception.ConfessRoomException;
 import com.music.musicwebapplication.service.ConfessService;
 import com.music.musicwebapplication.support.Status;
-import org.modelmapper.internal.bytebuddy.implementation.bytecode.Throw;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.Timestamp;
+import java.util.Map;
 import java.util.Optional;
 
-
-@Controller()
-@RequestMapping("/app/music/node")
+@Slf4j
+@Controller
+@RequestMapping("/app/music/nodes")
 public class ConfessPublicJoin {
     private final ConfessService service ;
 
@@ -35,29 +33,90 @@ public class ConfessPublicJoin {
             throw new ConfessRoomException("Oops! invalid request");
         }
 
-        boolean isValidRoomHash = service.validateRoomHash(roomId,sender);
-
-       if(isValidRoomHash){
+        Optional<Confess> request = service.getDetailsByRoomHash(roomId);
+        if(request.isEmpty()){
+            throw new ConfessRoomException("Oops your room not found");
+        }
+        Confess confess = request.get();
+        if(confess.getStatus() == Status.EXPIRED){
+            throw new ConfessRoomException("feelings expired");
+        }
+       if(confess.getSenderOriginalName().equals(sender) && confess.getStatus() == Status.SENT){
            model.addAttribute("sender",sender);
            model.addAttribute("roomId",roomId);
-           model.addAttribute("roomLogin",new GuestLogin());
+           model.addAttribute("nodeLogin",new NodeLogin());
            return "passcode";
-       }else{
-           throw new ConfessRoomException("Oops your room not found");
+       }else{ // otherwise in reading status then also don't work
+           throw new ConfessRoomException("Oops! invalid request");
        }
 
     }
+//    url to handle the after passcode enters
+    @PostMapping("/connect/node")
+    public String connectFeelings(@ModelAttribute("nodeLogin") NodeLogin node, Model model){
 
-//    public List<ConfessContainerRequest> getAllInProgressRequest(){
-//        Optional<List<ConfessContainerRequest>> inProgressList = service.getConfessData(Status.IN_PROGRESS);
-//
-//       if(inProgressList.isPresent()){
-//
-//       }
-//
-//    }
+        log.info("Sent data {}",node);
+        Optional<Confess> confessData = service.getDetailsByRoomHash(node.getRoomId());
+
+        if(confessData.isEmpty()){
+            throw new ConfessRoomException("Oops! invalid request");
+        }
+
+        Confess confess = confessData.get();
+//        validate the login details
+        if(!node.getPasscode().equals(confess.getPasscode()) || !confess.getSenderOriginalName().equals(node.getSender())){
+            throw new ConfessRoomException("Oops! invalid request and credentials");
+        }
+
+        if(confess.getStatus()== Status.DONE || confess.getStatus()== Status.EXPIRED){
+            throw new ConfessRoomException("Link expired or already consumed the content");
+        }
+//        and need to set the update
+           Map<String,String> response = service.updateStatus(Status.SENT,Status.READING, node.getRoomId());
+
+//        here last modified date will be updated as current time stamp
+
+        if(response.containsKey("error")){
+            throw new ConfessRoomException("Oops ! Join failed due to internal error");
+        }
+        else{
+            log.info("Status updated from sent to reading");
+        }
+
+//        need to get the data of the song and then message
+
+        log.info("confess data {}",confess);
+        model.addAttribute("receiverName",confess.getReceiverAlias());
+        model.addAttribute("roomId",confess.getRoomHash());
+        model.addAttribute("songFileName",confess.getSongName());
+        model.addAttribute("message",confess.getMessage());
 
 
-//   redirected to
+//        and display the page
+        return "confess";
 
+    }
+    @PostMapping("/confess/complete")
+    public String completeConfession(@RequestParam String roomId) {
+        if(roomId.isBlank()){
+            throw new ConfessRoomException("Oops! invalid request");
+        }
+        log.info("room hash {}",roomId);
+        // Update confession status in database
+        Map<String, String> response = service.updateStatus(Status.READING,Status.DONE,roomId);
+
+        if(response.containsKey("error")){
+            throw new ConfessRoomException("Oops ! Join failed due to internal error");
+        }
+        else{
+            log.info("Status updated from reading  to done");
+        }
+
+        return "redirect:/app/music/nodes/connect/finish";
+    }
+
+    @GetMapping("/connect/finish")
+    public String showFinishPage() {
+        return "finish"; // Returns finish.html template
+    }
 }

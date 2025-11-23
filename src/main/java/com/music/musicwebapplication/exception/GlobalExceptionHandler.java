@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConfessRoomException.class)
     public ModelAndView handleConfessRoomException(ConfessRoomException ex, Model model){
-        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),ex.getMessage().contains("invalid request") ? HttpStatus.BAD_REQUEST.toString(): HttpStatus.FORBIDDEN.toString(),
+        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(),ex.getMessage().contains("invalid request")  || ex.getMessage().contains("expired")? HttpStatus.BAD_REQUEST.toString(): HttpStatus.FORBIDDEN.toString(),
                 ex.getMessage()
         );
         model.addAttribute("errorObject",error);

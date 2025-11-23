@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -35,28 +34,8 @@ public class PublicSongController {
     }
 
     @GetMapping(value = "/public/streamSong/{name}",produces = "audio/mpeg")
-//    public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String name){
-//        log.info("Initiated the song Stream Request for file name : {}",name);
-//        ResponseInputStream<GetObjectResponse> objectStream = songControllerService.getSongStream(name);
-//
-//        StreamingResponseBody responseBody = outputStream -> {
-//            try(InputStream inputStream = objectStream){
-//                log.info("Streaming started ..");
-//                byte[] buffer = new byte[4096];
-//                int bytesRead;
-//                while ((bytesRead = inputStream.read(buffer))!= -1){
-//                    outputStream.write(buffer,0,bytesRead);
-//                }
-//            }finally {
-//                objectStream.close();
-//            }
-//
-//        };
-//        return ResponseEntity.ok()
-//                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
-//                .body(responseBody);
-//    }
     public ResponseEntity<Resource> streamSong(@PathVariable String name) throws IOException {
+        log.info("Requested song name / file name {}",name);
         Resource songResource = songCacheService.getCachedResource(name);
 
         return ResponseEntity.ok()

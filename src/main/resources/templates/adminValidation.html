@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecting Nodes - Admin Validation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Alan Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* HEADER */
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0 0 16px 16px;
+            margin: 0 10px 20px 10px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo {
+            height: 60px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* BREADCRUMB */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .breadcrumb a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            transition: all 0.3s;
+            padding: 5px 10px;
+            border-radius: 8px;
+        }
+
+        .breadcrumb a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .breadcrumb-current {
+            font-weight: 600;
+            color: white;
+        }
+
+        /* MAIN CONTAINER */
+        .main-container {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(64, 230, 226, 0.2) 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .table-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* TABLE */
+        .data-table-wrapper {
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+        }
+
+        .data-table thead {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(64, 230, 226, 0.3) 100%);
+        }
+
+        .data-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+        }
+
+        .data-table tbody tr {
+            transition: all 0.3s;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ACTION BUTTONS */
+        .message-btn, .status-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            color: white;
+            background: transparent;
+        }
+
+        .message-btn {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.3), rgba(33, 150, 243, 0.2));
+        }
+
+        .message-btn:hover {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.5), rgba(33, 150, 243, 0.3));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .status-btn {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.3), rgba(255, 152, 0, 0.2));
+        }
+
+        .status-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.5), rgba(255, 152, 0, 0.3));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+        }
+
+        .status-approved {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(76, 175, 80, 0.2)) !important;
+            pointer-events: none;
+            cursor: default !important;
+        }
+
+        .status-rejected {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(244, 67, 54, 0.2)) !important;
+            pointer-events: none;
+            cursor: default !important;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            color: white;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        /* STATUS FORM */
+        .status-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .form-button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            color: white;
+            background: transparent;
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-approve:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-reject {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .btn-reject:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* TOAST NOTIFICATIONS */
+        #toastContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 500px;
+            pointer-events: none;
+        }
+
+        .toast {
+            min-width: 300px;
+            max-width: 500px;
+            margin-bottom: 10px;
+            padding: 16px;
+            border-radius: 8px;
+            background-color: #323232;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-in-out;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: auto;
+        }
+
+        .toast.success {
+            background-color: #4caf50;
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .toast.error {
+            background-color: #f44336;
+            border-color: rgba(244, 67, 54, 0.3);
+        }
+
+        .toast.info {
+            background-color: #2196F3;
+            border-color: rgba(33, 150, 243, 0.3);
+        }
+
+        .toast.warning {
+            background-color: #ff9800;
+            border-color: rgba(255, 152, 0, 0.3);
+        }
+
+        .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOut 0.3s ease-in-out forwards;
+        }
+
+        /* MOBILE RESPONSIVE */
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .logo {
+                height: 50px;
+            }
+
+            .app-title {
+                font-size: 18px;
+            }
+
+            .breadcrumb {
+                font-size: 12px;
+            }
+
+            .main-container {
+                padding: 10px;
+            }
+
+            .table-header {
+                padding: 15px;
+            }
+
+            .table-title {
+                font-size: 16px;
+            }
+
+            .data-table-wrapper {
+                padding: 10px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+
+            .message-btn, .status-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+
+            .modal-content {
+                padding: 20px;
+                max-width: 95%;
+            }
+
+            .modal-header {
+                font-size: 18px;
+            }
+
+            .form-buttons {
+                flex-direction: column;
+            }
+
+            #toastContainer {
+                max-width: calc(100vw - 20px);
+                width: 100%;
+                right: 10px;
+                left: 10px;
+            }
+
+            .toast {
+                min-width: auto;
+                max-width: 100%;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(102, 126, 234, 0.4) 0%, rgba(64, 230, 226, 0.4) 100%);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(102, 126, 234, 0.6) 0%, rgba(64, 230, 226, 0.6) 100%);
+        }
+    </style>
+</head>
+<body>
+<!-- LOADER FRAGMENT -->
+<div th:replace="~{fragments/loader}"></div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
+<!-- HIDDEN MESSAGE CONTAINERS -->
+<div style="display: none;">
+    <span id="noDataMessage" th:if="${noData}" th:text="${noData}"></span>
+    <span id="successMessage" th:if="${successUpdate}" th:text="${successUpdate}"></span>
+    <span id="errorMessage" th:if="${errorUpdate}" th:text="${errorUpdate}"></span>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="header-content">
+        <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="logo">
+        <div class="app-title">Connecting Nodes - Admin Validation</div>
+    </div>
+    <div class="breadcrumb">
+        <a th:href="@{/app/music/dashboard}">Dashboard</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-current">Validation</span>
+    </div>
+</div>
+
+<!-- MAIN CONTAINER -->
+<div class="main-container">
+    <div class="table-container">
+        <div class="table-header">
+            <div class="table-title">In Progress Requests</div>
+        </div>
+
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Initiated By</th>
+                    <th>Sender Name</th>
+                    <th>Sender Email</th>
+                    <th>Room Name</th>
+                    <th>Receiver Alias</th>
+                    <th>Confess Type</th>
+                    <th>Email</th>
+                    <th>Song Name</th>
+                    <th>Singer Name</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="request : ${inProgressRequests}">
+                    <td th:text="${request.initiatedBy}">John Doe</td>
+                    <td th:text="${request.senderOriginalName}">John Smith</td>
+                    <td th:text="${request.senderEmail}">john@example.com</td>
+                    <td th:text="${request.roomName}">Love Room</td>
+                    <td th:text="${request.receiverAlias}">Jane</td>
+                    <td th:text="${request.confessType}">Romantic</td>
+                    <td th:text="${request.email}">receiver@example.com</td>
+                    <td th:text="${request.songName}">Perfect</td>
+                    <td th:text="${request.singerName}">Ed Sheeran</td>
+                    <td>
+                        <button class="message-btn"
+                                th:data-message="${request.message}"
+                                onclick="openMessageModal(this)">
+                            View Message
+                        </button>
+                    </td>
+                    <td>
+                        <button class="status-btn"
+                                th:classappend="${request.status.toString() == 'APPROVED' ? 'status-approved' : (request.status.toString() == 'REJECTED' ? 'status-rejected' : '')}"
+                                th:data-roomhash="${request.roomHash}"
+                                th:data-initiated="${request.initiatedBy}"
+                                th:data-room="${request.roomName}"
+                                th:data-status="${request.status}"
+                                onclick="openStatusModal(this)"
+                                th:text="${request.status}">
+                            IN_PROGRESS
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MESSAGE MODAL -->
+<div class="modal" id="messageModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Confession Message</span>
+            <button class="modal-close" type="button" onclick="closeMessageModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="messageContent"></div>
+    </div>
+</div>
+
+<!-- STATUS MODAL -->
+<div class="modal" id="statusModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Update Request Status</span>
+            <button class="modal-close" type="button" onclick="closeStatusModal()">&times;</button>
+        </div>
+        <div class="status-form">
+            <div class="form-group">
+                <label class="form-label">Initiated By:</label>
+                <div class="form-info" id="formInitiatedBy"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Room Name:</label>
+                <div class="form-info" id="formRoomName"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Current Status:</label>
+                <div class="form-info" id="formCurrentStatus"></div>
+            </div>
+
+            <div class="form-buttons" sec:authorize="hasRole('ADMIN')">
+                <button type="button" class="form-button btn-cancel" onclick="closeStatusModal()">
+                    Cancel
+                </button>
+
+                <form action="" method="post" style="flex: 1;" id="rejectForm">
+                    <button type="submit" class="form-button btn-reject" style="width: 100%;">
+                        Reject
+                    </button>
+                </form>
+
+                <form action="" method="post" style="flex: 1;" id="approveForm">
+                    <button type="submit" class="form-button btn-approve" style="width: 100%;">
+                        Approve
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toast Notification System
+    function showToast(message, type = 'info') {
+        console.log('showToast called:', message, type);
+        const container = document.getElementById('toastContainer');
+        if (!container) {
+            console.error('Toast container not found!');
+            return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        const icons = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ'
+        };
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type]}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => {
+                if (container.contains(toast)) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, 4000);
+    }
+
+    // Check for server messages on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Loaded - Checking for messages...');
+
+        // Check for no data message
+        const noDataElement = document.getElementById('noDataMessage');
+        if (noDataElement && noDataElement.textContent.trim() !== '') {
+            console.log('Showing noData toast:', noDataElement.textContent);
+            showToast(noDataElement.textContent, 'info');
+        }
+
+        // Check for success message
+        const successElement = document.getElementById('successMessage');
+        if (successElement && successElement.textContent.trim() !== '') {
+            console.log('Showing success toast:', successElement.textContent);
+            showToast(successElement.textContent, 'success');
+        }
+
+        // Check for error message
+        const errorElement = document.getElementById('errorMessage');
+        if (errorElement && errorElement.textContent.trim() !== '') {
+            console.log('Showing error toast:', errorElement.textContent);
+            showToast(errorElement.textContent, 'error');
+        }
+    });
+
+    // Message Modal Functions
+    function openMessageModal(button) {
+        const message = button.getAttribute('data-message');
+        document.getElementById('messageContent').innerHTML = message.replace(/\n/g, '<br>');
+        document.getElementById('messageModal').classList.add('active');
+    }
+
+    function closeMessageModal() {
+        document.getElementById('messageModal').classList.remove('active');
+    }
+
+    // Status Modal Functions
+    function openStatusModal(button) {
+        const status = button.getAttribute('data-status');
+
+        if (status === 'APPROVED' || status === 'REJECTED') {
+            return;
+        }
+
+        const roomHash = button.getAttribute('data-roomhash');
+        const initiatedBy = button.getAttribute('data-initiated');
+        const roomName = button.getAttribute('data-room');
+
+        document.getElementById('formInitiatedBy').textContent = initiatedBy;
+        document.getElementById('formRoomName').textContent = roomName;
+        document.getElementById('formCurrentStatus').textContent = status;
+
+        // Update form actions
+        const approvePath = `/app/music/connect/changeStatus/${roomHash}/APPROVED`;
+        const rejectPath = `/app/music/connect/changeStatus/${roomHash}/REJECTED`;
+
+        document.getElementById('approveForm').action = approvePath;
+        document.getElementById('rejectForm').action = rejectPath;
+
+        document.getElementById('statusModal').classList.add('active');
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').classList.remove('active');
+    }
+
+    // Close modals on outside click
+    document.getElementById('messageModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeMessageModal();
+        }
+    });
+
+    document.getElementById('statusModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeStatusModal();
+        }
+    });
+
+    // Close modals on ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMessageModal();
+            closeStatusModal();
+        }
+    });
+</script>
+</body>
+</html>

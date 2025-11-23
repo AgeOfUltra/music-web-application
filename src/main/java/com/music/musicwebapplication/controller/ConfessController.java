@@ -1,21 +1,27 @@
 package com.music.musicwebapplication.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.ConfessContainerRequest;
+import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.repo.UserRepo;
 import com.music.musicwebapplication.service.ConfessService;
+import com.music.musicwebapplication.support.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 
 @Slf4j
 @Controller
@@ -24,11 +30,38 @@ public class ConfessController {
 
     private final ConfessService service;
     private final UserRepo repo;
+    private final ObjectMapper objectMapper;
 
-    public ConfessController(ConfessService service, UserRepo repo) {
+    public ConfessController(ConfessService service, UserRepo repo, ObjectMapper objectMapper) {
         this.service = service;
         this.repo = repo;
+        this.objectMapper = objectMapper;
     }
+
+//    admin validation page controller
+
+//    url : /app/music/connect/request/inProgress
+    @GetMapping("/request/inProgress/{user}")
+    public String getAllInProgressRequest(@PathVariable(value = "user")String currentUser, Model model){
+        Optional<List<Confess>> availableRequest;
+
+        if(currentUser.equals("admin")){
+            availableRequest = service.getAllInProgressRequest(Status.IN_PROGRESS);
+        }else{
+            availableRequest=service.getAllRequestForUser(currentUser);
+        }
+
+        if(availableRequest.isEmpty()){
+            model.addAttribute("noData","No Pending request");
+        }else{
+            List<ConfessContainerRequest> confessDto = availableRequest.get().stream().map(entity -> objectMapper.convertValue(entity, ConfessContainerRequest.class))
+                    .collect(Collectors.toList());
+            model.addAttribute("inProgressRequests",confessDto);
+        }
+
+        return "adminValidation";
+    }
+
     //update db with data.
 
     @PostMapping("/sendRequest")
@@ -58,6 +91,27 @@ public class ConfessController {
         attribute.addFlashAttribute("emailStatus", "Successfully sent your confession!");
         attribute.addFlashAttribute("requestData", requestData);
         return new ModelAndView("redirect:/app/music/dashboard?status=sentSuccess");
+    }
+
+//   TODO :  admin dashBoard error object need to be configured
+
+//    url : /app/music/connect/changeStatus/{roomId}/{s2}
+    @PostMapping("/changeStatus/{roomId}/{s2}")
+    public ModelAndView updateRequestStatus(@PathVariable String roomId, @PathVariable String s2 , RedirectAttributes model){
+        log.info("initiating the status update service process ,Request : {},{}",s2,roomId);
+        Status newStatus = s2.equals("APPROVED") ? Status.APPROVED : Status.REJECTED;
+        Map<String,String> response  = service.updateStatus(Status.IN_PROGRESS,newStatus,roomId);
+        if(response.containsKey("error")){
+            model.addFlashAttribute("errorUpdate","update failed");
+
+        }else{
+            model.addFlashAttribute("successUpdate",response.get("saved"));
+        }
+
+        log.info("Finished the updating process : {},{}",s2,roomId);
+//        FIXME: redirect to the same page.
+
+         return new ModelAndView("redirect:/app/music/connect/request/inProgress/admin");
     }
 
 }

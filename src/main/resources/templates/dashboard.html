@@ -59,12 +59,21 @@
             <p>Send your music and feeling to loved once's</p>
             <button type="button" class="option-btn btn-create">Send Request</button>
         </div>
-        <div class="option-card" sec:authorize="hasRole('ADMIN')">
-            <h2>View Pending request</h2>
-            <p>View all your pending Request and update</p>
-            <button type="button" class="option-btn btn-create">
-                <a th:href="@{/app/music/connect/requestDashboard/admin}">View</a>
-            </button>
+        <div class="option-card">
+            <h2 th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending request' : 'Request Dashboard'">
+                View Pending request
+            </h2>
+
+            <p th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View all your pending Request and update' : 'View your request history and status'">
+                View all your pending Request and update
+            </p>
+
+            <form th:action="@{/app/music/connect/request/inProgress/{user}(user=${currentUser})}" method="get" style="margin: 0;">
+                <button type="submit" class="option-btn btn-view"
+                        th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending Request' : 'View My Requests'">
+                    View Pending Request
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -153,14 +162,14 @@
 
             <!-- Sender Original Name -->
             <div class="form-group">
-                <label for="senderOriginalName">Your Original Name(for Identification)</label>
+                <label for="senderOriginalName">Your Original Name(For recipient clarification)</label>
                 <input type="text" id="senderOriginalName" th:field="*{senderOriginalName}" placeholder="Enter your name">
             </div>
 
             <!-- Room Name -->
             <div class="form-group">
                 <label for="confessRoomName">Room Name</label>
-                <input type="text" id="confessRoomName" th:field="*{confessRoomName}" placeholder="Enter room name" >
+                <input type="text" id="confessRoomName" th:field="*{roomName}" placeholder="Enter room name" >
             </div>
 
             <!-- Receiver Alias -->

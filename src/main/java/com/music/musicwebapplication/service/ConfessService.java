@@ -6,16 +6,12 @@ import com.music.musicwebapplication.repo.ConfessRepo;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.support.Status;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import java.security.SecureRandom;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.random.RandomGenerator;
 
 @Slf4j
@@ -25,23 +21,21 @@ public class ConfessService {
     private final ConfessRepo repo;
     private static final RandomGenerator RNG = RandomGenerator.of("L128X256MixRandom");
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private final ModelMapper modelMapper;
 
 
-    public ConfessService(ConfessRepo repo, ModelMapper modelMapper) {
+
+    public ConfessService(ConfessRepo repo) {
         this.repo = repo;
-        this.modelMapper = modelMapper;
     }
 
     public String buildSaveConfessData(ConfessContainerRequest cr){
         //generate : room-name
-        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getConfessRoomName(),8);
+        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getRoomName(),8);
 //        passcode generate
         String passCode = generatePassCode(5);
 //        created time stamp need to update and duration will be handled later upon open.
 
 //        here we don't have fall back-mechanism , if the duplicate room hash is found
-        Status status = Status.IN_PROGRESS;
         Confess entity = new Confess();
         entity.setInitiatedBy(cr.getInitiatedBy());
         entity.setSenderOriginalName(cr.getSenderOriginalName());
@@ -53,10 +47,8 @@ public class ConfessService {
         entity.setSongName(cr.getSongName());
         entity.setSingerName(cr.getSingerName());
         entity.setMessage(cr.getMessage());
-
-        entity.setCreatedAt(Timestamp.from(Instant.now()));
-        entity.setRoomName(cr.getConfessRoomName());
-        entity.setStatus(status);
+        entity.setRoomName(cr.getRoomName());
+        entity.setStatus(Status.IN_PROGRESS);
         entity.setRoomHash(roomHash);
         entity.setRole(Role.GUEST);
 
@@ -88,29 +80,37 @@ public class ConfessService {
         return passCode;
     }
 
-    public Optional<List<ConfessContainerRequest>> getConfessData(Status status){
 
-        log.info("confss request type {}",status.toString());
-        List<Confess> confessStatus = repo.findAll().stream().filter(c -> c.getStatus().equals(status)).toList();
+//    update STATUS 1 -> STATUS 2
 
-        log.info("confess status result:{}",confessStatus);
+    public Map<String, String> updateStatus(Status s1, Status s2,String roomHash){
+        log.info("initiating the status update service process ,Request : {},{},{}",s1,s2,roomHash);
+        Optional<Confess> availableRequest = repo.findByRoomHash(roomHash);
 
-        List<ConfessContainerRequest> result = new ArrayList<>(confessStatus.stream().map(c -> modelMapper.map(c, ConfessContainerRequest.class)).toList());
-
-        log.info("confess data result:{}",result);
-        return Optional.of(result);
+        Map<String,String> response = new HashMap<>();
+        if(availableRequest.isEmpty()){
+            response.put("error","No Data is available");
+            log.error("Failed to update the process");
+            return  response;
+        }
+//        TODO :  need to find the failure case.
+        if(availableRequest.get().getStatus().equals(s1)){
+            availableRequest.get().setStatus(s2);
+            Confess updatedConfess = repo.save(availableRequest.get());
+            log.info("updated the status successfully new updated data: {}",updatedConfess);
+            response.put("saved","data saved successfully");
+        }
+        return response;
     }
 
-    public boolean validateRoomHash(String roomHash,String sender){
-        Optional<List<Confess>> availableRequest = repo.findByRoomHash((roomHash));
-        if(availableRequest.isEmpty()){
-            return false;
-        }
-        if(availableRequest.get().size()>1){
-            log.error("Duplicate Rooms available");
-//            not providing failing condition
-        }
+    public Optional<List<Confess>> getAllRequestForUser(String initiatedBy) {
+        return repo.findByInitiatedBy(initiatedBy);
+    }
 
-        return availableRequest.get().stream().allMatch(c -> c.getRoomHash().equals(roomHash) && c.getInitiatedBy().equals(sender));
+    public Optional<List<Confess>> getAllInProgressRequest(Status status) {
+        return repo.findByStatus(status);
+    }
+    public Optional<Confess> getDetailsByRoomHash(String roomHash){
+        return repo.findByRoomHash(roomHash);
     }
 }
