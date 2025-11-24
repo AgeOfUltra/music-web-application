@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connecting Nodes - Admin Validation</title>
+    <title>Connecting Nodes ∞ - Admin Validation</title>
     <style>
         * {
             margin: 0;
@@ -549,7 +549,8 @@
 <div class="header">
     <div class="header-content">
         <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="logo">
-        <div class="app-title">Connecting Nodes - Admin Validation</div>
+        <div class="app-title">
+            Connecting Nodes - <span th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending request' : 'Request Dashboard'"></span></div>
     </div>
     <div class="breadcrumb">
         <a th:href="@{/app/music/dashboard}">Dashboard</a>
