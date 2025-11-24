@@ -1,17 +1,11 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.dto.ChatMessage;
-import com.music.musicwebapplication.dto.FavoritesMessage;
-import com.music.musicwebapplication.dto.PlaybackMessage;
-import com.music.musicwebapplication.dto.SyncRequest;
+import com.music.musicwebapplication.dto.*;
 import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.repo.RoomRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
@@ -196,6 +190,17 @@ public class ChatController {
         } catch (Exception e) {
             log.error("❌ Error handling user leave in room {}: {}", roomName, e.getMessage(), e);
         }
+    }
+    @MessageMapping("/chat/{roomName}/typing")
+    @SendTo("/topic/chat/{roomName}/typing")
+    public TypingResponse handleTyping(
+            @DestinationVariable String roomName,
+            @Payload TypingRequest typingRequest) {
+
+        return new TypingResponse(
+                typingRequest.getSender(),
+                typingRequest.isTyping()
+        );
     }
 
     // ==================== ASYNC CLEANUP METHOD ====================

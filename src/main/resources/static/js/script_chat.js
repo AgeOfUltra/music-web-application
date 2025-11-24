@@ -49,6 +49,39 @@ function toggleFavorite(song, heartIcon) {
     }
 }
 
+// ==================== TYPING INDICATOR ====================
+let typing = false;
+let typingTimeout;
+
+function sendTypingEvent(isTyping) {
+    if (!stompClient || !stompClient.connected) return;
+
+    const typingMsg = {
+        sender: currentUsername,
+        typing: isTyping
+    };
+
+    stompClient.send(
+        `/app/music/chat/${currentRoomName}/typing`,
+        {},
+        JSON.stringify(typingMsg)
+    );
+}
+
+// detect user typing
+document.getElementById("messageInput").addEventListener("input", () => {
+    if (!typing) {
+        typing = true;
+        sendTypingEvent(true);
+    }
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        typing = false;
+        sendTypingEvent(false);
+    }, 1200); // stop typing after 1.2 sec
+});
+
 function broadcastFavorites(favorites, action, song, username) {
     if (!stompClient || !stompClient.connected) {
         console.error('Cannot broadcast favorites - WebSocket not connected');
@@ -899,6 +932,12 @@ function connectWebSocket(token) {
                 handlePlaybackCommand(playbackMsg);
             });
 
+            // listen to typing events
+            stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
+                const typingData = JSON.parse(message.body);
+                handleTypingIndicator(typingData);
+            });
+
             stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
                 const participants = JSON.parse(message.body);
                 updateParticipantsDisplay(participants);
@@ -932,6 +971,20 @@ function connectWebSocket(token) {
             }, 3000);
         }
     );
+}
+
+function handleTypingIndicator(data) {
+    const typingIndicator = document.getElementById("typingIndicator");
+    const typingUserSpan = document.querySelector(".typing-user");
+
+    if (data.sender === currentUsername) return; // do not show for self
+
+    if (data.typing) {
+        typingUserSpan.textContent = data.sender + " is typing";
+        typingIndicator.style.display = "flex";
+    } else {
+        typingIndicator.style.display = "none";
+    }
 }
 
 function requestFavoritesSync() {
