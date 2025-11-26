@@ -109,7 +109,6 @@ public class ChatController {
             sendErrorMessage(roomName, "Error processing playback command: " + e.getMessage());
         }
     }
-
     // ==================== USER JOIN ====================
     @MessageMapping("/chat/{roomName}/addUser")
     public void handleUserJoin(
@@ -191,6 +190,7 @@ public class ChatController {
             log.error("❌ Error handling user leave in room {}: {}", roomName, e.getMessage(), e);
         }
     }
+
     @MessageMapping("/chat/{roomName}/typing")
     @SendTo("/topic/chat/{roomName}/typing")
     public TypingResponse handleTyping(
@@ -204,6 +204,7 @@ public class ChatController {
     }
 
     // ==================== ASYNC CLEANUP METHOD ====================
+
     /**
      * Asynchronously checks if room is empty and cleans up if needed.
      * This runs in a separate thread to avoid blocking the main WebSocket handler.
@@ -436,5 +437,11 @@ public class ChatController {
 
         log.debug("📊 Cache stats: {}", stats);
         return stats;
+    }
+
+    @MessageMapping("/chat/{roomName}/skip")
+    @SendTo("/topic/chat/{roomName}/skip")
+    public SkipMessage handleSkip(@DestinationVariable String roomName, SkipMessage message) {
+        return message;
     }
 }

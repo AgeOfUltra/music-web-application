@@ -21,11 +21,21 @@ let lastUserLeft = null;
 let boundAudioRole = null;
 let logoutInProgress = false;
 let lastKnownOrganizer = null;
-
+let allSongsOnPage = [];
+let searchSongsList = [];
 // ==================== SHARED ROOM FAVORITES ====================
 let roomFavorites = []; // Shared across all participants in the room
 let isPlayingFavorites = false;
 let currentFavoriteIndex = 0;
+
+// ==================== ADD TO GLOBAL VARIABLES SECTION ====================
+let currentPlaylist = []; // Tracks the current playlist being used
+let currentPlaylistIndex = 0; // Current position in the playlist
+let playlistMode = null; // 'all' or 'favorites'
+
+// ==================== TYPING INDICATOR ====================
+let typing = false;
+let typingTimeout;
 
 function toggleFavorite(song, heartIcon) {
     const songId = song.fileName;
@@ -49,9 +59,6 @@ function toggleFavorite(song, heartIcon) {
     }
 }
 
-// ==================== TYPING INDICATOR ====================
-let typing = false;
-let typingTimeout;
 
 function sendTypingEvent(isTyping) {
     if (!stompClient || !stompClient.connected) return;
@@ -232,6 +239,7 @@ function playFavoritesPlaylist() {
 
     isPlayingFavorites = true;
     currentFavoriteIndex = 0;
+    playlistMode = 'favorites';
 
     ToastNotification.success(`Starting room favorites (${roomFavorites.length} songs)`);
     playSong(roomFavorites[currentFavoriteIndex]);
@@ -327,7 +335,10 @@ const onParticipantPlay = (e) => {
     if (!ignoreLocalEvents && e.isTrusted) {
         console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
         e.preventDefault();
-        try { audioPlayer.pause(); } catch(_) {}
+        try {
+            audioPlayer.pause();
+        } catch (_) {
+        }
         ToastNotification.warning('Only the organizer can control playback');
     }
 };
@@ -348,17 +359,17 @@ function bindAudioHandlersForRole(role) {
     if (!audioPlayer) return;
 
     audioPlayer.removeEventListener('pause', onOrganizerPause);
-    audioPlayer.removeEventListener('play',  onOrganizerPlay);
-    audioPlayer.removeEventListener('play',  onParticipantPlay, true);
+    audioPlayer.removeEventListener('play', onOrganizerPlay);
+    audioPlayer.removeEventListener('play', onParticipantPlay, true);
     audioPlayer.removeEventListener('pause', onParticipantPause, true);
     audioPlayer.removeEventListener('ended', onSongEnded);
 
     if (role === 'organizer') {
         audioPlayer.addEventListener('pause', onOrganizerPause);
-        audioPlayer.addEventListener('play',  onOrganizerPlay);
+        audioPlayer.addEventListener('play', onOrganizerPlay);
         audioPlayer.addEventListener('ended', onSongEnded);
     } else {
-        audioPlayer.addEventListener('play',  onParticipantPlay, true);
+        audioPlayer.addEventListener('play', onParticipantPlay, true);
         audioPlayer.addEventListener('pause', onParticipantPause, true);
     }
 
@@ -369,9 +380,24 @@ function bindAudioHandlersForRole(role) {
 function onSongEnded() {
     console.log('🎵 Song ended');
 
-    if (isPlayingFavorites && isOrganizer) {
-        console.log('📀 Auto-playing next song from favorites playlist');
-        setTimeout(() => playNextFavorite(), 1000);
+    if (!isOrganizer) return;
+
+    const current = currentSongData?.songFileName;
+    if (!current) return;
+
+// Check if current song is in favorites list
+    const favIndex = roomFavorites.findIndex(s => s.fileName === current);
+
+// Auto-play only if song is part of favorites playlist
+    if (favIndex !== -1) {
+        const nextIndex = favIndex + 1;
+
+        if (nextIndex < roomFavorites.length) {
+            console.log('📀 Auto-playing next song from favorites playlist');
+            setTimeout(() => playSong(roomFavorites[nextIndex]), 700);
+        } else {
+            console.log('📀 Favorites playlist ended');
+        }
     }
 }
 
@@ -379,11 +405,14 @@ function onRoleChange() {
     updatePermissionNotice();
     syncAudioWrapperClass();
     updateAudioControls();
+    updatePlaybackButtons(); // ADD THIS LINE
 
     const desired = isOrganizer ? 'organizer' : 'participant';
     if (boundAudioRole !== desired) {
         bindAudioHandlersForRole(desired);
     }
+
+    console.log('🎭 Role changed - isOrganizer:', isOrganizer);
 }
 
 function resetAudioOnOrganizerLeave() {
@@ -392,7 +421,10 @@ function resetAudioOnOrganizerLeave() {
 
     console.log("🎶 Organizer left - resetting audio");
 
-    try { audioPlayer.pause(); } catch(e) {}
+    try {
+        audioPlayer.pause();
+    } catch (e) {
+    }
 
     audioPlayer.src = "";
     audioPlayer.removeAttribute("src");
@@ -446,7 +478,7 @@ async function loadSongsForPage(pageNumber) {
     try {
         const response = await fetch(
             `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`,
-            { headers: { 'Authorization': `Bearer ${jwtToken}` } }
+            {headers: {'Authorization': `Bearer ${jwtToken}`}}
         );
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -518,7 +550,7 @@ function showEmptyState() {
 
 // ==================== TOAST NOTIFICATION SYSTEM ====================
 const ToastNotification = {
-    show: function(message, type = 'info', duration = 3000) {
+    show: function (message, type = 'info', duration = 3000) {
         const toastContainer = document.getElementById('toastContainer');
         if (!toastContainer) {
             console.error('Toast container not found!');
@@ -552,24 +584,24 @@ const ToastNotification = {
         }
     },
 
-    removeToast: function(toastDiv) {
+    removeToast: function (toastDiv) {
         toastDiv.classList.add('removing');
         setTimeout(() => toastDiv.remove(), 300);
     },
 
-    success: function(message, duration = 3000) {
+    success: function (message, duration = 3000) {
         this.show(message, 'success', duration);
     },
 
-    error: function(message, duration = 3000) {
+    error: function (message, duration = 3000) {
         this.show(message, 'error', duration);
     },
 
-    info: function(message, duration = 3000) {
+    info: function (message, duration = 3000) {
         this.show(message, 'info', duration);
     },
 
-    warning: function(message, duration = 3000) {
+    warning: function (message, duration = 3000) {
         this.show(message, 'warning', duration);
     }
 };
@@ -604,6 +636,7 @@ function setupAudioPlayerListeners() {
     }
     syncAudioWrapperClass();
     updateAudioControls();
+    updatePlaybackButtons(); // ADD THIS LINE
     bindAudioHandlersForRole(isOrganizer ? 'organizer' : 'participant');
     console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
 }
@@ -678,6 +711,12 @@ function handlePlaybackCommand(playbackMsg) {
             ignoreLocalEvents = false;
         }
     }, 10000);
+}
+
+function updatePlaylistContext(song, index = 0, mode = null) {
+    currentPlaylistIndex = index;
+    playlistMode = mode;
+    console.log('📋 Playlist context updated:', {index, mode, song: song.songName});
 }
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
@@ -893,6 +932,212 @@ function playSong(song) {
     }
 }
 
+// ==================== ADD NEXT/PREVIOUS FUNCTIONS ====================
+function playNextSong() {
+    if (!isOrganizer) {
+        ToastNotification.warning('Only the organizer can control playback');
+        return;
+    }
+
+    let nextSong = null;
+    let nextIndex = 0;
+
+    if (isPlayingFavorites && roomFavorites.length > 0) {
+        // Playing from favorites
+        if (currentFavoriteIndex === roomFavorites.length - 1) {
+            // At the last song
+            ToastNotification.info('🎵 End of favorites playlist');
+            return;
+        }
+        nextIndex = currentFavoriteIndex + 1;
+        nextSong = roomFavorites[nextIndex];
+        currentFavoriteIndex = nextIndex;
+    } else if (playlistMode === 'favorites' && roomFavorites.length > 0) {
+        // In favorites context but not auto-playing
+        if (currentPlaylistIndex === roomFavorites.length - 1) {
+            // At the last song
+            ToastNotification.info('🎵 End of favorites playlist');
+            return;
+        }
+        nextIndex = currentPlaylistIndex + 1;
+        nextSong = roomFavorites[nextIndex];
+    } else if (roomFavorites.length === 0) {
+        // No songs in favorites
+        ToastNotification.warning('Favorites playlist is empty. Add songs to favorites first!');
+        return;
+    } else if (playlistMode === 'all' && currentPlaylist.length > 0) {
+
+        if (currentPlaylistIndex >= currentPlaylist.length - 1) {
+            ToastNotification.info('🎵 End of playlist');
+            return;
+        }
+
+        nextIndex = currentPlaylistIndex + 1;
+        nextSong = currentPlaylist[nextIndex];
+        currentPlaylistIndex = nextIndex;
+
+    } else {
+        ToastNotification.warning('No playlist available to skip');
+        return;
+    }
+
+    if (nextSong) {
+        ToastNotification.info(`⏭️ Next: ${nextSong.songName}`);
+        broadcastSkipCommand('NEXT', nextSong, nextIndex);
+    } else {
+        ToastNotification.warning('No next song available');
+    }
+}
+
+function playPreviousSong() {
+    if (!isOrganizer) {
+        ToastNotification.warning('Only the organizer can control playback');
+        return;
+    }
+
+    let prevSong = null;
+    let prevIndex = 0;
+
+    if (isPlayingFavorites && roomFavorites.length > 0) {
+        // Playing from favorites
+        if (currentFavoriteIndex === 0) {
+            // At the first song
+            ToastNotification.info('🎵 Currently playing first song');
+            return;
+        }
+        prevIndex = currentFavoriteIndex - 1;
+        prevSong = roomFavorites[prevIndex];
+        currentFavoriteIndex = prevIndex;
+    } else if (playlistMode === 'favorites' && roomFavorites.length > 0) {
+        // In favorites context but not auto-playing
+        if (currentPlaylistIndex === 0) {
+            // At the first song
+            ToastNotification.info('🎵 Currently playing first song');
+            return;
+        }
+        prevIndex = currentPlaylistIndex - 1;
+        prevSong = roomFavorites[prevIndex];
+    } else if (roomFavorites.length === 0) {
+        // No songs in favorites
+        ToastNotification.warning('Favorites playlist is empty. Add songs to favorites first!');
+        return;
+    } else if (playlistMode === 'all' && currentPlaylist.length > 0) {
+
+        if (currentPlaylistIndex === 0) {
+            ToastNotification.info('🎵 Currently at first song');
+            return;
+        }
+
+        prevIndex = currentPlaylistIndex - 1;
+        prevSong = currentPlaylist[prevIndex];
+        currentPlaylistIndex = prevIndex;
+
+    } else {
+        ToastNotification.warning('No playlist available to skip');
+        return;
+    }
+
+    if (prevSong) {
+        ToastNotification.info(`⏮️ Previous: ${prevSong.songName}`);
+        broadcastSkipCommand('PREVIOUS', prevSong, prevIndex);
+    } else {
+        ToastNotification.warning('No previous song available');
+    }
+}
+
+function broadcastSkipCommand(action, song = null, index = 0) {
+    if (!stompClient || !stompClient.connected) {
+        console.error('Cannot broadcast skip - WebSocket not connected');
+        return;
+    }
+
+    const skipMessage = {
+        action: action, // 'NEXT' or 'PREVIOUS'
+        song: song,
+        index: index,
+        controller: currentUsername,
+        timestamp: Date.now()
+    };
+
+    try {
+        stompClient.send(
+            `/app/music/chat/${currentRoomName}/skip`,
+            {},
+            JSON.stringify(skipMessage)
+        );
+        console.log('📤 Broadcast skip command:', action);
+
+        // If we have a song, play it immediately
+        if (song) {
+            playSong(song);
+        }
+    } catch (error) {
+        console.error('Error broadcasting skip:', error);
+    }
+}
+
+function handleSkipCommand(message) {
+    console.log('📥 Received skip command:', message.action, 'from:', message.controller);
+
+    // Only non-organizers should respond to skip commands
+    if (isOrganizer) {
+        console.log('⏭️ Ignoring skip command as organizer');
+        return;
+    }
+
+    // Ignore commands from users who left
+    if (message.controller === lastUserLeft) {
+        console.warn("⏭️ Ignoring skip from user who just left:", message.controller);
+        return;
+    }
+
+    const stillInRoom = currentParticipants.some(p => p.userName === message.controller);
+    if (!stillInRoom) {
+        console.warn("⏭️ Ignoring stale skip from user who left:", message.controller);
+        return;
+    }
+
+    // Show notification (only show for other users, not self)
+    if (message.controller !== currentUsername && message.song) {
+        const actionText = message.action === 'NEXT' ? 'skipped to next' : 'went to previous';
+        ToastNotification.info(`${message.controller} ${actionText} song`);
+    }
+
+    // Update local state
+    if (message.song) {
+        if (playlistMode === 'favorites' || isPlayingFavorites) {
+            currentPlaylistIndex = message.index;
+            currentFavoriteIndex = message.index;
+        }
+    }
+}
+
+function updatePlaybackButtons() {
+    const prevBtn = document.getElementById('prevSongBtn');
+    const nextBtn = document.getElementById('nextSongBtn');
+
+    if (!prevBtn || !nextBtn) {
+        console.warn('⚠️ Playback buttons not found');
+        return;
+    }
+
+    if (isOrganizer) {
+        // Enable buttons for organizer
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+        prevBtn.title = 'Previous Song (Alt + ←)';
+        nextBtn.title = 'Next Song (Alt + →)';
+        console.log('✅ Enabled playback buttons for organizer');
+    } else {
+        // Disable buttons for non-organizers
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        prevBtn.title = 'Only organizer can skip songs';
+        nextBtn.title = 'Only organizer can skip songs';
+        console.log('🔒 Disabled playback buttons for non-organizer');
+    }
+}
+
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
     const socket = new SockJS('/app/music/ws');
@@ -936,6 +1181,10 @@ function connectWebSocket(token) {
             stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
                 const typingData = JSON.parse(message.body);
                 handleTypingIndicator(typingData);
+            });
+            stompClient.subscribe(`/topic/chat/${currentRoomName}/skip`, (message) => {
+                const skipMsg = JSON.parse(message.body);
+                handleSkipCommand(skipMsg);
             });
 
             stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
@@ -993,7 +1242,7 @@ function requestFavoritesSync() {
         stompClient.send(
             `/app/music/chat/${currentRoomName}/favorites/sync`,
             {},
-            JSON.stringify({ username: currentUsername })
+            JSON.stringify({username: currentUsername})
         );
         console.log('🔄 Requested favorites sync');
     }
@@ -1071,10 +1320,24 @@ function updateParticipantsDisplay(participants) {
         `;
         participantsList.appendChild(item);
 
-        const wasOrganizer = isOrganizer;
+        // Check if current user's role changed
         if (p.userName === currentUsername) {
+            const wasOrganizer = isOrganizer;
             isOrganizer = p.organizer;
-            onRoleChange();
+
+            // Only trigger onRoleChange if role actually changed
+            if (wasOrganizer !== isOrganizer) {
+                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
+                    'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
+                onRoleChange();
+
+                // Show notification about role change
+                if (isOrganizer) {
+                    ToastNotification.success('🎉 You are now the organizer!');
+                } else {
+                    ToastNotification.info('You are now a participant');
+                }
+            }
 
             if (wasOrganizer && !isOrganizer) {
                 resetAudioOnOrganizerLeave();
@@ -1189,6 +1452,7 @@ function displayMessage(message) {
 
 // ==================== SONG MANAGEMENT ====================
 function displaySongs(songs) {
+    allSongsOnPage = songs;
     const songList = document.getElementById('songList');
     songList.innerHTML = '';
 
@@ -1253,7 +1517,23 @@ function handleSongClick(element) {
         stopFavoritesPlaylist();
     }
 
+    // Build playlist from roomFavorites if user clicks inside favorites list
+    if (playlistMode !== 'favorites') {
+        playlistMode = 'all';
+        currentPlaylist = [...allSongsOnPage];  // or actual song list you want
+    }
+
+// Find index
+    currentPlaylistIndex = currentPlaylist.findIndex(s => s.fileName === song.fileName);
+
+// If not found, insert song at correct place
+    if (currentPlaylistIndex === -1) {
+        currentPlaylist.push(song);
+        currentPlaylistIndex = currentPlaylist.length - 1;
+    }
+
     playSong(song);
+
 }
 
 async function searchSongs() {
@@ -1283,6 +1563,7 @@ async function searchSongs() {
 }
 
 function displaySearchResults(songs) {
+    searchSongsList = songs;
     const searchResults = document.getElementById('searchResults');
     searchResults.innerHTML = '';
 
@@ -1306,7 +1587,17 @@ function displaySearchResults(songs) {
         const isFavorite = roomFavorites.some(f => f.fileName === song.fileName);
 
         songItem.innerHTML = `
-            <div class="song-item-content" onclick="if(${isOrganizer}) { handleSongClick(this.parentElement); closeSearchDrawer(); } else { ToastNotification.warning('Only the organizer can play songs'); }">
+            <div class="song-item-content" onclick="
+    if (${isOrganizer}) {
+        playlistMode = 'all';
+        currentPlaylist = searchSongsList;
+        currentPlaylistIndex = currentPlaylist.findIndex(s => s.fileName === '${song.fileName}');
+        handleSongClick(this.parentElement);
+        closeSearchDrawer();
+    } else {
+        ToastNotification.warning('Only the organizer can play songs');
+    }
+">
                 <div class="song-item-title">${song.songName} • ${song.language}</div>
                 <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
             </div>
@@ -1393,11 +1684,11 @@ window.addEventListener('beforeunload', (event) => {
     }
 });
 
-window.addEventListener('unload', function() {
+window.addEventListener('unload', function () {
     handleTabClose();
 });
 
-window.addEventListener('pagehide', function(event) {
+window.addEventListener('pagehide', function (event) {
     if (event.persisted === false) {
         handleTabClose();
     }
@@ -1435,7 +1726,8 @@ function safeDisconnectWebSocket() {
                 content: `${currentUsername} left the room`
             }));
             stompClient.disconnect();
-        } catch (_) {}
+        } catch (_) {
+        }
     }
 }
 
@@ -1452,12 +1744,12 @@ async function handleBack() {
         if (currentRoomName && currentUsername) {
             await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${jwtToken}` },
+                headers: {'Authorization': `Bearer ${jwtToken}`},
                 keepalive: true
             });
         }
 
-        await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
+        await fetch('/app/music/room/clearRoomSession', {method: 'POST', keepalive: true});
 
     } finally {
         window.location.href = '/app/music/dashboard';
@@ -1477,14 +1769,34 @@ async function logout() {
         if (currentRoomName && currentUsername) {
             await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${jwtToken}` },
+                headers: {'Authorization': `Bearer ${jwtToken}`},
                 keepalive: true
             });
         }
 
-        await fetch('/app/music/room/clearRoomSession', { method: 'POST', keepalive: true });
+        await fetch('/app/music/room/clearRoomSession', {method: 'POST', keepalive: true});
 
     } finally {
         window.location.href = '/app/music/public/logout';
     }
 }
+
+document.addEventListener('keydown', (e) => {
+    // Only organizer can use shortcuts
+    if (!isOrganizer) return;
+
+    // Don't trigger when typing in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    // Alt + Left Arrow = Previous
+    if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        playPreviousSong();
+    }
+
+    // Alt + Right Arrow = Next
+    if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        playNextSong();
+    }
+});

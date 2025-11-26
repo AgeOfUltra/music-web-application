@@ -479,7 +479,65 @@ body::before {
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
 }
+.playback-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 12px;
+}
 
+.playback-btn {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border: none;
+    color: white;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.playback-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+}
+
+.playback-btn:active {
+    transform: scale(0.95);
+}
+
+.playback-btn:disabled {
+    background: linear-gradient(135deg, #4b5563, #374151);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.playback-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.playback-btn i {
+    pointer-events: none;
+}
+
+/* Keyboard shortcut hint */
+.keyboard-hint {
+    font-size: 11px;
+    color: #a0a0a0;
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+}
 /* ==================== PAGINATION CONTROLS ==================== */
 .pagination-controls {
     display: flex;

@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
     <link rel="stylesheet" th:href="@{/css/style_chat.css}">
-    <title>Connecting Notes ∞ - Chat Room</title>
 </head>
 <body>
 <div class="header">
@@ -37,6 +36,20 @@
             <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
                 <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
             </div>
+
+            <!-- NEW: Playback Controls -->
+            <div class="playback-controls">
+                <button class="playback-btn" onclick="playPreviousSong()" title="Previous Song (Alt + ←)" id="prevSongBtn">
+                    <i class="bi bi-skip-start-fill"></i>
+                </button>
+                <button class="playback-btn" onclick="playNextSong()" title="Next Song (Alt + →)" id="nextSongBtn">
+                    <i class="bi bi-skip-end-fill"></i>
+                </button>
+            </div>
+            <div class="keyboard-hint" id="keyboardHint" style="display: none;">
+                Alt + ← Previous | Alt + → Next
+            </div>
+
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="search-btn" onclick="openSearchDrawer()" style="flex: 1;">
                     <i class="bi bi-search"></i> Search Songs
@@ -166,5 +179,32 @@
 </script>
 
 <script th:src="@{/js/script_chat.js}"></script>
+<script>
+    // Show keyboard hint only for organizers at page load
+    window.addEventListener('load', () => {
+        const hint = document.getElementById('keyboardHint');
+        if (PAGE_DATA.isOrganizer && hint) {
+            hint.style.display = 'block';
+        }
+
+        // If script_chat.js exposed a dynamic updatePlaybackButtons (the correct one),
+        // call it. Otherwise fall back to a tiny safe initializer that does not
+        // overwrite any existing function.
+        if (typeof window.updatePlaybackButtons === 'function') {
+            try { window.updatePlaybackButtons(); } catch (e) { console.warn('updatePlaybackButtons call failed', e); }
+        } else {
+            // fallback initializer (doesn't replace any functions)
+            const prevBtn = document.getElementById('prevSongBtn');
+            const nextBtn = document.getElementById('nextSongBtn');
+            if (prevBtn && nextBtn && !PAGE_DATA.isOrganizer) {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                prevBtn.title = 'Only organizer can skip songs';
+                nextBtn.title = 'Only organizer can skip songs';
+            }
+        }
+    });
+
+</script>
 </body>
 </html>
