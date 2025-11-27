@@ -33,21 +33,23 @@
                 <div class="song-title" id="currentSongTitle">No song playing</div>
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
-            <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
-                <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
-            </div>
 
-            <!-- NEW: Playback Controls -->
-            <div class="playback-controls">
-                <button class="playback-btn" onclick="playPreviousSong()" title="Previous Song (Alt + ←)" id="prevSongBtn">
+            <!-- NEW: Combined audio player and controls in one row -->
+            <div class="audio-controls-container">
+                <button class="playback-btn-inline" onclick="playPreviousSong()" title="Previous Song (Alt + ←)" id="prevSongBtn">
                     <i class="bi bi-skip-start-fill"></i>
                 </button>
-                <button class="playback-btn" onclick="playNextSong()" title="Next Song (Alt + →)" id="nextSongBtn">
+
+                <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
+                    <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
+                </div>
+
+                <button class="playback-btn-inline" onclick="playNextSong()" title="Next Song (Alt + →)" id="nextSongBtn">
                     <i class="bi bi-skip-end-fill"></i>
                 </button>
             </div>
+
             <div class="keyboard-hint" id="keyboardHint" style="display: none;">
-                Alt + ← Previous | Alt + → Next
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -187,9 +189,7 @@
             hint.style.display = 'block';
         }
 
-        // If script_chat.js exposed a dynamic updatePlaybackButtons (the correct one),
-        // call it. Otherwise fall back to a tiny safe initializer that does not
-        // overwrite any existing function.
+
         if (typeof window.updatePlaybackButtons === 'function') {
             try { window.updatePlaybackButtons(); } catch (e) { console.warn('updatePlaybackButtons call failed', e); }
         } else {
