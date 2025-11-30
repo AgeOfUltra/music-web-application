@@ -205,7 +205,10 @@
             color: white;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
         }
-
+        .audio-img{
+            height: 40px;
+            width: 45px;
+        }
         .app-title {
             font-size: 24px;
             font-weight: 700;
@@ -515,6 +518,10 @@
                 width: 50px;
                 font-size: 24px;
             }
+            .audio-img{
+                height: 35px;
+                width: 40px;
+            }
 
             .app-title {
                 font-size: 16px;
@@ -640,7 +647,9 @@
             <div class="vinyl-record paused" id="vinylRecord">
                 <div class="vinyl-grooves"></div>
                 <div class="vinyl-center">
-                    <div class="vinyl-label">∞</div>
+                    <div class="vinyl-label">
+                            <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="audio-img">
+                    </div>
                 </div>
             </div>
         </div>
