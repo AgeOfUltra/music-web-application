@@ -1,3 +1,7 @@
-1) need to implement the cache and stream the song from the cache
+1) room hash generate -> necessary changes done
 
-2) upon network reset need to store the sessionn again.
+2) chat room logout need to be back-end
+
+4) copy and share.
+
+3) new issues found: UI tab view layout change

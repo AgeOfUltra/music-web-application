@@ -19,7 +19,7 @@ public class ConfessService {
 
     private final ConfessRepo repo;
     private static final RandomGenerator RNG = RandomGenerator.of("L128X256MixRandom");
-    private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$&";
 
     @Value("${app.music.room.length}")
     private int ROOM_LENGTH;
@@ -62,6 +62,13 @@ public class ConfessService {
 
     private String generateRoomName(String message,String alias,String type,String sender,String song,String roomName){
         String newStr = (message+alias+type+sender+song+roomName).replace(" ","");
+        return generateHashHelper(newStr);
+    }
+    public String generateRoomName(String roomName, int size, String organizer){
+        String newStr = (organizer+roomName+Integer.toString(size)).replace(" ","");
+        return generateHashHelper(newStr);
+    }
+    private String generateHashHelper(String newStr) {
         StringBuilder sb = new StringBuilder(ROOM_LENGTH);
         for (int i = 0; i < ROOM_LENGTH; i++) {
             int index = RNG.nextInt(newStr.length());
@@ -72,7 +79,8 @@ public class ConfessService {
         log.info("room has generated {} ",hash);
         return hash;
     }
-    private String generatePassCode(){
+
+    public String generatePassCode(){
 
         StringBuilder sb = new StringBuilder(PASSCODE_LENGTH);
         for (int i = 0; i < PASSCODE_LENGTH; i++) {
@@ -83,7 +91,6 @@ public class ConfessService {
         log.info("passcode generated {}",passCode);
         return passCode;
     }
-
 
 //    update STATUS 1 -> STATUS 2
 

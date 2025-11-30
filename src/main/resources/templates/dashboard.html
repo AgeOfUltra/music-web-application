@@ -109,10 +109,15 @@
             <button type="button" class="close-btn" onclick="closeJoinModal()">&times;</button>
         </div>
 
-        <form th:action="@{/app/music/room/join}" id="joinRoomForm" th:method="POST">
+        <form th:action="@{/app/music/room/join}" id="joinRoomForm" th:method="POST" th:object="${joinRoom}">
             <div class="form-group">
-                <label for="joinRoomName">Room Name</label>
-                <input type="text" id="joinRoomName" name="roomName" placeholder="Enter room name to join" required>
+                <label for="joinRoomName">Room Code</label>
+                <input type="text" id="joinRoomName" th:field="*{roomCode}" placeholder="Enter room name to join" required>
+            </div>
+
+            <div class="form-group">
+                <label for="joinPassCode">Room Code</label>
+                <input type="text" id="joinPassCode" th:field="*{passCode}" placeholder="Enter room name to join" required>
             </div>
 
             <div class="form-group" style="display: none;">

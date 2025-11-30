@@ -19,19 +19,24 @@ import java.util.Optional;
 public class RoomService {
     private final RoomRepo repo;
     private final ParticipantRepo participantRepo;
+    private final ConfessService serviceConfess;
 
 
-    public RoomService(RoomRepo repo, ParticipantRepo participantRepo) {
+    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess) {
         this.repo = repo;
         this.participantRepo = participantRepo;
+        this.serviceConfess = serviceConfess;
     }
     @Transactional
     public Room createRoom(Room room){
         Optional<Room> existingRoom = repo.findRoomByRoomName(room.getRoomName());
-        if(isUserPresentInAnyRoom(room.getParticipant().get(0).getUserName())){
+        String participantName = room.getParticipant().get(0).getUserName();
+        if(isUserPresentInAnyRoom(participantName)){
             throw new RoomManageException("User already exist in one of the room");
         }
-
+//        set room name and then generate passcode from existing method
+        room.setRoomHash(serviceConfess.generateRoomName(room.getRoomName(), room.getMaxCount(),participantName ));
+        room.setPassCode(serviceConfess.generatePassCode());
         if(existingRoom.isPresent()){
             throw new RoomManageException("Room already available with given name");
         }
@@ -111,6 +116,10 @@ public class RoomService {
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> new RoomNotFoundException("Room not found with Room Name: " + roomName));
     }
 
+    @Transactional
+    public Optional<Room> getRoomDetailsByHash(String hash){
+        return repo.findRoomWithParticipantsByRoomHash(hash);
+    }
 
 
     public boolean isUserPresentInAnyRoom(String username){
@@ -148,6 +157,7 @@ public class RoomService {
             return Optional.empty();
         }
     }
+
 
 
     @PreDestroy
