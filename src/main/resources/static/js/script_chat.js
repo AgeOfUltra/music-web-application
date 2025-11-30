@@ -1599,7 +1599,7 @@ function displaySearchResults(songs) {
     }
 ">
                 <div class="song-item-title">${song.songName} • ${song.language}</div>
-                <div class="song-item-info">${song.hero || song.singer} • ${song.singer || song.movie} • ${song.language || 'Unknown'}</div>
+                <div class="song-item-info">${song.hero || song.singer} • ${ song.movie || song.singer } • ${song.language || 'Unknown'}</div>
             </div>
             <button class="favorite-heart ${isFavorite ? 'bi bi-heart-fill' : 'bi bi-heart'}" 
                     onclick="event.stopPropagation(); toggleFavorite({
