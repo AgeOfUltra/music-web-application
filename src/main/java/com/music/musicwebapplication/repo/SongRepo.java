@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,7 +17,9 @@ public interface SongRepo extends JpaRepository<Song,Long> {
 
     Optional<Song> findSongByFileName(String objectKey);
 
-    List<Song> findBySongNameContainingIgnoreCase(String query);
+//    @Query("SELECT s from Song s where lower(s.songName) = :query or lower(s.movie) = :query")
+@Query("SELECT s FROM Song s WHERE LOWER(s.songName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(s.movie) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Song> findBySongNameContainingIgnoreCase(@Param("query") String query);
 
     boolean existsByFileName(String fileName);
 

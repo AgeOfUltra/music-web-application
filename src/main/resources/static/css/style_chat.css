@@ -121,7 +121,7 @@ body::before {
 /* ==================== MAIN CONTAINER ==================== */
 .main-container {
     display: grid;
-    grid-template-columns: 380px 1fr 400px;
+    grid-template-columns: 450px 1fr 400px;
     height: calc(100vh - 90px);
     gap: 0;
     padding: 15px;

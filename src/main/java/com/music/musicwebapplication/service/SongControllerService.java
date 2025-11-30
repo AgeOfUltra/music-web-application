@@ -128,6 +128,7 @@ public class SongControllerService {
     }
 
     public List<Song> searchSongsByName(String songName) {
+        log.info("request data : {}" , songName);
         return repo.findBySongNameContainingIgnoreCase(songName);
     }
 }
