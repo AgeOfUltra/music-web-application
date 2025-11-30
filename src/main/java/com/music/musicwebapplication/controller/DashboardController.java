@@ -1,7 +1,6 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.CreateRoom;
-import com.music.musicwebapplication.dto.JoinRoom;
 import com.music.musicwebapplication.dto.ConfessContainerRequest;
 import com.music.musicwebapplication.dto.RoomJoin;
 import lombok.extern.slf4j.Slf4j;

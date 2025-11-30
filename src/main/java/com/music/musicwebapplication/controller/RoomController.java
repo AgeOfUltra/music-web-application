@@ -1,7 +1,6 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.CreateRoom;
-import com.music.musicwebapplication.dto.JoinRoom;
 import com.music.musicwebapplication.dto.RoomJoin;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
@@ -12,7 +11,6 @@ import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.ColorUsageUtil;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -174,13 +172,7 @@ public class RoomController {
         }
     }
 //    API
-    private ResponseEntity<Participant> joinRoomApi(JoinRoom joinRoom) throws Exception{
-        Participant newParticipant = new Participant();
-        newParticipant.setUserName(joinRoom.getParticipantName());
-        newParticipant.setOrganizer(false);
-        Participant participant = rService.joinRoom(joinRoom.getRoomName(),newParticipant);
-        return ResponseEntity.ok(participant);
-    }
+
     private ResponseEntity<Participant> joinRoomApi(RoomJoin joinRoom) throws Exception{
         Participant newParticipant = new Participant();
         newParticipant.setUserName(joinRoom.getParticipantName());
