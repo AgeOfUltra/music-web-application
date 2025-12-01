@@ -53,6 +53,8 @@ public class RoomController {
         Room currentRoom = availableRoom.get();
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomName", currentRoom.getRoomName());
+        model.addAttribute("roomCode", roomName);
+        model.addAttribute("passCode",currentRoom.getPassCode());
         model.addAttribute("roomCount", currentParticipantCount(currentRoom.getRoomName()));
         model.addAttribute("totalCount", rService.getRoomDetails(currentRoom.getRoomName()).getMaxCount());
         model.addAttribute("userColor",colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));

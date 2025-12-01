@@ -7,7 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
     <link rel="stylesheet" th:href="@{/css/style_chat.css}">
 </head>
 <body>
@@ -94,7 +95,11 @@
 
     <div class="middle-panel">
         <div class="room-header">
-            <div class="room-name" th:text="${roomName}" id="roomName"></div>
+            <div class="room-name" id="roomName">
+                <span th:text="${roomName}"></span>
+                <i class="bi bi-copy" id="copyRoomInfo" title="Copy room details to share with others"></i>
+            </div>
+
             <div class="room-user-info">Logged in as: <span th:text="${username}"></span></div>
             <div class="participant-count" id="participantCount" th:text="'Participants: ' + ${roomCount} + '/' + ${totalCount}"></div>
         </div>
@@ -175,9 +180,26 @@
         jwtToken: /*[[${jwtToken}]]*/ '',
         userColor: /*[[${userColor}]]*/ '',
         darkerColor: /*[[${darkerColor}]]*/ '',
+        roomCode: /*[[${roomCode}]]*/ '',
+        passCode: /*[[${passCode}]]*/ '',
         isOrganizer: /*[[${isOrganizer}]]*/ false
+
     };
     /*]]>*/
+
+    document.getElementById("copyRoomInfo").addEventListener("click", () => {
+        const roomCode = PAGE_DATA.roomCode;
+        const passCode = PAGE_DATA.passCode || ""; // if you added passCode in PAGE_DATA
+
+        const textToCopy = `Room Code: ${roomCode}\nPasscode: ${passCode}`;
+
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                alert("Copied:\n" + textToCopy);
+            })
+            .catch(err => console.error("Copy failed", err));
+    });
+
 </script>
 
 <script th:src="@{/js/script_chat.js}"></script>
