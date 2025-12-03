@@ -48,6 +48,7 @@ public class AdminSongController {
         }
 
         songContainer.setMovie(songContainer.getMovie().replace("'","\\'"));
+        songContainer.setSinger(songContainer.getSinger().replace("'","\\'"));
         ResponseEntity<?> response;
         try {
             response = uploadSongApi(songContainer);

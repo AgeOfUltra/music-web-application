@@ -2,6 +2,6 @@
 
 2) chat room logout need to be back-end
 
-4) copy and share.
+4) copy and share. done
 
-3) new issues found: UI tab view layout change
+3) new issues found: UI tab view layout change done

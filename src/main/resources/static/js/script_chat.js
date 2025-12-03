@@ -29,9 +29,9 @@ let isPlayingFavorites = false;
 let currentFavoriteIndex = 0;
 
 // ==================== ADD TO GLOBAL VARIABLES SECTION ====================
-let currentPlaylist = []; // Tracks the current playlist being used
-let currentPlaylistIndex = 0; // Current position in the playlist
-let playlistMode = null; // 'all' or 'favorites'
+let currentPlaylist = [];
+let currentPlaylistIndex = 0;
+let playlistMode = null;
 
 // ==================== TYPING INDICATOR ====================
 let typing = false;
@@ -109,14 +109,17 @@ function broadcastFavorites(favorites, action, song, username) {
             {},
             JSON.stringify(message)
         );
-        console.log('📤 Broadcast favorites:', action, song?.songName);
+        // // console.log('📤 Broadcast favorites:', action, song?.songName);
     } catch (error) {
         console.error('Error broadcasting favorites:', error);
     }
 }
 
 function handleFavoritesUpdate(message) {
-    console.log('📥 Received favorites update:', message.action, 'from:', message.username);
+    // console.log('📥 Received favorites update:', message);
+    // console.log('   Action:', message.action);
+    // console.log('   From:', message.username);
+    // console.log('   Current user:', currentUsername);
 
     roomFavorites = message.favorites || [];
     updateFavoritesDisplay();
@@ -125,11 +128,14 @@ function handleFavoritesUpdate(message) {
     // Show toast notification for others (not the person who made the change)
     if (message.username !== currentUsername) {
         if (message.action === 'ADD' && message.song) {
-            ToastNotification.info(`${message.username} added "${message.song.songName}" to favorites`, 2000);
+            ToastNotification.info(`${message.username} added "${message.song.songName}" to favorites`, 3000);
         } else if (message.action === 'REMOVE' && message.song) {
-            ToastNotification.info(`${message.username} removed "${message.song.songName}" from favorites`, 2000);
+            ToastNotification.info(`${message.username} removed "${message.song.songName}" from favorites`, 3000);
         } else if (message.action === 'CLEAR') {
-            ToastNotification.warning(`${message.username} cleared all favorites`, 2000);
+            ToastNotification.warning(`${message.username} cleared all favorites`, 3000);
+        } else if (message.action === 'SYNC') {
+            // Silent sync, no notification needed
+            // console.log('📋 Synced favorites list');
         }
     }
 }
@@ -303,7 +309,7 @@ const onOrganizerPause = (e) => {
             timestamp: Math.floor(audioPlayer.currentTime * 1000),
             controller: currentUsername
         };
-        console.log('⏸️ [ORGANIZER] Sending PAUSE command:', playbackMessage);
+        // console.log('⏸️ [ORGANIZER] Sending PAUSE command:', playbackMessage);
         stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
     }
 };
@@ -323,7 +329,7 @@ const onOrganizerPlay = (e) => {
             heroine: currentSongData.heroine,
             language: currentSongData.language
         };
-        console.log('▶️ [ORGANIZER] Sending RESUME command:', playbackMessage);
+        // console.log('▶️ [ORGANIZER] Sending RESUME command:', playbackMessage);
         stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
     }
 };
@@ -333,7 +339,7 @@ const onParticipantPlay = (e) => {
     if (!audioPlayer) return;
     if (isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted) {
-        console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
+        // console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
         e.preventDefault();
         try {
             audioPlayer.pause();
@@ -348,9 +354,9 @@ const onParticipantPause = (e) => {
     if (!audioPlayer) return;
     if (isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted) {
-        console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
+        // console.log('🔒 [NON-ORGANIZER] Prevented manual pause attempt (user initiated).');
         e.preventDefault();
-        audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
+        audioPlayer.play().catch(err =>  console.log('Resume from prevented pause:', err));
     }
 };
 
@@ -374,11 +380,11 @@ function bindAudioHandlersForRole(role) {
     }
 
     boundAudioRole = role;
-    console.log('🎛️ Rebound audio handlers for role:', role);
+    // console.log('🎛️ Rebound audio handlers for role:', role);
 }
 
 function onSongEnded() {
-    console.log('🎵 Song ended');
+    // console.log('🎵 Song ended');
 
     if (!isOrganizer) return;
 
@@ -388,15 +394,15 @@ function onSongEnded() {
 // Check if current song is in favorites list
     const favIndex = roomFavorites.findIndex(s => s.fileName === current);
 
-// Auto-play only if song is part of favorites playlist
+// Autoplay only if song is part of favorites playlist
     if (favIndex !== -1) {
         const nextIndex = favIndex + 1;
 
         if (nextIndex < roomFavorites.length) {
-            console.log('📀 Auto-playing next song from favorites playlist');
+            // console.log('📀 Auto-playing next song from favorites playlist');
             setTimeout(() => playSong(roomFavorites[nextIndex]), 700);
         } else {
-            console.log('📀 Favorites playlist ended');
+            // console.log('📀 Favorites playlist ended');
         }
     }
 }
@@ -412,14 +418,14 @@ function onRoleChange() {
         bindAudioHandlersForRole(desired);
     }
 
-    console.log('🎭 Role changed - isOrganizer:', isOrganizer);
+    // console.log('🎭 Role changed - isOrganizer:', isOrganizer);
 }
 
 function resetAudioOnOrganizerLeave() {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
 
-    console.log("🎶 Organizer left - resetting audio");
+    // console.log("🎶 Organizer left - resetting audio");
 
     try {
         audioPlayer.pause();
@@ -458,8 +464,8 @@ function initializePage() {
         return;
     }
 
-    console.log('✅ Initialized chat for:', currentUsername, 'in room:', currentRoomName);
-    console.log('✅ Is organizer:', isOrganizer);
+    // console.log('✅ Initialized chat for:', currentUsername, 'in room:', currentRoomName);
+    // console.log('✅ Is organizer:', isOrganizer);
 
     updatePermissionNotice();
     setupAudioPlayerListeners();
@@ -551,14 +557,45 @@ function showEmptyState() {
 // ==================== TOAST NOTIFICATION SYSTEM ====================
 const ToastNotification = {
     show: function (message, type = 'info', duration = 3000) {
+        // console.log(`🔔 [TOAST] Attempting to show toast: [${type}] ${message}`);
+
         const toastContainer = document.getElementById('toastContainer');
         if (!toastContainer) {
-            console.error('Toast container not found!');
+            console.error('❌ [TOAST] Toast container not found!');
             return;
         }
 
+        // console.log('✅ [TOAST] Toast container found:', toastContainer);
+
         const toastDiv = document.createElement('div');
         toastDiv.className = `toast ${type}`;
+
+        // Add inline styles to ensure visibility (debugging)
+        toastDiv.style.cssText = `
+            min-width: 300px;
+            max-width: 500px;
+            margin-bottom: 10px;
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: "Inter", sans-serif;
+            pointer-events: auto;
+            z-index: 9999;
+            position: relative;
+        `;
+
+        // Set background based on type
+        if (type === 'success') toastDiv.style.backgroundColor = '#4caf50';
+        else if (type === 'error') toastDiv.style.backgroundColor = '#f44336';
+        else if (type === 'info') toastDiv.style.backgroundColor = '#2196F3';
+        else if (type === 'warning') toastDiv.style.backgroundColor = '#ff9800';
+        else toastDiv.style.backgroundColor = '#323232';
 
         const icons = {
             success: '✓',
@@ -568,25 +605,35 @@ const ToastNotification = {
         };
 
         toastDiv.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.info}</span>
-            <span class="toast-message">${message}</span>
-            <button class="toast-close">×</button>
+            <span class="toast-icon" style="font-size: 18px; flex-shrink: 0; font-weight: bold;">${icons[type] || icons.info}</span>
+            <span class="toast-message" style="flex: 1; line-height: 1.4; word-break: break-word;">${message}</span>
+            <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; padding: 0; flex-shrink: 0; width: 24px; height: 24px;">×</button>
         `;
 
         toastContainer.appendChild(toastDiv);
+        // console.log('✅ [TOAST] Toast added to DOM, element:', toastDiv);
+        // console.log('✅ [TOAST] Toast container children count:', toastContainer.children.length);
 
         toastDiv.querySelector('.toast-close').addEventListener('click', () => {
+            // console.log('🔔 [TOAST] Close button clicked');
             this.removeToast(toastDiv);
         });
 
         if (duration > 0) {
-            setTimeout(() => this.removeToast(toastDiv), duration);
+            setTimeout(() => {
+                // console.log('🔔 [TOAST] Auto-removing toast after', duration, 'ms');
+                this.removeToast(toastDiv);
+            }, duration);
         }
     },
 
     removeToast: function (toastDiv) {
+        // console.log('🔔 [TOAST] Removing toast');
         toastDiv.classList.add('removing');
-        setTimeout(() => toastDiv.remove(), 300);
+        setTimeout(() => {
+            toastDiv.remove();
+            // console.log('✅ [TOAST] Toast removed from DOM');
+        }, 300);
     },
 
     success: function (message, duration = 3000) {
@@ -616,7 +663,18 @@ function initializeToastNotifications() {
         ToastNotification.success(successJoin);
     }
 }
-
+window.addEventListener('DOMContentLoaded', () => {
+    const toastContainer = document.getElementById('toastContainer');
+    if (toastContainer) {
+        // console.log('✅ [INIT] Toast container found on page load');
+        // console.log('   Position:', window.getComputedStyle(toastContainer).position);
+        // console.log('   Z-index:', window.getComputedStyle(toastContainer).zIndex);
+        // console.log('   Top:', window.getComputedStyle(toastContainer).top);
+        // console.log('   Right:', window.getComputedStyle(toastContainer).right);
+    } else {
+        console.error('❌ [INIT] Toast container NOT found on page load!');
+    }
+});
 // ==================== UPDATE CURRENT SONG DISPLAY ====================
 function updateCurrentSongDisplay(songName, hero, language, movie, singer) {
     document.getElementById('currentSongTitle').textContent = songName;
@@ -638,7 +696,7 @@ function setupAudioPlayerListeners() {
     updateAudioControls();
     updatePlaybackButtons(); // ADD THIS LINE
     bindAudioHandlersForRole(isOrganizer ? 'organizer' : 'participant');
-    console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
+    // console.log('🎵 Setting up audio player listeners for:', isOrganizer ? 'ORGANIZER' : 'NON-ORGANIZER');
 }
 
 // ==================== PLAYBACK HANDLING ====================
@@ -663,7 +721,7 @@ function handlePlaybackCommand(playbackMsg) {
         return;
     }
 
-    console.log('🔥 [' + currentUsername + '] Received playback command:', playbackMsg.action, 'from:', playbackMsg.controller);
+    // console.log('🔥 [' + currentUsername + '] Received playback command:', playbackMsg.action, 'from:', playbackMsg.controller);
 
     const controller = playbackMsg.controller;
 
@@ -716,7 +774,7 @@ function handlePlaybackCommand(playbackMsg) {
 function updatePlaylistContext(song, index = 0, mode = null) {
     currentPlaylistIndex = index;
     playlistMode = mode;
-    console.log('📋 Playlist context updated:', {index, mode, song: song.songName});
+    // console.log('📋 Playlist context updated:', {index, mode, song: song.songName});
 }
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
@@ -731,8 +789,8 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         movie: playbackMsg.movie
     };
 
-    console.log('🎵 Received PLAY command for song:', playbackMsg.songName);
-    console.log('   Audio source URL:', newSrc);
+    // console.log('🎵 Received PLAY command for song:', playbackMsg.songName);
+    // console.log('   Audio source URL:', newSrc);
     updateCurrentSongDisplay(playbackMsg.songName, playbackMsg.hero, playbackMsg.language, playbackMsg.movie, playbackMsg.singer);
 
     const isOwnAction = playbackMsg.controller === currentUsername;
@@ -751,33 +809,33 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         sourceChanged = audioPlayer.src !== newSrc;
     }
 
-    console.log('   Source changed:', sourceChanged);
+    // console.log('   Source changed:', sourceChanged);
 
     if (sourceChanged) {
-        console.log('   Setting new audio source...');
+        // console.log('   Setting new audio source...');
         audioPlayer.src = newSrc;
     }
 
     const startTime = playbackMsg.timestamp ? playbackMsg.timestamp / 1000 : 0;
-    console.log('   Start time:', startTime.toFixed(2), 'seconds');
+    // console.log('   Start time:', startTime.toFixed(2), 'seconds');
 
     if (sourceChanged) {
-        console.log('   Waiting for metadata to load...');
+        // console.log('   Waiting for metadata to load...');
 
         let metadataLoaded = false;
 
         const metadataHandler = () => {
             metadataLoaded = true;
-            console.log('   ✅ Metadata loaded');
+            // console.log('   ✅ Metadata loaded');
             audioPlayer.currentTime = startTime;
 
-            console.log('   ▶️ Attempting to play from:', startTime.toFixed(2) + 's');
+            // console.log('   ▶️ Attempting to play from:', startTime.toFixed(2) + 's');
             const playPromise = audioPlayer.play();
 
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        console.log('   ✅ Audio playback started successfully');
+                        // console.log('   ✅ Audio playback started successfully');
                         ignoreLocalEvents = false;
                     })
                     .catch(err => {
@@ -805,7 +863,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
-                            console.log('   ✅ Audio playback started (after timeout)');
+                            // console.log('   ✅ Audio playback started (after timeout)');
                             ignoreLocalEvents = false;
                         })
                         .catch(err => {
@@ -818,14 +876,14 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
             }
         }, 8000);
     } else {
-        console.log('   Same source, seeking and playing');
+        // console.log('   Same source, seeking and playing');
         audioPlayer.currentTime = startTime;
 
         const playPromise = audioPlayer.play();
         if (playPromise !== undefined) {
             playPromise
                 .then(() => {
-                    console.log('   ✅ Audio playback started');
+                    // console.log('   ✅ Audio playback started');
                     ignoreLocalEvents = false;
                 })
                 .catch(err => {
@@ -839,7 +897,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
 }
 
 function handlePauseCommand(audioPlayer, playbackMsg) {
-    console.log('⏸️ Pausing at timestamp:', (playbackMsg.timestamp / 1000).toFixed(2), 'seconds');
+    // console.log('⏸️ Pausing at timestamp:', (playbackMsg.timestamp / 1000).toFixed(2), 'seconds');
     audioPlayer.currentTime = playbackMsg.timestamp / 1000;
     audioPlayer.pause();
 
@@ -856,7 +914,7 @@ function handlePauseCommand(audioPlayer, playbackMsg) {
 }
 
 function handleResumeCommand(audioPlayer, playbackMsg) {
-    console.log('▶️ Resuming from timestamp:', (playbackMsg.timestamp / 1000).toFixed(2), 'seconds');
+    // console.log('▶️ Resuming from timestamp:', (playbackMsg.timestamp / 1000).toFixed(2), 'seconds');
     if (playbackMsg.timestamp !== undefined) {
         audioPlayer.currentTime = playbackMsg.timestamp / 1000;
     }
@@ -865,7 +923,7 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
     if (playPromise !== undefined) {
         playPromise
             .then(() => {
-                console.log('   ✅ Resume successful');
+                // console.log('   ✅ Resume successful');
                 ignoreLocalEvents = false;
             })
             .catch(err => {
@@ -914,8 +972,8 @@ function playSong(song) {
         timestamp: 0
     };
 
-    console.log('🎵 [ORGANIZER] Preparing to play song:', song.songName);
-    console.log('📤 Playback message to send:', playbackMessage);
+    // console.log('🎵 [ORGANIZER] Preparing to play song:', song.songName);
+    // console.log('📤 Playback message to send:', playbackMessage);
 
     try {
         const messageJson = JSON.stringify(playbackMessage);
@@ -925,7 +983,7 @@ function playSong(song) {
             messageJson
         );
 
-        console.log('✅ Message sent successfully');
+        // console.log('✅ Message sent successfully');
     } catch (error) {
         console.error('❌ Error sending playback message:', error);
         ToastNotification.error('Failed to play song');
@@ -1065,7 +1123,7 @@ function broadcastSkipCommand(action, song = null, index = 0) {
             {},
             JSON.stringify(skipMessage)
         );
-        console.log('📤 Broadcast skip command:', action);
+        // console.log('📤 Broadcast skip command:', action);
 
         // If we have a song, play it immediately
         if (song) {
@@ -1077,11 +1135,14 @@ function broadcastSkipCommand(action, song = null, index = 0) {
 }
 
 function handleSkipCommand(message) {
-    console.log('📥 Received skip command:', message.action, 'from:', message.controller);
+    // console.log('📥 Received skip command:', message);
+    // console.log('   Action:', message.action);
+    // console.log('   From:', message.controller);
+    // console.log('   Current user:', currentUsername);
 
     // Only non-organizers should respond to skip commands
     if (isOrganizer) {
-        console.log('⏭️ Ignoring skip command as organizer');
+        // console.log('⏭️ Ignoring skip command as organizer');
         return;
     }
 
@@ -1100,7 +1161,8 @@ function handleSkipCommand(message) {
     // Show notification (only show for other users, not self)
     if (message.controller !== currentUsername && message.song) {
         const actionText = message.action === 'NEXT' ? 'skipped to next' : 'went to previous';
-        ToastNotification.info(`${message.controller} ${actionText} song`);
+        ToastNotification.info(`${message.controller} ${actionText} song`, 3000);
+        // console.log('✅ Toast notification shown');
     }
 
     // Update local state
@@ -1127,14 +1189,14 @@ function updatePlaybackButtons() {
         nextBtn.disabled = false;
         prevBtn.title = 'Previous Song (Alt + ←)';
         nextBtn.title = 'Next Song (Alt + →)';
-        console.log('✅ Enabled playback buttons for organizer');
+        // console.log('✅ Enabled playback buttons for organizer');
     } else {
         // Disable buttons for non-organizers
         prevBtn.disabled = true;
         nextBtn.disabled = true;
         prevBtn.title = 'Only organizer can skip songs';
         nextBtn.title = 'Only organizer can skip songs';
-        console.log('🔒 Disabled playback buttons for non-organizer');
+        // console.log('🔒 Disabled playback buttons for non-organizer');
     }
 }
 
@@ -1146,18 +1208,17 @@ function connectWebSocket(token) {
     stompClient.connect(
         {'Authorization': `Bearer ${token}`},
         (frame) => {
-            console.log('✅ Connected to WebSocket');
+            // console.log('✅ Connected to WebSocket');
             ToastNotification.success('Connected to chat room');
 
+            // Chat messages
             stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
                 const msg = JSON.parse(message.body);
-
-                console.log("🔥 CHAT message received:", msg);
+                // console.log("🔥 CHAT message received:", msg);
 
                 if (msg.type === "LEAVE") {
                     lastUserLeft = msg.sender;
-                    console.log("📌 User LEFT:", lastUserLeft);
-
+                    // console.log("📌 User LEFT:", lastUserLeft);
                     ToastNotification.info(`${msg.sender} left the room`);
                     return;
                 }
@@ -1172,32 +1233,39 @@ function connectWebSocket(token) {
                 }
             });
 
+            // Playback commands
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
                 const playbackMsg = JSON.parse(message.body);
                 handlePlaybackCommand(playbackMsg);
             });
 
-            // listen to typing events
+            // Typing events
             stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
                 const typingData = JSON.parse(message.body);
                 handleTypingIndicator(typingData);
             });
+
+            // Skip commands - VERIFY THIS EXISTS
             stompClient.subscribe(`/topic/chat/${currentRoomName}/skip`, (message) => {
+                // console.log('📨 Raw skip message received:', message.body);
                 const skipMsg = JSON.parse(message.body);
                 handleSkipCommand(skipMsg);
             });
 
+            // Participants updates
             stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
                 const participants = JSON.parse(message.body);
                 updateParticipantsDisplay(participants);
             });
 
-            // Subscribe to shared room favorites
+            // Shared room favorites - VERIFY THIS EXISTS
             stompClient.subscribe(`/topic/chat/${currentRoomName}/favorites`, (message) => {
+                // console.log('📨 Raw favorites message received:', message.body);
                 const favoritesMsg = JSON.parse(message.body);
                 handleFavoritesUpdate(favoritesMsg);
             });
 
+            // Send JOIN message
             stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
                 sender: currentUsername,
                 type: 'JOIN',
@@ -1214,7 +1282,7 @@ function connectWebSocket(token) {
             ToastNotification.error('Connection error. Reconnecting...');
             setTimeout(() => {
                 if (stompClient && !stompClient.connected) {
-                    console.log('🔄 Attempting to reconnect...');
+                    // console.log('🔄 Attempting to reconnect...');
                     connectWebSocket(token);
                 }
             }, 3000);
@@ -1244,7 +1312,7 @@ function requestFavoritesSync() {
             {},
             JSON.stringify({username: currentUsername})
         );
-        console.log('🔄 Requested favorites sync');
+        // console.log('🔄 Requested favorites sync');
     }
 }
 
@@ -1412,7 +1480,7 @@ function sendMessage() {
     try {
         stompClient.send(`/app/music/chat/${currentRoomName}/send`, {}, JSON.stringify(chatMessage));
         input.value = '';
-        console.log('✅ Message sent:', content);
+        // console.log('✅ Message sent:', content);
     } catch (error) {
         console.error('❌ Error sending message:', error);
         ToastNotification.error('Error sending message');
@@ -1696,22 +1764,22 @@ window.addEventListener('pagehide', function (event) {
 
 // ==================== HANDLE TAB CLOSE ====================
 function handleTabClose() {
-    console.log('📌 Tab/Window is closing - Initiating logout...');
+    // console.log('📌 Tab/Window is closing - Initiating logout...');
 
     if (isReload()) {
-        console.log("🔄 Page reload detected — skipping LEAVE + logout");
+        // console.log("🔄 Page reload detected — skipping LEAVE + logout");
         return;
     }
 
     if (isClosing) {
-        console.log('⚠️ Already closing, skipping duplicate handleTabClose');
+        // console.log('⚠️ Already closing, skipping duplicate handleTabClose');
         return;
     }
     isClosing = true;
 
     if (participantRefreshInterval) {
         clearInterval(participantRefreshInterval);
-        console.log('✅ Cleared participant refresh interval');
+        // console.log('✅ Cleared participant refresh interval');
     }
 
     safeDisconnectWebSocket();
@@ -1760,26 +1828,52 @@ async function logout() {
     if (logoutInProgress) return;
     logoutInProgress = true;
 
+    allowUnload = true;
+    isClosing = true;
+
     try {
-        allowUnload = true;
-        isClosing = true;
+        // 1️⃣ Notify WebSocket that user is leaving (only once)
+        await sendLeaveOverWebSocket();
 
-        safeDisconnectWebSocket();
 
-        if (currentRoomName && currentUsername) {
-            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-                method: 'DELETE',
-                headers: {'Authorization': `Bearer ${jwtToken}`},
-                keepalive: true
-            });
-        }
-
-        await fetch('/app/music/room/clearRoomSession', {method: 'POST', keepalive: true});
-
+    } catch (err) {
+        console.error("Logout error:", err);
     } finally {
+        // 3️⃣ Backend will clear session + remove user from room + remove JWT cookie
         window.location.href = '/app/music/public/logout';
     }
 }
+function sendLeaveOverWebSocket() {
+    return new Promise(resolve => {
+        if (!stompClient || !stompClient.connected) {
+            resolve();
+            return;
+        }
+
+        try {
+            stompClient.send(
+                `/app/music/chat/${currentRoomName}/removeUser`,
+                {},
+                JSON.stringify({
+                    sender: currentUsername,
+                    type: 'LEAVE',
+                    content: `${currentUsername} left the room`
+                })
+            );
+
+            // Proper async disconnect
+            stompClient.disconnect(() => {
+                // console.log("🔌 WebSocket disconnected cleanly");
+                resolve();
+            });
+
+        } catch (e) {
+            console.error("WS disconnect error:", e);
+            resolve();
+        }
+    });
+}
+
 
 document.addEventListener('keydown', (e) => {
     // Only organizer can use shortcuts
