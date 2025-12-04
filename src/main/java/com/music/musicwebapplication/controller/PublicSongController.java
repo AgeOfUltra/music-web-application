@@ -57,4 +57,9 @@ public class PublicSongController {
         return ResponseEntity.ok(songControllerService.searchSongsByName(query));
     }
 
+    @GetMapping("/getAllCachedSongs")
+    public ResponseEntity<List<String>> getAllCachedSongs(){
+        return ResponseEntity.ok(songCacheService.getSongList());
+    }
+
 }

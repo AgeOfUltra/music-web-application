@@ -24,4 +24,7 @@ public interface SongRepo extends JpaRepository<Song,Long> {
     boolean existsByFileName(String fileName);
 
     boolean existsBySongName(String songName);
+
+    @Query("SELECT s.fileName from Song s")
+    List<String> findAllSongBySongName();
 }

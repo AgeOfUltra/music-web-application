@@ -325,6 +325,70 @@ label {
     font-weight: 600;
 }
 
+.song-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 46, 0.98);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.song-suggestions.active {
+    display: block;
+}
+
+.song-suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.song-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.song-suggestion-item:hover {
+    background: rgba(124, 58, 237, 0.2);
+}
+
+.song-suggestion-item.selected {
+    background: rgba(124, 58, 237, 0.3);
+}
+
+.no-suggestions {
+    padding: 10px 15px;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+/* Custom scrollbar for suggestions */
+.song-suggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+.song-suggestions::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.song-suggestions::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.5);
+    border-radius: 3px;
+}
+
+.song-suggestions::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.7);
+}
+
 input,
 select,
 textarea {

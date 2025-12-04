@@ -209,13 +209,20 @@
             <!-- Song Name -->
             <div class="form-group">
                 <label for="songName">Song Name</label>
-                <input type="text" id="songName" th:field="*{songName}" placeholder="Enter song name" >
+                <div style="position: relative;">
+                    <input type="text"
+                           id="songName"
+                           th:field="*{songName}"
+                           placeholder="Enter song name"
+                           autocomplete="off">
+                    <div id="songSuggestions" class="song-suggestions"></div>
+                </div>
             </div>
 
             <!-- Singer Name -->
             <div class="form-group">
-                <label for="singerName">Singer Name</label>
-                <input type="text" id="singerName" th:field="*{singerName}" placeholder="Enter singer name" >
+                <label for="singerName">Singer/Movie Name</label>
+                <input type="text" id="singerName" th:field="*{singerName}" placeholder="Enter singer/movie name" >
             </div>
 
             <!-- Message -->

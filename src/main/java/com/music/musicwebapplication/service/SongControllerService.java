@@ -7,6 +7,7 @@ import com.music.musicwebapplication.repo.SongRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -122,11 +123,16 @@ public class SongControllerService {
 //
 //    }
 
+    @Cacheable(
+            value = "AllSongsPaged",
+            key = "{#page, #size}"
+    )
     public Page<Song> getAllSongsName(int page, int size) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("songName").ascending());
         return  repo.findAll(pageable);
     }
 
+    @Cacheable(value="CachedSongs",key="#songName")
     public List<Song> searchSongsByName(String songName) {
         log.info("request data : {}" , songName);
         return repo.findBySongNameContainingIgnoreCase(songName);
