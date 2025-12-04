@@ -246,6 +246,8 @@ function playFavoritesPlaylist() {
     isPlayingFavorites = true;
     currentFavoriteIndex = 0;
     playlistMode = 'favorites';
+    currentPlaylist = [...roomFavorites];
+    currentPlaylistIndex = 0;
 
     ToastNotification.success(`Starting room favorites (${roomFavorites.length} songs)`);
     playSong(roomFavorites[currentFavoriteIndex]);
@@ -338,7 +340,9 @@ const onParticipantPlay = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
     if (isOrganizer) return;
-    if (!ignoreLocalEvents && e.isTrusted) {
+
+    // Only prevent if user-initiated AND not during WebSocket sync
+    if (!ignoreLocalEvents && e.isTrusted && audioPlayer.paused) {
         // console.log('🔒 [NON-ORGANIZER] Prevented manual play attempt (user initiated).');
         e.preventDefault();
         try {
@@ -391,19 +395,61 @@ function onSongEnded() {
     const current = currentSongData?.songFileName;
     if (!current) return;
 
-// Check if current song is in favorites list
+    let nextSong = null;
+    let nextIndex = -1;
+
+    // Priority 1: Check if current song is in favorites playlist
     const favIndex = roomFavorites.findIndex(s => s.fileName === current);
-
-// Autoplay only if song is part of favorites playlist
-    if (favIndex !== -1) {
-        const nextIndex = favIndex + 1;
-
-        if (nextIndex < roomFavorites.length) {
-            // console.log('📀 Auto-playing next song from favorites playlist');
-            setTimeout(() => playSong(roomFavorites[nextIndex]), 700);
-        } else {
-            // console.log('📀 Favorites playlist ended');
+    if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
+        // Playing from favorites - continue with next favorite
+        nextIndex = favIndex + 1;
+        nextSong = roomFavorites[nextIndex];
+        currentFavoriteIndex = nextIndex;
+        playlistMode = 'favorites';
+        // console.log('📀 Auto-playing next song from favorites playlist');
+    }
+    // Priority 2: Check if playing from search results
+    else if (playlistMode === 'search' && currentPlaylist.length > 0) {
+        const searchIndex = currentPlaylist.findIndex(s => s.fileName === current);
+        if (searchIndex !== -1 && searchIndex < currentPlaylist.length - 1) {
+            nextIndex = searchIndex + 1;
+            nextSong = currentPlaylist[nextIndex];
+            currentPlaylistIndex = nextIndex;
+            // console.log('📀 Auto-playing next song from search results');
         }
+    }
+    // Priority 3: Check if playing from main song list (current page)
+    else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+        const pageIndex = allSongsOnPage.findIndex(s => s.fileName === current);
+        if (pageIndex !== -1 && pageIndex < allSongsOnPage.length - 1) {
+            nextIndex = pageIndex + 1;
+            nextSong = allSongsOnPage[nextIndex];
+            currentPlaylistIndex = nextIndex;
+            // console.log('📀 Auto-playing next song from current page');
+        } else {
+            // console.log('📀 Reached end of current page - no more songs to auto-play');
+            ToastNotification.info('🎵 Playlist ended');
+        }
+    }
+    // Priority 4: Fallback - try to find in any available list
+    else {
+        // Try to find current song in allSongsOnPage
+        const pageIndex = allSongsOnPage.findIndex(s => s.fileName === current);
+        if (pageIndex !== -1 && pageIndex < allSongsOnPage.length - 1) {
+            nextIndex = pageIndex + 1;
+            nextSong = allSongsOnPage[nextIndex];
+            currentPlaylistIndex = nextIndex;
+            playlistMode = 'all';
+            // console.log('📀 Auto-playing next song from page (fallback)');
+        }
+    }
+
+    // Play the next song if found
+    if (nextSong) {
+        ToastNotification.info(`▶️ Auto-playing: ${nextSong.songName}`);
+        setTimeout(() => playSong(nextSong), 700);
+    } else {
+        // console.log('📀 No next song available - playlist ended');
     }
 }
 
@@ -1000,38 +1046,43 @@ function playNextSong() {
     let nextSong = null;
     let nextIndex = 0;
 
-    if (isPlayingFavorites && roomFavorites.length > 0) {
+    if (playlistMode === 'favorites' && roomFavorites.length > 0) {
         // Playing from favorites
-        if (currentFavoriteIndex === roomFavorites.length - 1) {
-            // At the last song
-            ToastNotification.info('🎵 End of favorites playlist');
-            return;
-        }
-        nextIndex = currentFavoriteIndex + 1;
-        nextSong = roomFavorites[nextIndex];
-        currentFavoriteIndex = nextIndex;
-    } else if (playlistMode === 'favorites' && roomFavorites.length > 0) {
-        // In favorites context but not auto-playing
-        if (currentPlaylistIndex === roomFavorites.length - 1) {
-            // At the last song
-            ToastNotification.info('🎵 End of favorites playlist');
-            return;
-        }
-        nextIndex = currentPlaylistIndex + 1;
-        nextSong = roomFavorites[nextIndex];
-    } else if (roomFavorites.length === 0) {
-        // No songs in favorites
-        ToastNotification.warning('Favorites playlist is empty. Add songs to favorites first!');
-        return;
-    } else if (playlistMode === 'all' && currentPlaylist.length > 0) {
+        const currentIndex = isPlayingFavorites ? currentFavoriteIndex : currentPlaylistIndex;
 
-        if (currentPlaylistIndex >= currentPlaylist.length - 1) {
-            ToastNotification.info('🎵 End of playlist');
+        if (currentIndex >= roomFavorites.length - 1) {
+            ToastNotification.info('🎵 End of favorites playlist');
+            return;
+        }
+
+        nextIndex = currentIndex + 1;
+        nextSong = roomFavorites[nextIndex];
+
+        if (isPlayingFavorites) {
+            currentFavoriteIndex = nextIndex;
+        }
+        currentPlaylistIndex = nextIndex;
+
+    } else if (playlistMode === 'search' && searchSongsList.length > 0) {
+        // Playing from search results
+        if (currentPlaylistIndex >= searchSongsList.length - 1) {
+            ToastNotification.info('🎵 End of search results');
             return;
         }
 
         nextIndex = currentPlaylistIndex + 1;
-        nextSong = currentPlaylist[nextIndex];
+        nextSong = searchSongsList[nextIndex];
+        currentPlaylistIndex = nextIndex;
+
+    } else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+        // Playing from main list
+        if (currentPlaylistIndex >= allSongsOnPage.length - 1) {
+            ToastNotification.info('🎵 End of current page');
+            return;
+        }
+
+        nextIndex = currentPlaylistIndex + 1;
+        nextSong = allSongsOnPage[nextIndex];
         currentPlaylistIndex = nextIndex;
 
     } else {
@@ -1056,38 +1107,43 @@ function playPreviousSong() {
     let prevSong = null;
     let prevIndex = 0;
 
-    if (isPlayingFavorites && roomFavorites.length > 0) {
+    if (playlistMode === 'favorites' && roomFavorites.length > 0) {
         // Playing from favorites
-        if (currentFavoriteIndex === 0) {
-            // At the first song
-            ToastNotification.info('🎵 Currently playing first song');
-            return;
-        }
-        prevIndex = currentFavoriteIndex - 1;
-        prevSong = roomFavorites[prevIndex];
-        currentFavoriteIndex = prevIndex;
-    } else if (playlistMode === 'favorites' && roomFavorites.length > 0) {
-        // In favorites context but not auto-playing
-        if (currentPlaylistIndex === 0) {
-            // At the first song
-            ToastNotification.info('🎵 Currently playing first song');
-            return;
-        }
-        prevIndex = currentPlaylistIndex - 1;
-        prevSong = roomFavorites[prevIndex];
-    } else if (roomFavorites.length === 0) {
-        // No songs in favorites
-        ToastNotification.warning('Favorites playlist is empty. Add songs to favorites first!');
-        return;
-    } else if (playlistMode === 'all' && currentPlaylist.length > 0) {
+        const currentIndex = isPlayingFavorites ? currentFavoriteIndex : currentPlaylistIndex;
 
+        if (currentIndex === 0) {
+            ToastNotification.info('🎵 Currently playing first song');
+            return;
+        }
+
+        prevIndex = currentIndex - 1;
+        prevSong = roomFavorites[prevIndex];
+
+        if (isPlayingFavorites) {
+            currentFavoriteIndex = prevIndex;
+        }
+        currentPlaylistIndex = prevIndex;
+
+    } else if (playlistMode === 'search' && searchSongsList.length > 0) {
+        // Playing from search results
         if (currentPlaylistIndex === 0) {
             ToastNotification.info('🎵 Currently at first song');
             return;
         }
 
         prevIndex = currentPlaylistIndex - 1;
-        prevSong = currentPlaylist[prevIndex];
+        prevSong = searchSongsList[prevIndex];
+        currentPlaylistIndex = prevIndex;
+
+    } else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+        // Playing from main list
+        if (currentPlaylistIndex === 0) {
+            ToastNotification.info('🎵 Currently at first song');
+            return;
+        }
+
+        prevIndex = currentPlaylistIndex - 1;
+        prevSong = allSongsOnPage[prevIndex];
         currentPlaylistIndex = prevIndex;
 
     } else {
@@ -1578,6 +1634,8 @@ function handleSongClick(element) {
         songName: element.dataset.songname,
         hero: element.dataset.hero,
         heroine: element.dataset.heroine,
+        singer: element.dataset.singer,
+        movie: element.dataset.movie,
         language: element.dataset.language
     };
 
@@ -1585,23 +1643,30 @@ function handleSongClick(element) {
         stopFavoritesPlaylist();
     }
 
-    // Build playlist from roomFavorites if user clicks inside favorites list
-    if (playlistMode !== 'favorites') {
+    // Check if song is from favorites list
+    const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
+    if (favIndex !== -1) {
+        // Song is in favorites - set context to favorites
+        playlistMode = 'favorites';
+        currentPlaylist = [...roomFavorites];
+        currentPlaylistIndex = favIndex;
+        currentFavoriteIndex = favIndex;
+        // console.log('🎵 Playing from favorites context');
+    } else {
+        // Song is from main list - set context to all songs
         playlistMode = 'all';
-        currentPlaylist = [...allSongsOnPage];  // or actual song list you want
-    }
+        currentPlaylist = [...allSongsOnPage];
+        currentPlaylistIndex = allSongsOnPage.findIndex(s => s.fileName === song.fileName);
 
-// Find index
-    currentPlaylistIndex = currentPlaylist.findIndex(s => s.fileName === song.fileName);
-
-// If not found, insert song at correct place
-    if (currentPlaylistIndex === -1) {
-        currentPlaylist.push(song);
-        currentPlaylistIndex = currentPlaylist.length - 1;
+        // If not found in current page, add it
+        if (currentPlaylistIndex === -1) {
+            currentPlaylist.push(song);
+            currentPlaylistIndex = currentPlaylist.length - 1;
+        }
+        // console.log('🎵 Playing from main list context');
     }
 
     playSong(song);
-
 }
 
 async function searchSongs() {
@@ -1650,24 +1715,16 @@ function displaySearchResults(songs) {
         songItem.dataset.songname = song.songName;
         songItem.dataset.hero = song.hero;
         songItem.dataset.heroine = song.heroine;
+        songItem.dataset.singer = song.singer;
+        songItem.dataset.movie = song.movie;
         songItem.dataset.language = song.language;
 
         const isFavorite = roomFavorites.some(f => f.fileName === song.fileName);
 
         songItem.innerHTML = `
-            <div class="song-item-content" onclick="
-    if (${isOrganizer}) {
-        playlistMode = 'all';
-        currentPlaylist = searchSongsList;
-        currentPlaylistIndex = currentPlaylist.findIndex(s => s.fileName === '${song.fileName}');
-        handleSongClick(this.parentElement);
-        closeSearchDrawer();
-    } else {
-        ToastNotification.warning('Only the organizer can play songs');
-    }
-">
+            <div class="song-item-content" onclick="handleSearchSongClick(this.parentElement)">
                 <div class="song-item-title">${song.songName} • ${song.language}</div>
-                <div class="song-item-info">${song.hero || song.singer} • ${ song.movie || song.singer } • ${song.language || 'Unknown'}</div>
+                <div class="song-item-info">${song.hero || song.singer} • ${song.movie || song.singer} • ${song.language || 'Unknown'}</div>
             </div>
             <button class="favorite-heart ${isFavorite ? 'bi bi-heart-fill' : 'bi bi-heart'}" 
                     onclick="event.stopPropagation(); toggleFavorite({
@@ -1685,6 +1742,53 @@ function displaySearchResults(songs) {
 
         searchResults.appendChild(songItem);
     });
+}
+
+// ==================== NEW: Handle Search Song Click ====================
+function handleSearchSongClick(element) {
+    if (!isOrganizer) {
+        ToastNotification.warning('Only the organizer can play songs');
+        return;
+    }
+
+    const song = {
+        fileName: element.dataset.filename,
+        songName: element.dataset.songname,
+        hero: element.dataset.hero,
+        heroine: element.dataset.heroine,
+        singer: element.dataset.singer,
+        movie: element.dataset.movie,
+        language: element.dataset.language
+    };
+
+    if (isPlayingFavorites) {
+        stopFavoritesPlaylist();
+    }
+
+    // Check if song is from favorites list
+    const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
+    if (favIndex !== -1) {
+        // Song is in favorites - set context to favorites
+        playlistMode = 'favorites';
+        currentPlaylist = [...roomFavorites];
+        currentPlaylistIndex = favIndex;
+        currentFavoriteIndex = favIndex;
+        // console.log('🎵 Playing from favorites context (via search)');
+    } else {
+        // Set context to search results
+        playlistMode = 'search';
+        currentPlaylist = [...searchSongsList];
+        currentPlaylistIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
+
+        if (currentPlaylistIndex === -1) {
+            currentPlaylist.push(song);
+            currentPlaylistIndex = currentPlaylist.length - 1;
+        }
+        // console.log('🎵 Playing from search results context');
+    }
+
+    playSong(song);
+    closeSearchDrawer();
 }
 
 // ==================== UTILITY FUNCTIONS ====================

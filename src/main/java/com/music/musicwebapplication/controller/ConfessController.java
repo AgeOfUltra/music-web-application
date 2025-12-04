@@ -88,7 +88,7 @@ public class ConfessController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
-        attribute.addFlashAttribute("emailStatus", "Successfully sent your confession!");
+        attribute.addFlashAttribute("emailStatus", "Confess sent for approval!");
         attribute.addFlashAttribute("requestData", requestData);
         return new ModelAndView("redirect:/app/music/dashboard?status=sentSuccess");
     }

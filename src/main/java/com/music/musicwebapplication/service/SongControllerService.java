@@ -107,29 +107,13 @@ public class SongControllerService {
         return savedSong.get();
     }
 
-//    public ResponseInputStream<GetObjectResponse> getSongStream(String objectKey){
-//
-//        Optional<Song> song = repo.findSongByFileName(objectKey);
-//        if(song.isEmpty()){
-//            log.info("Song not found in DB with name {}",objectKey);
-//           throw new SongNotFoundException("Song not found");
-//        }
-//
-//        GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
-//                .bucket(bucketName)
-//                .key(objectKey)
-//                .build();
-//        return client.getObject(getObjectRequest);
-//
-//    }
-
     @Cacheable(
             value = "AllSongsPaged",
             key = "{#page, #size}"
     )
-    public Page<Song> getAllSongsName(int page, int size) {
+    public List<Song> getAllSongsName(int page, int size) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("songName").ascending());
-        return  repo.findAll(pageable);
+        return  repo.findAll(pageable).getContent();
     }
 
     @Cacheable(value="CachedSongs",key="#songName")
