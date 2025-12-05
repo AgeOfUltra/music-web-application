@@ -37,6 +37,12 @@ let playlistMode = null;
 let typing = false;
 let typingTimeout;
 
+let lastSyncRequest = 0;
+let syncRequestCooldown = 2000; // 2 seconds
+
+let syncRetryCount = 0;
+const MAX_SYNC_RETRIES = 3;
+
 function toggleFavorite(song, heartIcon) {
     const songId = song.fileName;
     const existingFavorite = roomFavorites.find(f => f.fileName === songId);
@@ -464,6 +470,12 @@ function onRoleChange() {
         bindAudioHandlersForRole(desired);
     }
 
+    if (!isOrganizer) {
+        console.log('🔄 Role changed to participant - requesting sync');
+        setTimeout(() => {
+            requestPlaybackStateSync();
+        }, 500);
+    }
     // console.log('🎭 Role changed - isOrganizer:', isOrganizer);
 }
 
@@ -1292,6 +1304,19 @@ function connectWebSocket(token) {
             // Playback commands
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
                 const playbackMsg = JSON.parse(message.body);
+
+                // ✅ NEW: If non-organizer receives PLAY command and has no current song, sync immediately
+                if (!isOrganizer &&
+                    playbackMsg.action === 'PLAY' &&
+                    (!currentSongData || currentSongData.songFileName !== playbackMsg.songFileName)) {
+
+                    console.log('🔄 New song detected - requesting immediate sync');
+
+                    // Small delay to let backend update state
+                    setTimeout(() => {
+                        requestPlaybackStateSync();
+                    }, 300);
+                }
                 handlePlaybackCommand(playbackMsg);
             });
 
@@ -1328,6 +1353,21 @@ function connectWebSocket(token) {
                 content: `${currentUsername} joined the room`
             }));
 
+            stompClient.subscribe(`/topic/chat/${currentRoomName}/playback/state`, (message) => {
+                const stateMsg = JSON.parse(message.body);
+                handlePlaybackStateSync(stateMsg);
+            });
+
+            setTimeout(() => {
+                requestPlaybackStateSync();
+            }, 1000 + Math.random() * 500);
+
+            setTimeout(() => {
+                if (!currentSongData && !isOrganizer) {
+                    console.log('🔄 Second sync attempt - checking for active playback');
+                    requestPlaybackStateSync();
+                }
+            }, 3500);
             // Request current favorites state
             requestFavoritesSync();
 
@@ -1341,9 +1381,203 @@ function connectWebSocket(token) {
                     // console.log('🔄 Attempting to reconnect...');
                     connectWebSocket(token);
                 }
-            }, 3000);
+            }, 500 + Math.random() * 700);
         }
     );
+}
+
+function requestPlaybackStateSync() {
+    if (!stompClient || !stompClient.connected) {
+        console.warn('⚠️ Cannot request playback sync - WebSocket not connected');
+        return;
+    }
+
+    // Cooldown check to prevent spam
+    const now = Date.now();
+    if (now - lastSyncRequest < syncRequestCooldown) {
+        console.log('⏳ Sync request on cooldown');
+        return;
+    }
+
+    lastSyncRequest = now;
+
+    const syncRequest = {
+        requester: currentUsername,
+        timestamp: now
+    };
+
+    try {
+        stompClient.send(
+            `/app/music/chat/${currentRoomName}/playback/sync`,
+            {},
+            JSON.stringify(syncRequest)
+        );
+        console.log('🔄 Requested playback state sync');
+    } catch (error) {
+        console.error('❌ Error requesting playback sync:', error);
+    }
+}
+
+function handlePlaybackStateSync(stateMsg) {
+    console.log('📥 Received playback state sync:', stateMsg);
+
+    // Check if there's active playback
+    if (!stateMsg.isPlaying || !stateMsg.songFileName) {
+        console.log('ℹ️ No active playback to sync');
+        if (syncRetryCount < MAX_SYNC_RETRIES) {
+            syncRetryCount++;
+            console.log(`🔄 Retrying sync (attempt ${syncRetryCount}/${MAX_SYNC_RETRIES})...`);
+
+            setTimeout(() => {
+                requestPlaybackStateSync();
+            }, 2000 * syncRetryCount); // Exponential backoff: 2s, 4s, 6s
+        } else {
+            ToastNotification.info('No song currently playing');
+            syncRetryCount = 0; // Reset counter
+        }
+        return;
+    }
+
+    syncRetryCount = 0;
+
+    // If we're the organizer, ignore sync messages (we control playback)
+    if (isOrganizer) {
+        console.log('⏭️ Ignoring sync as organizer');
+        return;
+    }
+
+    // ✅ ADD MISSING CHECK: If sync is from a user who left, ignore
+    if (stateMsg.organizer === lastUserLeft) {
+        console.warn('⏭️ Ignoring sync from user who left:', stateMsg.organizer);
+        return;
+    }
+
+    const stillInRoom = currentParticipants.some(p => p.userName === stateMsg.organizer);
+    if (!stillInRoom) {
+        console.warn('⏭️ Ignoring stale sync from user who left:', stateMsg.organizer);
+        return;
+    }
+
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) {
+        console.error('❌ Audio player not found');
+        return;
+    }
+
+    // Save current song data
+    currentSongData = {
+        songFileName: stateMsg.songFileName,
+        songName: stateMsg.songName,
+        hero: stateMsg.hero,
+        heroine: stateMsg.heroine,
+        language: stateMsg.language,
+        movie: stateMsg.movie
+    };
+
+    // Update UI
+    updateCurrentSongDisplay(
+        stateMsg.songName,
+        stateMsg.hero,
+        stateMsg.language,
+        stateMsg.movie,
+        stateMsg.singer
+    );
+
+    // Show notification
+    ToastNotification.info(`🎵 Syncing to: ${stateMsg.songName}`);
+
+    // Set audio source
+    const newSrc = `/app/music/audio/public/streamSong/${stateMsg.songFileName}`;
+
+    ignoreLocalEvents = true;
+
+    // Check if source needs changing
+    let sourceChanged = true;
+    try {
+        const existingPath = audioPlayer.src ? new URL(audioPlayer.src).pathname : '';
+        const newPath = new URL(newSrc, window.location.origin).pathname;
+        sourceChanged = existingPath !== newPath;
+    } catch (err) {
+        sourceChanged = audioPlayer.src !== newSrc;
+    }
+
+    console.log('🔄 Source changed:', sourceChanged);
+
+    if (sourceChanged) {
+        audioPlayer.src = newSrc;
+    }
+
+    // Calculate current timestamp
+    const currentTimestamp = stateMsg.timestamp + (Date.now() - stateMsg.serverTime);
+    const startTime = currentTimestamp / 1000;
+
+    console.log(`⏱️ Syncing to timestamp: ${startTime.toFixed(2)}s`);
+
+    if (sourceChanged) {
+        // Wait for metadata to load before seeking
+        const metadataHandler = () => {
+            audioPlayer.currentTime = startTime;
+
+            if (stateMsg.isPaused) {
+                audioPlayer.pause();
+                console.log('⏸️ Synced to paused state');
+            } else {
+                const playPromise = audioPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('▶️ Synced playback started');
+                            ignoreLocalEvents = false;
+                        })
+                        .catch(err => {
+                            console.error('❌ Sync play error:', err.message);
+                            ignoreLocalEvents = false;
+                        });
+                } else {
+                    ignoreLocalEvents = false;
+                }
+            }
+
+            audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
+        };
+
+        audioPlayer.addEventListener('loadedmetadata', metadataHandler, {once: true});
+
+        // Timeout fallback
+        setTimeout(() => {
+            audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
+            audioPlayer.currentTime = startTime;
+
+            if (!stateMsg.isPaused) {
+                audioPlayer.play().catch(err => console.error('Timeout play error:', err));
+            }
+            ignoreLocalEvents = false;
+        }, 5000);
+
+    } else {
+        // Same source - just seek
+        audioPlayer.currentTime = startTime;
+
+        if (stateMsg.isPaused) {
+            audioPlayer.pause();
+            ignoreLocalEvents = false;
+        } else {
+            const playPromise = audioPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log('▶️ Synced playback (same source)');
+                        ignoreLocalEvents = false;
+                    })
+                    .catch(err => {
+                        console.error('❌ Sync play error:', err.message);
+                        ignoreLocalEvents = false;
+                    });
+            } else {
+                ignoreLocalEvents = false;
+            }
+        }
+    }
 }
 
 function handleTypingIndicator(data) {

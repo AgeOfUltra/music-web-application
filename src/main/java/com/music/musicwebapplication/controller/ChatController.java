@@ -1,447 +1,421 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.dto.*;
+import com.music.musicwebapplication.dto.ChatMessage;
+import com.music.musicwebapplication.chatDto.PlaybackState;
+import com.music.musicwebapplication.chatDto.PlaybackSyncRequest;
+import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
-import com.music.musicwebapplication.repo.RoomRepo;
-import lombok.RequiredArgsConstructor;
+import com.music.musicwebapplication.service.RoomService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.handler.annotation.*;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Controller
 @Slf4j
-@RequiredArgsConstructor
+@Controller
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final RoomRepo roomRepo;
+    private final RoomService roomService;
 
-    // ==================== IN-MEMORY FAVORITES STORAGE ====================
-    private final Map<String, FavoritesMessage> roomFavoritesCache = new ConcurrentHashMap<>();
+    // Store current playback state for each room
+    // Key: roomName, Value: PlaybackState
+    private final Map<String, PlaybackState> roomPlaybackStates = new ConcurrentHashMap<>();
 
-    // ==================== CHAT MESSAGING ====================
+    public ChatController(SimpMessagingTemplate messagingTemplate, RoomService roomService) {
+        this.messagingTemplate = messagingTemplate;
+        this.roomService = roomService;
+    }
+
+    // ==================== CHAT MESSAGES ====================
+
     @MessageMapping("/chat/{roomName}/send")
-    public void handleChatMessage(
-            @DestinationVariable String roomName,
-            @Payload ChatMessage message,
-            @Header(value = "simpSessionAttributes", required = false) Map<String, Object> sessionAttributes) {
+    public void sendMessage(@DestinationVariable String roomName,
+                            @Payload ChatMessage chatMessage) {
 
-        try {
-            String username = null;
+        log.info("💬 Chat message from {} in room {}: {}",
+                chatMessage.getSender(), roomName, chatMessage.getContent());
 
-            if (message.getSender() != null && !message.getSender().isEmpty()) {
-                username = message.getSender();
-                log.info("✅ Got username from message sender: {}", username);
-            } else {
-                username = extractUsername(sessionAttributes);
-                if (username != null) {
-                    log.info("✅ Got username from session: {}", username);
-                }
-            }
+        chatMessage.setType(String.valueOf(ChatMessage.MessageType.CHAT));
 
-            if (username == null || username.isEmpty()) {
-                log.error("❌ Username not found in message or session");
-                return;
-            }
-
-            message.setSender(username);
-            message.setType("CHAT");
-            message.setTimestamp(System.currentTimeMillis());
-
-            log.info("💬 Chat message from: {} in room: {}", username, roomName);
-
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName, message);
-
-        } catch (Exception e) {
-            log.error("❌ Error handling chat message in room {}: {}", roomName, e.getMessage(), e);
-        }
-    }
-
-    // ==================== PLAYBACK CONTROL ====================
-    @MessageMapping("/chat/{roomName}/playback")
-    public void handlePlaybackCommand(
-            @DestinationVariable String roomName,
-            @Payload PlaybackMessage playbackMessage,
-            @Header(value = "simpSessionAttributes", required = false) Map<String, Object> sessionAttributes) {
-
-        try {
-            log.info("📥 Received playback message: {}", playbackMessage);
-
-            String username = null;
-
-            if (playbackMessage != null && playbackMessage.getSender() != null && !playbackMessage.getSender().isEmpty()) {
-                username = playbackMessage.getSender();
-                log.info("✅ Got username from message sender: {}", username);
-            } else if (playbackMessage != null && playbackMessage.getController() != null && !playbackMessage.getController().isEmpty()) {
-                username = playbackMessage.getController();
-                log.info("✅ Got username from message controller: {}", username);
-            } else if (sessionAttributes != null) {
-                username = extractUsername(sessionAttributes);
-                log.info("✅ Got username from session: {}", username);
-            }
-
-            if (username == null || username.isEmpty()) {
-                log.error("❌ Username not found - Message: {}, Session: {}", playbackMessage, sessionAttributes);
-                sendErrorMessage(roomName, "Username not found in session");
-                return;
-            }
-
-            if (playbackMessage.getAction() == null || playbackMessage.getAction().isEmpty()) {
-                log.warn("⚠️ Missing action in playback message for room: {}", roomName);
-                return;
-            }
-
-            playbackMessage.setController(username);
-            playbackMessage.setSender(username);
-
-            log.info("🎵 Playback action: {} by: {} in room: {}", playbackMessage.getAction(), username, roomName);
-
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/playback", playbackMessage);
-
-        } catch (Exception e) {
-            log.error("❌ Error handling playback command in room {}: {}", roomName, e.getMessage(), e);
-            sendErrorMessage(roomName, "Error processing playback command: " + e.getMessage());
-        }
-    }
-    // ==================== USER JOIN ====================
-    @MessageMapping("/chat/{roomName}/addUser")
-    public void handleUserJoin(
-            @DestinationVariable String roomName,
-            @Payload ChatMessage message,
-            @Header(value = "simpSessionAttributes", required = false) Map<String, Object> sessionAttributes) {
-
-        try {
-            String username = null;
-
-            if (message.getSender() != null && !message.getSender().isEmpty()) {
-                username = message.getSender();
-                log.info("✅ Got username from message sender: {}", username);
-            } else {
-                username = extractUsername(sessionAttributes);
-                if (username != null) {
-                    log.info("✅ Got username from session: {}", username);
-                }
-            }
-
-            if (username == null || username.isEmpty()) {
-                log.error("❌ Username not found for user join");
-                return;
-            }
-
-            message.setSender(username);
-            message.setType("JOIN");
-
-            log.info("👤 User {} joined room: {}", username, roomName);
-
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName, message);
-            broadcastParticipants(roomName);
-
-        } catch (Exception e) {
-            log.error("❌ Error handling user join in room {}: {}", roomName, e.getMessage(), e);
-        }
-    }
-
-    // ==================== USER LEAVE WITH ASYNC CLEANUP ====================
-    @MessageMapping("/chat/{roomName}/removeUser")
-    public void handleUserLeave(
-            @DestinationVariable String roomName,
-            @Payload ChatMessage message,
-            @Header(value = "simpSessionAttributes", required = false) Map<String, Object> sessionAttributes) {
-
-        try {
-            String username = null;
-
-            if (message.getSender() != null && !message.getSender().isEmpty()) {
-                username = message.getSender();
-                log.info("✅ Got username from message sender: {}", username);
-            } else {
-                username = extractUsername(sessionAttributes);
-                if (username != null) {
-                    log.info("✅ Got username from session: {}", username);
-                }
-            }
-
-            if (username == null || username.isEmpty()) {
-                log.error("❌ Username not found for user leave");
-                return;
-            }
-
-            message.setSender(username);
-            message.setType("LEAVE");
-
-            log.info("👋 User {} left room: {}", username, roomName);
-
-            // Broadcast LEAVE message
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName, message);
-
-            // Broadcast updated participant list
-            broadcastParticipants(roomName);
-
-            // Async cleanup check - non-blocking
-            asyncCleanupCheck(roomName);
-
-        } catch (Exception e) {
-            log.error("❌ Error handling user leave in room {}: {}", roomName, e.getMessage(), e);
-        }
-    }
-
-    @MessageMapping("/chat/{roomName}/typing")
-    @SendTo("/topic/chat/{roomName}/typing")
-    public TypingResponse handleTyping(
-            @DestinationVariable String roomName,
-            @Payload TypingRequest typingRequest) {
-
-        return new TypingResponse(
-                typingRequest.getSender(),
-                typingRequest.isTyping()
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName,
+                chatMessage
         );
     }
 
-    // ==================== ASYNC CLEANUP METHOD ====================
+    // ==================== USER JOIN/LEAVE ====================
 
-    /**
-     * Asynchronously checks if room is empty and cleans up if needed.
-     * This runs in a separate thread to avoid blocking the main WebSocket handler.
-     *
-     * @param roomName The name of the room to check
-     */
-    @Async("asyncTaskExecutor")
-    public void asyncCleanupCheck(String roomName) {
-        try {
-            log.debug("🔄 [ASYNC] Starting cleanup check for room: {}", roomName);
+    @MessageMapping("/chat/{roomName}/addUser")
+    public void addUser(@DestinationVariable String roomName,
+                        @Payload ChatMessage chatMessage,
+                        SimpMessageHeaderAccessor headerAccessor) {
 
-            // Wait a bit to ensure database transaction is complete
-            // Longer delay than sync version since this is non-blocking
-            Thread.sleep(200);
+        String username = chatMessage.getSender();
+        log.info("✅ User {} joining room: {}", username, roomName);
 
-            Room room = roomRepo.findRoomWithParticipantsByRoomName(roomName).orElse(null);
+        // Store username in WebSocket session
+        headerAccessor.getSessionAttributes().put("username", username);
+        headerAccessor.getSessionAttributes().put("roomName", roomName);
 
-            if (room == null) {
-                log.warn("⚠️ [ASYNC] Room not found during cleanup check: {}", roomName);
-                return;
-            }
+        chatMessage.setType(String.valueOf(ChatMessage.MessageType.JOIN));
 
-            // Check if room is empty
-            if (room.getParticipant() == null || room.getParticipant().isEmpty()) {
-                log.info("🧹 [ASYNC] Room {} is empty, cleaning up favorites", roomName);
+        // Broadcast JOIN message to all participants
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName,
+                chatMessage
+        );
 
-                // Cleanup favorites cache
-                cleanupRoomFavorites(roomName);
+        // Send updated participant list
+        broadcastParticipantList(roomName);
 
-                // Broadcast empty favorites to any straggler connections
-                broadcastEmptyFavorites(roomName);
-
-                log.info("✅ [ASYNC] Cleanup completed for room: {}", roomName);
-            } else {
-                log.debug("📊 [ASYNC] Room {} still has {} participants, skipping cleanup",
-                        roomName, room.getParticipant().size());
-            }
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("⚠️ [ASYNC] Cleanup check interrupted for room: {}", roomName);
-        } catch (Exception e) {
-            log.error("❌ [ASYNC] Error in cleanup check for room {}: {}", roomName, e.getMessage(), e);
-        }
+        log.info("📢 Broadcasted JOIN message for {} in room {}", username, roomName);
     }
 
-    // ==================== FAVORITES MANAGEMENT ====================
-    @MessageMapping("/chat/{roomName}/favorites")
-    public void handleFavorites(
-            @DestinationVariable String roomName,
-            @Payload FavoritesMessage message) {
+    @MessageMapping("/chat/{roomName}/removeUser")
+    public void removeUser(@DestinationVariable String roomName,
+                           @Payload ChatMessage chatMessage,
+                           SimpMessageHeaderAccessor headerAccessor) {
+
+        String username = chatMessage.getSender();
+        log.info("❌ User {} leaving room: {}", username, roomName);
+
+        chatMessage.setType(String.valueOf(ChatMessage.MessageType.LEAVE));
+
+        // Broadcast LEAVE message
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName,
+                chatMessage
+        );
+
+        // Check if the leaving user is the organizer
+        try {
+            Room room = roomService.getRoomDetails(roomName);
+            boolean wasOrganizer = room.getParticipant().stream()
+                    .anyMatch(p -> p.getUserName().equals(username) && p.isOrganizer());
+
+            if (wasOrganizer) {
+                // Clear playback state when organizer leaves
+                clearPlaybackState(roomName);
+                log.info("🎵 Organizer left - cleared playback state for room: {}", roomName);
+            }
+        } catch (Exception e) {
+            log.error("Error checking organizer status on leave: {}", e.getMessage());
+        }
+
+        // Remove user from room
+        try {
+            roomService.exitFromRoom(roomName, username);
+        } catch (Exception e) {
+            log.error("Error removing user from room: {}", e.getMessage());
+        }
+
+        // Send updated participant list
+        broadcastParticipantList(roomName);
+
+        log.info("📢 Broadcasted LEAVE message for {} in room {}", username, roomName);
+    }
+
+    // ==================== PLAYBACK CONTROL (ENHANCED WITH STATE TRACKING) ====================
+
+    @MessageMapping("/chat/{roomName}/playback")
+    public void handlePlayback(@DestinationVariable String roomName,
+                               @Payload Map<String, Object> playbackMessage) {
+
+        String action = (String) playbackMessage.get("action");
+        String controller = (String) playbackMessage.get("controller");
+
+        log.info("🎵 Playback command received - Room: {}, Action: {}, Controller: {}",
+                roomName, action, controller);
+
+        // Update room state based on action
+        switch (action) {
+            case "PLAY":
+                updatePlaybackState(roomName, playbackMessage, false, true);
+                log.info("▶️ PLAY command - Updated state for room: {}", roomName);
+                break;
+
+            case "PAUSE":
+                updatePlaybackState(roomName, playbackMessage, true, true);
+                log.info("⏸️ PAUSE command - Updated state for room: {}", roomName);
+                break;
+
+            case "RESUME":
+                updatePlaybackState(roomName, playbackMessage, false, true);
+                log.info("▶️ RESUME command - Updated state for room: {}", roomName);
+                break;
+
+            default:
+                log.warn("⚠️ Unknown playback action: {}", action);
+        }
+
+        // Broadcast playback command to all participants
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/playback",
+                playbackMessage
+        );
+
+        log.info("📤 Playback command broadcasted to room: {}", roomName);
+    }
+
+    // ==================== NEW: PLAYBACK STATE SYNC ====================
+
+    @MessageMapping("/chat/{roomName}/playback/sync")
+    public void handleSyncRequest(@DestinationVariable String roomName,
+                                  @Payload PlaybackSyncRequest syncRequest) {
+
+        if (syncRequest == null || !syncRequest.isValid()) {
+            log.warn("⚠️ Invalid sync request received for room: {}", roomName);
+            return;
+        }
 
         try {
-            log.info("⭐ Received favorites update for room: {} - Action: {} by: {}",
-                    roomName, message.getAction(), message.getUsername());
+            Room room = roomService.getRoomDetails(roomName);
+            boolean userExists = room.getParticipant().stream()
+                    .anyMatch(p -> p.getUserName().equals(syncRequest.getRequester()));
 
-            // Store the current state in cache
-            roomFavoritesCache.put(roomName, message);
-
-            // Broadcast to all participants in the room
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/favorites", message);
-
-            log.info("📤 Broadcasted favorites update to room: {}", roomName);
-
+            if (!userExists) {
+                log.warn("⚠️ Sync request from non-participant {}: ignored",
+                        syncRequest.getRequester());
+                return;
+            }
         } catch (Exception e) {
-            log.error("❌ Error handling favorites for room {}: {}", roomName, e.getMessage(), e);
+            log.error("❌ Error validating sync request: {}", e.getMessage());
+            return;
         }
+
+        log.info("🔄 Sync request from {} in room: {}", syncRequest.getRequester(), roomName);
+
+        PlaybackState currentState = roomPlaybackStates.get(roomName);
+
+        if (currentState == null || !currentState.isPlaying()) {
+            log.info("ℹ️ No active playback in room: {}", roomName);
+
+            // Send empty state to indicate no playback
+            PlaybackState emptyState = PlaybackState.builder()
+                    .isPlaying(false)
+                    .build();
+
+            messagingTemplate.convertAndSend(
+                    "/topic/chat/" + roomName + "/playback/state",
+                    emptyState
+            );
+            return;
+        }
+
+        // Calculate current timestamp accounting for elapsed time
+        long currentTime = System.currentTimeMillis();
+        long elapsed = currentTime - currentState.getServerTime();
+
+        // If paused, don't add elapsed time to timestamp
+        long adjustedTimestamp = currentState.getTimestamp() +
+                (currentState.isPaused() ? 0 : elapsed);
+
+        // Create updated state with current timestamp
+        PlaybackState syncState = PlaybackState.builder()
+                .songFileName(currentState.getSongFileName())
+                .songName(currentState.getSongName())
+                .hero(currentState.getHero())
+                .heroine(currentState.getHeroine())
+                .singer(currentState.getSinger())
+                .movie(currentState.getMovie())
+                .language(currentState.getLanguage())
+                .organizer(currentState.getOrganizer())
+                .timestamp(adjustedTimestamp)
+                .serverTime(currentTime)
+                .isPlaying(true)
+                .isPaused(currentState.isPaused())
+                .build();
+
+        // Send state to all participants in the room
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/playback/state",
+                syncState
+        );
+
+        log.info("✅ Sent playback state to {}: {} at {}ms (paused: {})",
+                syncRequest.getRequester(),
+                syncState.getSongName(),
+                adjustedTimestamp,
+                syncState.isPaused());
+    }
+
+    // ==================== SKIP COMMANDS ====================
+
+    @MessageMapping("/chat/{roomName}/skip")
+    public void handleSkipCommand(@DestinationVariable String roomName,
+                                  @Payload Map<String, Object> skipMessage) {
+
+        String action = (String) skipMessage.get("action");
+        String controller = (String) skipMessage.get("controller");
+
+        log.info("⏭️ Skip command received - Room: {}, Action: {}, Controller: {}",
+                roomName, action, controller);
+
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/skip",
+                skipMessage
+        );
+
+        log.info("📤 Skip command broadcasted to room: {}", roomName);
+    }
+
+    // ==================== TYPING INDICATOR ====================
+
+    @MessageMapping("/chat/{roomName}/typing")
+    public void handleTyping(@DestinationVariable String roomName,
+                             @Payload Map<String, Object> typingMessage) {
+
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/typing",
+                typingMessage
+        );
+    }
+
+    // ==================== ROOM FAVORITES ====================
+
+    @MessageMapping("/chat/{roomName}/favorites")
+    public void handleFavorites(@DestinationVariable String roomName,
+                                @Payload Map<String, Object> favoritesMessage) {
+
+        String action = (String) favoritesMessage.get("action");
+        String username = (String) favoritesMessage.get("username");
+
+        log.info("❤️ Favorites update - Room: {}, Action: {}, User: {}",
+                roomName, action, username);
+
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/favorites",
+                favoritesMessage
+        );
+
+        log.info("📤 Favorites update broadcasted to room: {}", roomName);
     }
 
     @MessageMapping("/chat/{roomName}/favorites/sync")
-    public void syncFavorites(
-            @DestinationVariable String roomName,
-            @Payload SyncRequest request) {
+    public void handleFavoritesSync(@DestinationVariable String roomName,
+                                    @Payload Map<String, Object> syncRequest) {
 
-        try {
-            log.info("🔄 Sync request from user: {} for room: {}", request.getUsername(), roomName);
+        log.info("🔄 Favorites sync request in room: {}", roomName);
 
-            // Get cached favorites for this room, or return empty list
-            FavoritesMessage cachedFavorites = roomFavoritesCache.get(roomName);
+        // Here you would typically fetch favorites from database/cache
+        // For now, just broadcast a SYNC action to trigger client-side state sharing
+        Map<String, Object> syncMessage = Map.of(
+                "action", "SYNC",
+                "username", "system",
+                "favorites", List.of() // Empty list, clients will update from their state
+        );
 
-            FavoritesMessage syncMessage;
-            if (cachedFavorites != null && cachedFavorites.getFavorites() != null) {
-                // Send current favorites state to the requester
-                syncMessage = new FavoritesMessage(
-                        "SYNC",
-                        cachedFavorites.getFavorites(),
-                        null,
-                        "system",
-                        System.currentTimeMillis()
-                );
-                log.info("✅ Sending {} cached favorites to user: {}",
-                        cachedFavorites.getFavorites().size(), request.getUsername());
-            } else {
-                // No favorites yet, send empty list
-                syncMessage = new FavoritesMessage(
-                        "SYNC",
-                        new ArrayList<>(),
-                        null,
-                        "system",
-                        System.currentTimeMillis()
-                );
-                log.info("📭 No favorites cached for room: {}, sending empty list", roomName);
-            }
-
-            // Broadcast to all (or use convertAndSendToUser if you want to target specific user)
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/favorites", syncMessage);
-
-        } catch (Exception e) {
-            log.error("❌ Error syncing favorites for room {}: {}", roomName, e.getMessage(), e);
-        }
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + roomName + "/favorites",
+                syncMessage
+        );
     }
 
-    // ==================== BROADCAST PARTICIPANTS ====================
-    protected void broadcastParticipants(String roomName) {
-        try {
-            Room room = roomRepo.findRoomWithParticipantsByRoomName(roomName).orElse(null);
-
-            if (room != null && room.getParticipant() != null && !room.getParticipant().isEmpty()) {
-                log.info("📡 Broadcasting {} participants for room: {}", room.getParticipant().size(), roomName);
-
-                messagingTemplate.convertAndSend(
-                        "/topic/chat/" + roomName + "/participants",
-                        room.getParticipant()
-                );
-            } else {
-                log.warn("⚠️ Room not found or has no participants: {}", roomName);
-            }
-        } catch (Exception e) {
-            log.error("❌ Error broadcasting participants for room {}: {}", roomName, e.getMessage(), e);
-        }
-    }
-
-    // ==================== CLEANUP METHODS ====================
+    // ==================== HELPER METHODS ====================
 
     /**
-     * Cleans up room favorites from cache
+     * Update internal playback state for a room
      */
-    public void cleanupRoomFavorites(String roomName) {
-        try {
-            FavoritesMessage removed = roomFavoritesCache.remove(roomName);
+    private void updatePlaybackState(String roomName,
+                                     Map<String, Object> playbackMessage,
+                                     boolean isPaused,
+                                     boolean isPlaying) {
 
-            if (removed != null && removed.getFavorites() != null) {
-                log.info("🧹 Cleaned up {} favorites for room: {}",
-                        removed.getFavorites().size(), roomName);
-            } else {
-                log.info("🧹 No favorites to clean up for room: {}", roomName);
-            }
+        String songFileName = (String) playbackMessage.get("songFileName");
 
-        } catch (Exception e) {
-            log.error("❌ Error cleaning up favorites for room {}: {}", roomName, e.getMessage(), e);
+        if (songFileName == null || songFileName.isEmpty()) {
+            log.warn("⚠️ No songFileName in playback message, skipping state update");
+            return;
         }
+
+        Object timestampObj = playbackMessage.get("timestamp");
+        long timestamp = 0;
+
+        if (timestampObj instanceof Number) {
+            timestamp = ((Number) timestampObj).longValue();
+        }
+
+        PlaybackState state = PlaybackState.builder()
+                .songFileName(songFileName)
+                .songName((String) playbackMessage.get("songName"))
+                .hero((String) playbackMessage.get("hero"))
+                .heroine((String) playbackMessage.get("heroine"))
+                .singer((String) playbackMessage.get("singer"))
+                .movie((String) playbackMessage.get("movie"))
+                .language((String) playbackMessage.get("language"))
+                .organizer((String) playbackMessage.get("controller"))
+                .timestamp(timestamp)
+                .serverTime(System.currentTimeMillis())
+                .isPlaying(isPlaying)
+                .isPaused(isPaused)
+                .build();
+
+        roomPlaybackStates.put(roomName, state);
+
+        log.info("💾 Updated playback state for room {}: {} ({}ms) - Playing: {}, Paused: {}",
+                roomName,
+                state.getSongName(),
+                timestamp,
+                isPlaying,
+                isPaused);
     }
 
     /**
-     * Broadcasts empty favorites message to notify all clients
+     * Clear playback state for a room (called when organizer leaves or room ends)
      */
-    private void broadcastEmptyFavorites(String roomName) {
+    public void clearPlaybackState(String roomName) {
+        PlaybackState removedState = roomPlaybackStates.remove(roomName);
+
+        if (removedState != null) {
+            log.info("🗑️ Cleared playback state for room {}: {}",
+                    roomName, removedState.getSongName());
+        } else {
+            log.info("🗑️ No playback state to clear for room: {}", roomName);
+        }
+    }
+
+    /**
+     * Get current playback state for a room (for debugging/monitoring)
+     */
+    public PlaybackState getPlaybackState(String roomName) {
+        return roomPlaybackStates.get(roomName);
+    }
+
+    /**
+     * Broadcast updated participant list to all users in the room
+     */
+    private void broadcastParticipantList(String roomName) {
         try {
-            FavoritesMessage emptyMessage = new FavoritesMessage(
-                    "CLEAR",
-                    new ArrayList<>(),
-                    null,
-                    "system",
-                    System.currentTimeMillis()
-            );
+            Room room = roomService.getRoomDetails(roomName);
+            List<Participant> participants = room.getParticipant();
 
             messagingTemplate.convertAndSend(
-                    "/topic/chat/" + roomName + "/favorites",
-                    emptyMessage
+                    "/topic/chat/" + roomName + "/participants",
+                    participants
             );
 
-            log.info("📤 Broadcasted empty favorites for room: {}", roomName);
+            log.info("📋 Broadcasted participant list for room {}: {} participants",
+                    roomName, participants.size());
 
         } catch (Exception e) {
-            log.error("❌ Error broadcasting empty favorites for room {}: {}", roomName, e.getMessage(), e);
+            log.error("❌ Error broadcasting participant list for room {}: {}",
+                    roomName, e.getMessage());
         }
-    }
-
-    // ==================== UTILITY METHODS ====================
-
-    private String extractUsername(Map<String, Object> sessionAttributes) {
-        if (sessionAttributes == null) {
-            log.warn("⚠️ Session attributes not available");
-            return null;
-        }
-
-        Object username = sessionAttributes.get("username");
-        return username != null ? (String) username : null;
-    }
-
-    private void sendErrorMessage(String roomName, String errorContent) {
-        try {
-            PlaybackMessage errorMsg = new PlaybackMessage();
-            errorMsg.setAction("ERROR");
-            errorMsg.setContent(errorContent);
-
-            messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/playback", errorMsg);
-        } catch (Exception e) {
-            log.error("❌ Error sending error message: {}", e.getMessage());
-        }
-    }
-
-    // ==================== PUBLIC API FOR MANUAL CLEANUP ====================
-
-    /**
-     * Public method to manually trigger cleanup for a specific room.
-     * Can be called from other services or scheduled tasks.
-     *
-     * @param roomName The name of the room to cleanup
-     */
-    public void manualCleanupRoom(String roomName) {
-        log.info("🔧 Manual cleanup triggered for room: {}", roomName);
-        asyncCleanupCheck(roomName);
     }
 
     /**
-     * Get current cache statistics for monitoring
+     * Clean up room resources (call this when room is deleted)
      */
-    public Map<String, Object> getCacheStatistics() {
-        Map<String, Object> stats = new ConcurrentHashMap<>();
-        stats.put("totalRooms", roomFavoritesCache.size());
-        stats.put("roomNames", new ArrayList<>(roomFavoritesCache.keySet()));
-
-        int totalFavorites = roomFavoritesCache.values().stream()
-                .filter(msg -> msg.getFavorites() != null)
-                .mapToInt(msg -> msg.getFavorites().size())
-                .sum();
-
-        stats.put("totalFavorites", totalFavorites);
-
-        log.debug("📊 Cache stats: {}", stats);
-        return stats;
-    }
-
-    @MessageMapping("/chat/{roomName}/skip")
-    @SendTo("/topic/chat/{roomName}/skip")
-    public SkipMessage handleSkip(@DestinationVariable String roomName, SkipMessage message) {
-        return message;
+    public void cleanupRoom(String roomName) {
+        clearPlaybackState(roomName);
+        log.info("🧹 Cleaned up resources for room: {}", roomName);
     }
 }
