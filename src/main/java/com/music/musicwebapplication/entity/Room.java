@@ -29,7 +29,7 @@ public class Room {
     @LastModifiedDate
     @Column(insertable = false)
     private LocalDateTime modifiedAt;
-    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL,orphanRemoval = true)
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL,orphanRemoval = true,fetch = FetchType.EAGER)
     private List<Participant> participant = new ArrayList<>();
 
 }

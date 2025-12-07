@@ -1,5 +1,6 @@
 package com.music.musicwebapplication.service;
 
+import com.music.musicwebapplication.controller.ChatController;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.exception.RoomManageException;
@@ -20,12 +21,13 @@ public class RoomService {
     private final RoomRepo repo;
     private final ParticipantRepo participantRepo;
     private final ConfessService serviceConfess;
+    private final PlaybackStateService playbackStateService;
 
-
-    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess) {
+    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService) {
         this.repo = repo;
         this.participantRepo = participantRepo;
         this.serviceConfess = serviceConfess;
+        this.playbackStateService = playbackStateService;
     }
     @Transactional
     public Room createRoom(Room room){
@@ -68,6 +70,7 @@ public class RoomService {
         return participantRepo.save(participant);
     }
 
+
     @Transactional
     public boolean exitFromRoom(String roomName, String userName) {
 
@@ -84,13 +87,18 @@ public class RoomService {
         boolean isOrganizer = leavingUser.isOrganizer();
         int currentSize = participants.size();
 
-
+        // ---------- LAST ORGANIZER: DELETE ROOM + REDIS ----------
         if (currentSize == 1 && isOrganizer) {
             repo.delete(room);
+
+            // ✅ Clear BOTH favorites AND playback state
+            playbackStateService.clearFavorites(roomName);
+            playbackStateService.clearPlaybackState(roomName);  // ✅ Added
+
             return true;
         }
 
-
+        // ---------- TRANSFER ORGANIZER ROLE ----------
         if (isOrganizer && currentSize > 1) {
             participants.stream()
                     .filter(p -> !p.getUserName().equals(userName))
@@ -101,7 +109,7 @@ public class RoomService {
                     });
         }
 
-
+        // ---------- REMOVE PARTICIPANT ----------
         participants.remove(leavingUser);
         leavingUser.setRoom(null);
         leavingUser.setOrganizer(false);
@@ -110,6 +118,7 @@ public class RoomService {
 
         return true;
     }
+
 
     @Transactional
     public Room getRoomDetails(String roomName){

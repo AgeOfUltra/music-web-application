@@ -1,15 +1,19 @@
 package com.music.musicwebapplication.chatDto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PlaybackState {
 
     // Song information
@@ -56,5 +60,31 @@ public class PlaybackState {
                 songName != null &&
                 !songName.isEmpty();
     }
+    public static PlaybackState fromMap(Map<String, Object> msg) {
+        PlaybackState state = new PlaybackState();
+
+        state.setSongFileName((String) msg.get("songFileName"));
+        state.setSongName((String) msg.get("songName"));
+        state.setHero((String) msg.get("hero"));
+        state.setHeroine((String) msg.get("heroine"));
+        state.setMovie((String) msg.get("movie"));
+        state.setSinger((String) msg.get("singer"));
+        state.setLanguage((String) msg.get("language"));
+
+        String action = (String) msg.get("action");
+        state.setPlaying("PLAY".equals(action) || "RESUME".equals(action));
+        state.setPaused("PAUSE".equals(action));
+
+        Object ts = msg.get("timestamp");
+        state.setTimestamp(ts instanceof Number ? ((Number) ts).longValue() : 0L);
+
+        state.setOrganizer((String) msg.get("controller"));
+
+        // ✅ Set serverTime to current time when converting from map
+        state.setServerTime(System.currentTimeMillis());
+
+        return state;
+    }
+
 }
 

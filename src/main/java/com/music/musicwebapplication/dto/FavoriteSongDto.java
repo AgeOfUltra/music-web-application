@@ -1,13 +1,15 @@
 package com.music.musicwebapplication.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FavoriteSong {
+@Builder
+public class FavoriteSongDto {
     private String fileName;
     private String songName;
     private String hero;
@@ -17,4 +19,6 @@ public class FavoriteSong {
     private String language;
     private String requestedBy;     // Username who added this favorite
     private Long requestedAt;       // Timestamp when added
+
+
 }
