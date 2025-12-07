@@ -190,21 +190,40 @@ public class PublicLoginController {
         return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
     }
 
+
     @GetMapping("/logout")
     public String logoutUser(HttpServletResponse response, HttpServletRequest request) {
 
         String username = loginService.extractUsernameFromJwt(request);
 
         if (username != null) {
+            try {
+                // Exit from room if in one (handles WebSocket notifications & Redis cleanup)
+                Optional<String> leftRoom = roomService.exitFromRoomWithNotification(username);
 
-            Optional<String> leftRoom = roomService.exitFromRoomLogoutHandler(username);
-            sessionService.updateRoomName(username, null);
-            sessionService.deleteUserSession(username);
+                if (leftRoom.isPresent()) {
+                    log.info("User {} exited room {} during logout", username, leftRoom.get());
+                }
+
+                // Clear user session from DB
+                sessionService.updateRoomName(username, null);
+                sessionService.deleteUserSession(username);
+
+                // ✅ Clear user session from Redis
+//                playbackStateService.clearUserSession(username);
+
+                log.info("✅ User {} logged out successfully", username);
+
+            } catch (Exception e) {
+                log.error("Error during logout for user {}: {}", username, e.getMessage());
+                // Continue with logout even if room exit fails
+            }
         }
 
-        // 4. remove JWT cookie
+        // Remove JWT cookie
         ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
+                .secure(true) // Enable in production (HTTPS)
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(0)

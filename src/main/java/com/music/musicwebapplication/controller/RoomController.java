@@ -24,6 +24,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -249,7 +250,44 @@ public class RoomController {
         return ResponseEntity.ok("Room cleared");
     }
 
+    @DeleteMapping("/room/exitRoom")
+    public ResponseEntity<?> exitRoom(HttpServletRequest request) {
 
+        String username = loginService.extractUsernameFromJwt(request);
+
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Unauthorized"));
+        }
+
+        try {
+            // Exit from room with notifications and Redis cleanup
+            Optional<String> leftRoom = rService.exitFromRoomWithNotification(username);
+
+            if (leftRoom.isEmpty()) {
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "message", "Not in any room or already exited"
+                ));
+            }
+
+            // Clear room name from session (but keep user session intact)
+            sessionService.updateRoomName(username, null);
+
+            log.info("✅ User {} successfully exited room {}", username, leftRoom.get());
+
+            return ResponseEntity.ok().body(Map.of(
+                    "success", true,
+                    "message", "Successfully exited from room",
+                    "roomName", leftRoom.get()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error exiting room for user {}: {}", username, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error exiting room"));
+        }
+    }
 
 
 }

@@ -778,10 +778,6 @@ function handlePlaybackCommand(playbackMsg) {
     }, 10000);
 }
 
-function updatePlaylistContext(song, index = 0, mode = null) {
-    currentPlaylistIndex = index;
-    playlistMode = mode;
-}
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
     const newSrc = `/app/music/audio/public/streamSong/${playbackMsg.songFileName}`;
@@ -2084,25 +2080,45 @@ function safeDisconnectWebSocket() {
 }
 
 async function handleBack() {
+    if (isClosing) return; // Prevent duplicate calls
+
     try {
         allowUnload = true;
         isClosing = true;
 
-        if (participantRefreshInterval) clearInterval(participantRefreshInterval);
-
-        safeDisconnectWebSocket();
-
-        if (currentRoomName && currentUsername) {
-            await fetch(`/app/music/room/leave?roomName=${encodeURIComponent(currentRoomName)}&username=${encodeURIComponent(currentUsername)}`, {
-                method: 'DELETE',
-                headers: {'Authorization': `Bearer ${jwtToken}`},
-                keepalive: true
-            });
+        // Stop participant refresh
+        if (participantRefreshInterval) {
+            clearInterval(participantRefreshInterval);
         }
 
-        await fetch('/app/music/room/clearRoomSession', {method: 'POST', keepalive: true});
+        // Gracefully disconnect WebSocket (no removeUser message needed)
+        if (stompClient && stompClient.connected) {
+            try {
+                stompClient.disconnect();
+            } catch (e) {
+                console.error("WS disconnect error:", e);
+            }
+        }
 
+        // Backend handles: room exit + WebSocket notifications + session update
+        const response = await fetch('/app/music/room/exitRoom', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${jwtToken}`,
+                'Content-Type': 'application/json'
+            },
+            keepalive: true
+        });
+
+        if (!response.ok) {
+            console.error('Failed to exit room:', response.status);
+        }
+
+    } catch (error) {
+        console.error("Error during back navigation:", error);
+        // Continue to dashboard even on error
     } finally {
+        // Navigate to dashboard (user stays logged in)
         window.location.href = '/app/music/dashboard';
     }
 }
@@ -2111,46 +2127,34 @@ async function logout() {
     if (logoutInProgress) return;
     logoutInProgress = true;
 
-    allowUnload = true;
-    isClosing = true;
-
     try {
-        await sendLeaveOverWebSocket();
+        allowUnload = true;
+        isClosing = true;
+
+        // Stop participant refresh
+        if (participantRefreshInterval) {
+            clearInterval(participantRefreshInterval);
+        }
+
+        // Gracefully disconnect WebSocket
+        if (stompClient && stompClient.connected) {
+            try {
+                stompClient.disconnect();
+            } catch (e) {
+                console.error("WS disconnect error:", e);
+            }
+        }
+
+        // Backend handles: room exit + session clear + JWT removal
+        window.location.href = '/app/music/public/logout';
+
     } catch (err) {
         console.error("Logout error:", err);
-    } finally {
+        // Still attempt logout
         window.location.href = '/app/music/public/logout';
     }
 }
 
-function sendLeaveOverWebSocket() {
-    return new Promise(resolve => {
-        if (!stompClient || !stompClient.connected) {
-            resolve();
-            return;
-        }
-
-        try {
-            stompClient.send(
-                `/app/music/chat/${currentRoomName}/removeUser`,
-                {},
-                JSON.stringify({
-                    sender: currentUsername,
-                    type: 'LEAVE',
-                    content: `${currentUsername} left the room`
-                })
-            );
-
-            stompClient.disconnect(() => {
-                resolve();
-            });
-
-        } catch (e) {
-            console.error("WS disconnect error:", e);
-            resolve();
-        }
-    });
-}
 
 document.addEventListener('keydown', (e) => {
     if (!isOrganizer) return;

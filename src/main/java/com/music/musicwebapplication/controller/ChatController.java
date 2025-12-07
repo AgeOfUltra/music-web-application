@@ -4,9 +4,12 @@ import com.music.musicwebapplication.chatDto.PlaybackState;
 import com.music.musicwebapplication.dto.FavoriteSongDto;
 import com.music.musicwebapplication.dto.SyncRequest;
 import com.music.musicwebapplication.entity.Participant;
+import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.service.PlaybackStateService;
 import com.music.musicwebapplication.service.RoomService;
 
+import com.music.musicwebapplication.service.UserSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +27,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final PlaybackStateService playbackStateService;
     private final RoomService roomService;
+    private final UserSessionService sessionService;
 
     // -----------------------------------
     // CHAT
@@ -40,20 +44,81 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
     }
 
+//    @MessageMapping("/chat/{roomName}/removeUser")
+//    public void removeUser(@DestinationVariable String roomName,
+//                           @Payload Map<String, Object> chatMessage) {
+//
+//        String username = (String) chatMessage.get("sender");
+//
+//        roomService.exitFromRoom(roomName, username);
+//
+//        messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
+//
+//        List<Participant> participants = roomService.getRoomDetails(roomName).getParticipant();
+//        messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
+//    }
+
     @MessageMapping("/chat/{roomName}/removeUser")
     public void removeUser(@DestinationVariable String roomName,
                            @Payload Map<String, Object> chatMessage) {
 
         String username = (String) chatMessage.get("sender");
 
-        roomService.exitFromRoom(roomName, username);
+        try {
+            // Check if room exists and user is in it
+            Optional<Room> roomOpt = Optional.ofNullable(roomService.getRoomDetails(roomName));
+            if (roomOpt.isEmpty()) {
+                // ✅ Clear session even if room doesn't exist
+                sessionService.updateRoomName(username, null);
+                return;
+            }
 
-        messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
+            Room room = roomOpt.get();
+            boolean userExists = room.getParticipant().stream()
+                    .anyMatch(p -> p.getUserName().equals(username));
 
-        List<Participant> participants = roomService.getRoomDetails(roomName).getParticipant();
-        messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
+            if (!userExists) {
+                // ✅ Clear session even if user not in room
+                sessionService.updateRoomName(username, null);
+                return; // User already removed
+            }
+
+            // Check if last organizer
+            boolean isLastOrganizer = room.getParticipant().size() == 1 &&
+                    room.getParticipant().get(0).isOrganizer();
+
+            // Remove user from room (handles DB + Redis cleanup)
+            roomService.exitFromRoom(roomName, username);
+
+            // ✅ CRITICAL: Clear user session after room exit
+            sessionService.updateRoomName(username, null);
+            log.info("✅ Cleared session for user {} after tab close", username);
+
+            // Only broadcast if room wasn't deleted
+            if (!isLastOrganizer) {
+                // Broadcast leave message
+                messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
+
+                // Broadcast updated participants
+                Optional<Room> updatedRoom = Optional.ofNullable(roomService.getRoomDetails(roomName));
+                if (updatedRoom.isPresent()) {
+                    List<Participant> participants = updatedRoom.get().getParticipant();
+                    messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error in removeUser for room {} and user {}: {}",
+                    roomName, username, e.getMessage());
+
+            // ✅ Even on error, try to clear session
+            try {
+                sessionService.updateRoomName(username, null);
+            } catch (Exception sessionEx) {
+                log.error("Failed to clear session for user {}: {}", username, sessionEx.getMessage());
+            }
+        }
     }
-
     // -----------------------------------
     // TYPING
     // -----------------------------------

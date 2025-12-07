@@ -9,10 +9,13 @@ import com.music.musicwebapplication.repo.ParticipantRepo;
 import com.music.musicwebapplication.repo.RoomRepo;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -22,12 +25,16 @@ public class RoomService {
     private final ParticipantRepo participantRepo;
     private final ConfessService serviceConfess;
     private final PlaybackStateService playbackStateService;
+   private final UserSessionService sessionService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService) {
+    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService, UserSessionService sessionService, SimpMessagingTemplate messagingTemplate) {
         this.repo = repo;
         this.participantRepo = participantRepo;
         this.serviceConfess = serviceConfess;
         this.playbackStateService = playbackStateService;
+        this.sessionService = sessionService;
+        this.messagingTemplate = messagingTemplate;
     }
     @Transactional
     public Room createRoom(Room room){
@@ -70,6 +77,80 @@ public class RoomService {
         return participantRepo.save(participant);
     }
 
+    /**
+     * Handles complete room exit with WebSocket notifications
+     * Returns the room name that was exited from
+     */
+    @Transactional
+    public Optional<String> exitFromRoomWithNotification(String username) {
+        // Get room name from session
+        Optional<String> roomNameOpt = sessionService.getRoomName(username);
+
+        if (roomNameOpt.isEmpty()) {
+            log.warn("User {} attempted to exit but is not in any room", username);
+            return Optional.empty();
+        }
+
+        String roomName = roomNameOpt.get();
+
+        // Check if room exists and user is actually in it
+        Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
+        if (roomOpt.isEmpty()) {
+            log.warn("Room {} not found for user {}", roomName, username);
+            // Still clear user session even if room doesn't exist
+            playbackStateService.clearFavorites(roomName);
+            playbackStateService.clearPlaybackState(roomName);
+            return Optional.empty();
+        }
+
+        Room room = roomOpt.get();
+        boolean userExists = room.getParticipant().stream()
+                .anyMatch(p -> p.getUserName().equals(username));
+
+        if (!userExists) {
+            log.warn("User {} not found in room {}", username, roomName);
+            return Optional.empty();
+        }
+
+        // Check if user is the last organizer (room will be deleted)
+        boolean isLastOrganizer = room.getParticipant().size() == 1 &&
+                room.getParticipant().get(0).isOrganizer() &&
+                room.getParticipant().get(0).getUserName().equals(username);
+
+        // ✅ Clear user-specific Redis data before exit
+//        playbackStateService.(roomName, username);
+
+        // 1. Remove user from room (handles organizer transfer, room deletion, Redis cleanup)
+        boolean roomDeleted = exitFromRoom(roomName, username);
+
+        // 2. Only broadcast if room still exists (not deleted)
+        if (!isLastOrganizer && !roomDeleted) {
+            try {
+                // Broadcast LEAVE message via WebSocket
+                Map<String, Object> leaveMessage = new HashMap<>();
+                leaveMessage.put("sender", username);
+                leaveMessage.put("type", "LEAVE");
+                leaveMessage.put("content", username + " left the room");
+
+                messagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMessage);
+
+                // Broadcast updated participants list
+                Optional<Room> updatedRoom = repo.findRoomByRoomName(roomName);
+                if (updatedRoom.isPresent()) {
+                    List<Participant> participants = updatedRoom.get().getParticipant();
+                    messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
+                    log.info("✅ Broadcasted participant update for room {}", roomName);
+                }
+            } catch (Exception e) {
+                log.error("Error broadcasting room exit for user {} in room {}: {}",
+                        username, roomName, e.getMessage());
+            }
+        } else {
+            log.info("Room {} was deleted after last organizer {} left", roomName, username);
+        }
+
+        return roomNameOpt;
+    }
 
     @Transactional
     public boolean exitFromRoom(String roomName, String userName) {
@@ -91,9 +172,11 @@ public class RoomService {
         if (currentSize == 1 && isOrganizer) {
             repo.delete(room);
 
-            // ✅ Clear BOTH favorites AND playback state
+            // ✅ Clear ALL Redis data for the room
             playbackStateService.clearFavorites(roomName);
-            playbackStateService.clearPlaybackState(roomName);  // ✅ Added
+            playbackStateService.clearPlaybackState(roomName);
+
+            log.info("Room {} deleted. All Redis data cleared.", roomName);
 
             return true;
         }
@@ -106,7 +189,13 @@ public class RoomService {
                     .ifPresent(newOrg -> {
                         newOrg.setOrganizer(true);
                         participantRepo.save(newOrg);
+                        log.info("Organizer role transferred from {} to {} in room {}",
+                                userName, newOrg.getUserName(), roomName);
                     });
+
+            // ✅ OPTIONAL: Clear playback state when organizer changes
+            // Uncomment if you want to reset playback on organizer transfer
+            // playbackStateService.clearPlaybackState(roomName);
         }
 
         // ---------- REMOVE PARTICIPANT ----------
@@ -114,7 +203,11 @@ public class RoomService {
         leavingUser.setRoom(null);
         leavingUser.setOrganizer(false);
 
+        participantRepo.delete(leavingUser); // ✅ Delete from DB
         repo.save(room);
+
+        log.info("User {} removed from room {}. Remaining participants: {}",
+                userName, roomName, participants.size());
 
         return true;
     }
@@ -144,28 +237,7 @@ public class RoomService {
 
     }
 
-    @Transactional
-    public Optional<String> exitFromRoomLogoutHandler(String username) {
-        Optional<Room> userRoom = repo.findAll()
-                .stream()
-                .filter(room -> room.getParticipant()
-                        .stream()
-                        .anyMatch(p -> p.getUserName().equals(username)))
-                .findFirst();
 
-        if (userRoom.isEmpty()) {
-            return Optional.empty();
-        }
-
-        String roomName = userRoom.get().getRoomName();
-        try {
-            exitFromRoom(roomName, username);
-            return Optional.of(roomName);
-        } catch (Exception e) {
-            log.error("Error while removing user {} from room {}", username, roomName, e);
-            return Optional.empty();
-        }
-    }
 
 
 
