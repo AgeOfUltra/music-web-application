@@ -261,8 +261,8 @@ public class RoomController {
         }
 
         try {
-            // Exit from room with notifications and Redis cleanup
-            Optional<String> leftRoom = rService.exitFromRoomWithNotification(username);
+            // ✅ SCENARIO 1: Back button - keep session, clear room only
+            Optional<String> leftRoom = rService.exitFromRoomWithNotification(username, false);
 
             if (leftRoom.isEmpty()) {
                 return ResponseEntity.ok().body(Map.of(
@@ -271,10 +271,7 @@ public class RoomController {
                 ));
             }
 
-            // Clear room name from session (but keep user session intact)
-            sessionService.updateRoomName(username, null);
-
-            log.info("✅ User {} successfully exited room {}", username, leftRoom.get());
+            log.info("✅ User {} exited room {} (BACK button - session kept)", username, leftRoom.get());
 
             return ResponseEntity.ok().body(Map.of(
                     "success", true,

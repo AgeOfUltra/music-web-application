@@ -198,32 +198,30 @@ public class PublicLoginController {
 
         if (username != null) {
             try {
-                // Exit from room if in one (handles WebSocket notifications & Redis cleanup)
-                Optional<String> leftRoom = roomService.exitFromRoomWithNotification(username);
+                // ✅ SCENARIO 2: Logout - delete complete session
+                Optional<String> leftRoom = roomService.exitFromRoomWithNotification(username, true);
 
-                if (leftRoom.isPresent()) {
-                    log.info("User {} exited room {} during logout", username, leftRoom.get());
+                leftRoom.ifPresent(s -> log.info("User {} exited room {} during LOGOUT (session deleted)", username, s));
+
+                // Note: Session already deleted by exitFromRoom if user was in room
+                // But if user wasn't in room, still delete session
+                try {
+                    sessionService.deleteUserSession(username);
+                } catch (Exception e) {
+                    // Already deleted, ignore
                 }
-
-                // Clear user session from DB
-                sessionService.updateRoomName(username, null);
-                sessionService.deleteUserSession(username);
-
-                // ✅ Clear user session from Redis
-//                playbackStateService.clearUserSession(username);
 
                 log.info("✅ User {} logged out successfully", username);
 
             } catch (Exception e) {
                 log.error("Error during logout for user {}: {}", username, e.getMessage());
-                // Continue with logout even if room exit fails
             }
         }
 
         // Remove JWT cookie
         ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(true) // Enable in production (HTTPS)
+                .secure(false) // Set to true in production
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(0)
@@ -235,8 +233,5 @@ public class PublicLoginController {
 
         return "redirect:/app/music/public/login?logout=true";
     }
-
-
-
 
 }

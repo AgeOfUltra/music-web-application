@@ -77,13 +77,9 @@ public class RoomService {
         return participantRepo.save(participant);
     }
 
-    /**
-     * Handles complete room exit with WebSocket notifications
-     * Returns the room name that was exited from
-     */
+
     @Transactional
-    public Optional<String> exitFromRoomWithNotification(String username) {
-        // Get room name from session
+    public Optional<String> exitFromRoomWithNotification(String username, boolean clearCompleteSession) {
         Optional<String> roomNameOpt = sessionService.getRoomName(username);
 
         if (roomNameOpt.isEmpty()) {
@@ -93,14 +89,19 @@ public class RoomService {
 
         String roomName = roomNameOpt.get();
 
-        // Check if room exists and user is actually in it
         Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
         if (roomOpt.isEmpty()) {
             log.warn("Room {} not found for user {}", roomName, username);
-            // Still clear user session even if room doesn't exist
             playbackStateService.clearFavorites(roomName);
             playbackStateService.clearPlaybackState(roomName);
-            return Optional.empty();
+
+            // Clear session based on strategy
+            if (clearCompleteSession) {
+                sessionService.deleteUserSession(username);
+            } else {
+                sessionService.updateRoomName(username, null);
+            }
+            return Optional.of(roomName);
         }
 
         Room room = roomOpt.get();
@@ -109,24 +110,26 @@ public class RoomService {
 
         if (!userExists) {
             log.warn("User {} not found in room {}", username, roomName);
+
+            // Clear session based on strategy
+            if (clearCompleteSession) {
+                sessionService.deleteUserSession(username);
+            } else {
+                sessionService.updateRoomName(username, null);
+            }
             return Optional.empty();
         }
 
-        // Check if user is the last organizer (room will be deleted)
         boolean isLastOrganizer = room.getParticipant().size() == 1 &&
                 room.getParticipant().get(0).isOrganizer() &&
                 room.getParticipant().get(0).getUserName().equals(username);
 
-        // ✅ Clear user-specific Redis data before exit
-//        playbackStateService.(roomName, username);
+        // ✅ Pass strategy to core method
+        exitFromRoom(roomName, username, clearCompleteSession);
 
-        // 1. Remove user from room (handles organizer transfer, room deletion, Redis cleanup)
-        boolean roomDeleted = exitFromRoom(roomName, username);
-
-        // 2. Only broadcast if room still exists (not deleted)
-        if (!isLastOrganizer && !roomDeleted) {
+        // Broadcast if room still exists
+        if (!isLastOrganizer) {
             try {
-                // Broadcast LEAVE message via WebSocket
                 Map<String, Object> leaveMessage = new HashMap<>();
                 leaveMessage.put("sender", username);
                 leaveMessage.put("type", "LEAVE");
@@ -134,7 +137,6 @@ public class RoomService {
 
                 messagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMessage);
 
-                // Broadcast updated participants list
                 Optional<Room> updatedRoom = repo.findRoomByRoomName(roomName);
                 if (updatedRoom.isPresent()) {
                     List<Participant> participants = updatedRoom.get().getParticipant();
@@ -149,11 +151,17 @@ public class RoomService {
             log.info("Room {} was deleted after last organizer {} left", roomName, username);
         }
 
-        return roomNameOpt;
+        return Optional.of(roomName);
+    }
+
+    // ✅ Backward compatibility
+    @Transactional
+    public Optional<String> exitFromRoomWithNotification(String username) {
+        return exitFromRoomWithNotification(username, false);
     }
 
     @Transactional
-    public boolean exitFromRoom(String roomName, String userName) {
+    public boolean exitFromRoom(String roomName, String userName, boolean clearCompleteSession) {
 
         Room room = repo.findRoomByRoomName(roomName)
                 .orElseThrow(() -> new RoomNotFoundException("Room not found: " + roomName));
@@ -172,11 +180,17 @@ public class RoomService {
         if (currentSize == 1 && isOrganizer) {
             repo.delete(room);
 
-            // ✅ Clear ALL Redis data for the room
             playbackStateService.clearFavorites(roomName);
             playbackStateService.clearPlaybackState(roomName);
 
-            log.info("Room {} deleted. All Redis data cleared.", roomName);
+            // ✅ Session handling based on exit type
+            if (clearCompleteSession) {
+                sessionService.deleteUserSession(userName);
+                log.info("Room {} deleted. Session DELETED for {}", roomName, userName);
+            } else {
+                sessionService.updateRoomName(userName, null);
+                log.info("Room {} deleted. RoomName CLEARED for {}", roomName, userName);
+            }
 
             return true;
         }
@@ -192,10 +206,6 @@ public class RoomService {
                         log.info("Organizer role transferred from {} to {} in room {}",
                                 userName, newOrg.getUserName(), roomName);
                     });
-
-            // ✅ OPTIONAL: Clear playback state when organizer changes
-            // Uncomment if you want to reset playback on organizer transfer
-            // playbackStateService.clearPlaybackState(roomName);
         }
 
         // ---------- REMOVE PARTICIPANT ----------
@@ -203,13 +213,25 @@ public class RoomService {
         leavingUser.setRoom(null);
         leavingUser.setOrganizer(false);
 
-        participantRepo.delete(leavingUser); // ✅ Delete from DB
+        participantRepo.delete(leavingUser);
         repo.save(room);
 
-        log.info("User {} removed from room {}. Remaining participants: {}",
-                userName, roomName, participants.size());
+        // ✅ Session handling based on exit type
+        if (clearCompleteSession) {
+            sessionService.deleteUserSession(userName);
+            log.info("User {} removed from room {}. Session DELETED.", userName, roomName);
+        } else {
+            sessionService.updateRoomName(userName, null);
+            log.info("User {} removed from room {}. RoomName CLEARED.", userName, roomName);
+        }
 
         return true;
+    }
+
+    // ✅ Keep backward compatibility - default to clearing room only
+    @Transactional
+    public boolean exitFromRoom(String roomName, String userName) {
+        return exitFromRoom(roomName, userName, false);
     }
 
 

@@ -44,19 +44,6 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
     }
 
-//    @MessageMapping("/chat/{roomName}/removeUser")
-//    public void removeUser(@DestinationVariable String roomName,
-//                           @Payload Map<String, Object> chatMessage) {
-//
-//        String username = (String) chatMessage.get("sender");
-//
-//        roomService.exitFromRoom(roomName, username);
-//
-//        messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
-//
-//        List<Participant> participants = roomService.getRoomDetails(roomName).getParticipant();
-//        messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
-//    }
 
     @MessageMapping("/chat/{roomName}/removeUser")
     public void removeUser(@DestinationVariable String roomName,
@@ -65,11 +52,11 @@ public class ChatController {
         String username = (String) chatMessage.get("sender");
 
         try {
-            // Check if room exists and user is in it
             Optional<Room> roomOpt = Optional.ofNullable(roomService.getRoomDetails(roomName));
             if (roomOpt.isEmpty()) {
-                // ✅ Clear session even if room doesn't exist
-                sessionService.updateRoomName(username, null);
+                // ✅ SCENARIO 2: Tab close - delete session
+                sessionService.deleteUserSession(username);
+                log.info("✅ Session deleted for {} (room not found)", username);
                 return;
             }
 
@@ -78,28 +65,21 @@ public class ChatController {
                     .anyMatch(p -> p.getUserName().equals(username));
 
             if (!userExists) {
-                // ✅ Clear session even if user not in room
-                sessionService.updateRoomName(username, null);
-                return; // User already removed
+                // ✅ SCENARIO 2: Tab close - delete session
+                sessionService.deleteUserSession(username);
+                log.info("✅ Session deleted for {} (user not in room)", username);
+                return;
             }
 
-            // Check if last organizer
             boolean isLastOrganizer = room.getParticipant().size() == 1 &&
                     room.getParticipant().get(0).isOrganizer();
 
-            // Remove user from room (handles DB + Redis cleanup)
-            roomService.exitFromRoom(roomName, username);
+            // ✅ SCENARIO 2: Tab close - delete complete session
+            roomService.exitFromRoom(roomName, username, true);
 
-            // ✅ CRITICAL: Clear user session after room exit
-            sessionService.updateRoomName(username, null);
-            log.info("✅ Cleared session for user {} after tab close", username);
-
-            // Only broadcast if room wasn't deleted
             if (!isLastOrganizer) {
-                // Broadcast leave message
                 messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
 
-                // Broadcast updated participants
                 Optional<Room> updatedRoom = Optional.ofNullable(roomService.getRoomDetails(roomName));
                 if (updatedRoom.isPresent()) {
                     List<Participant> participants = updatedRoom.get().getParticipant();
@@ -111,11 +91,10 @@ public class ChatController {
             log.error("Error in removeUser for room {} and user {}: {}",
                     roomName, username, e.getMessage());
 
-            // ✅ Even on error, try to clear session
             try {
-                sessionService.updateRoomName(username, null);
+                sessionService.deleteUserSession(username);
             } catch (Exception sessionEx) {
-                log.error("Failed to clear session for user {}: {}", username, sessionEx.getMessage());
+                log.error("Failed to delete session for user {}: {}", username, sessionEx.getMessage());
             }
         }
     }
