@@ -7,7 +7,11 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TypingRequest {
-    private String sender;
-    private boolean typing;
+public class RequestSong {
+
+    private String songName;
+
+    private String movieName;
+
+    private String singerName;
 }

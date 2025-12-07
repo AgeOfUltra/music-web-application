@@ -46,29 +46,4 @@ public class WebSocketEventListener {
     }
 
 
-    /**
-     * Send disconnect/leave message to room
-     */
-    private void sendDisconnectMessage(String username, String roomName) {
-        try {
-            // Create leave message
-            ChatMessage leaveMessage = new ChatMessage();
-            leaveMessage.setSender(username);
-            leaveMessage.setType("LEAVE");
-            leaveMessage.setContent(username + " left the chat");
-            leaveMessage.setTimestamp(System.currentTimeMillis());
-
-            // Broadcast to room
-            messageTemplate.convertAndSend(
-                    "/topic/chat/" + roomName,
-                    leaveMessage
-            );
-
-            log.info("✅ Leave message sent for user {} in room {}", username, roomName);
-
-        } catch (Exception e) {
-            log.error("❌ Failed to send leave message for user {} in room {}: {}",
-                    username, roomName, e.getMessage(), e);
-        }
-    }
 }
