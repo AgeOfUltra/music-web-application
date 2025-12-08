@@ -43,6 +43,8 @@ let isSyncing = false;
 let syncTimeout = null;
 let hasReceivedInitialSync = false;
 
+let replyingToMessage = null;
+
 // ==================== FAVORITES MANAGEMENT ====================
 function toggleFavorite(song, heartIcon) {
     const songId = song.fileName;
@@ -948,7 +950,7 @@ function handlePlaybackSyncState(syncMsg) {
     }
 
     // Check if there's valid playback state
-    if (!syncMsg.valid || !syncMsg.isPlaying || !syncMsg.songFileName) {
+    if (!syncMsg.valid || !syncMsg.songFileName) {
         console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
@@ -962,24 +964,33 @@ function handlePlaybackSyncState(syncMsg) {
     }
 
     console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
+    console.log('📊 [SYNC] State details:', {
+        isPlaying: syncMsg.isPlaying,
+        isPaused: syncMsg.isPaused,
+        timestamp: syncMsg.timestamp,
+        serverTime: syncMsg.serverTime
+    });
 
     // Calculate adjusted timestamp accounting for network delay
     const serverTime = syncMsg.serverTime || Date.now();
     const clientTime = Date.now();
-    const elapsedSinceServer = clientTime - serverTime;
+    const networkDelay = clientTime - serverTime;
+
+    console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
 
     let adjustedTimestamp = syncMsg.timestamp || 0;
 
-    // Only adjust if not paused
-    if (!syncMsg.isPaused) {
-        adjustedTimestamp += elapsedSinceServer;
+    // Only adjust if currently playing (not paused)
+    if (syncMsg.isPlaying && !syncMsg.isPaused) {
+        adjustedTimestamp += networkDelay;
+        console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
+            original: syncMsg.timestamp,
+            networkDelay: networkDelay,
+            adjusted: adjustedTimestamp
+        });
+    } else {
+        console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
     }
-
-    console.log('⏱️ [SYNC] Timestamp adjustment:', {
-        original: syncMsg.timestamp,
-        adjusted: adjustedTimestamp,
-        elapsed: elapsedSinceServer
-    });
 
     // Set ignore flag to prevent event triggers
     ignoreLocalEvents = true;
@@ -995,6 +1006,8 @@ function handlePlaybackSyncState(syncMsg) {
         singer: syncMsg.singer
     };
 
+    console.log('📝 [SYNC] Updated current song data:', currentSongData);
+
     // Update UI
     updateCurrentSongDisplay(
         syncMsg.songName,
@@ -1006,12 +1019,16 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Build audio source URL
     const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}`;
+    console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
     audioPlayer.src = audioSrc;
 
     const syncAudio = () => {
         const targetTime = adjustedTimestamp / 1000; // Convert to seconds
+
+        console.log('🎯 [SYNC] Setting playback position to:', targetTime, 'seconds');
+
         audioPlayer.currentTime = targetTime;
 
         if (syncMsg.isPaused) {
@@ -1019,7 +1036,8 @@ function handlePlaybackSyncState(syncMsg) {
             audioPlayer.pause();
             ignoreLocalEvents = false;
             isSyncing = false;
-        } else {
+            ToastNotification.info(`Synced to: ${syncMsg.songName} (Paused)`);
+        } else if (syncMsg.isPlaying) {
             console.log('▶️ [SYNC] Playing state - starting playback');
             const playPromise = audioPlayer.play();
 
@@ -1029,7 +1047,7 @@ function handlePlaybackSyncState(syncMsg) {
                         console.log('✅ [SYNC] Playback synced successfully');
                         ignoreLocalEvents = false;
                         isSyncing = false;
-                        ToastNotification.success(`Synced to: ${syncMsg.songName}`);
+                        ToastNotification.success(`🎵 Synced: ${syncMsg.songName}`);
                     })
                     .catch(err => {
                         console.error('❌ [SYNC] Play error:', err.message);
@@ -1041,16 +1059,24 @@ function handlePlaybackSyncState(syncMsg) {
                 ignoreLocalEvents = false;
                 isSyncing = false;
             }
+        } else {
+            console.log('⏹️ [SYNC] No playback state - staying idle');
+            ignoreLocalEvents = false;
+            isSyncing = false;
         }
     };
 
     // Wait for metadata to load before syncing
     if (audioPlayer.readyState >= 2) {
         // Metadata already loaded
+        console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
         syncAudio();
     } else {
         // Wait for metadata
+        console.log('⏳ [SYNC] Waiting for metadata to load...');
+
         const metadataHandler = () => {
+            console.log('✅ [SYNC] Metadata loaded - syncing now');
             syncAudio();
             audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
         };
@@ -1061,7 +1087,7 @@ function handlePlaybackSyncState(syncMsg) {
         setTimeout(() => {
             audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
             if (isSyncing) {
-                console.warn('⚠️ [SYNC] Metadata timeout - attempting sync anyway');
+                console.warn('⚠️ [SYNC] Metadata timeout (5s) - attempting sync anyway');
                 syncAudio();
             }
         }, 5000);
@@ -1085,7 +1111,8 @@ function requestPlaybackSync() {
 
     const syncRequest = {
         username: currentUsername,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        roomName: currentRoomName  // Include room name for clarity
     };
 
     try {
@@ -1095,13 +1122,15 @@ function requestPlaybackSync() {
             JSON.stringify(syncRequest)
         );
 
+        console.log('📤 [SYNC] Sync request sent:', syncRequest);
+
         // Set timeout in case no response
         syncTimeout = setTimeout(() => {
             if (isSyncing && !hasReceivedInitialSync) {
                 console.log('⏱️ [SYNC] No sync response received - assuming no active playback');
                 isSyncing = false;
             }
-        }, 3000);
+        }, 5000);  // Increased to 5 seconds
 
     } catch (error) {
         console.error('❌ [SYNC] Error requesting sync:', error);
@@ -1439,21 +1468,21 @@ function connectWebSocket(token) {
             console.log('✅ Connected to WebSocket');
             ToastNotification.success('Connected to chat room');
 
+            // Subscribe to all channels...
+            // (keep all existing subscriptions)
+
             // Chat messages
             stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
                 const msg = JSON.parse(message.body);
-
                 if (msg.type === "LEAVE") {
                     lastUserLeft = msg.sender;
                     ToastNotification.info(`${msg.sender} left the room`);
                     return;
                 }
-
                 if (msg.type === "JOIN") {
                     ToastNotification.success(`${msg.sender} joined the room`);
                     return;
                 }
-
                 if (msg.type === "CHAT") {
                     displayMessage(msg);
                 }
@@ -1465,31 +1494,29 @@ function connectWebSocket(token) {
                 handlePlaybackCommand(playbackMsg);
             });
 
-            // NEW: Subscribe to playback sync state responses
+            // ⭐ CRITICAL: Subscribe to playback sync state responses
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback/state`, (message) => {
+                console.log('📨 [SYNC] Received sync state message');
                 const syncMsg = JSON.parse(message.body);
                 handlePlaybackSyncState(syncMsg);
             });
 
-            // Typing events
+            // Typing, Skip, Participants, Favorites (keep existing subscriptions)
             stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
                 const typingData = JSON.parse(message.body);
                 handleTypingIndicator(typingData);
             });
 
-            // Skip commands
             stompClient.subscribe(`/topic/chat/${currentRoomName}/skip`, (message) => {
                 const skipMsg = JSON.parse(message.body);
                 handleSkipCommand(skipMsg);
             });
 
-            // Participants updates
             stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
                 const participants = JSON.parse(message.body);
                 updateParticipantsDisplay(participants);
             });
 
-            // Shared room favorites
             stompClient.subscribe(`/topic/chat/${currentRoomName}/favorites`, (message) => {
                 const favoritesMsg = JSON.parse(message.body);
                 handleFavoritesUpdate(favoritesMsg);
@@ -1505,10 +1532,13 @@ function connectWebSocket(token) {
             // Request current favorites state
             requestFavoritesSync();
 
-            // NEW: Request playback sync for late joiners
+            // ⭐ CRITICAL: Request playback sync for late joiners
+            // Give server time to process JOIN, then sync
+            console.log('⏳ [SYNC] Scheduling playback sync in 1 second...');
             setTimeout(() => {
+                console.log('🚀 [SYNC] Initiating playback sync...');
                 requestPlaybackSync();
-            }, 500);
+            }, 1000);  // Increased delay to ensure JOIN is processed
 
             startParticipantRefreshInterval();
         },
@@ -1685,6 +1715,62 @@ function updateAudioControls() {
 }
 
 // ==================== CHAT MESSAGING ====================
+function setReplyToMessage(messageId, sender, content) {
+    replyingToMessage = {
+        id: messageId,
+        sender: sender,
+        content: content
+    };
+    showReplyPreview();
+}
+
+function showReplyPreview() {
+    if (!replyingToMessage) return;
+
+    const chatInputContainer = document.querySelector('.chat-input-container');
+    let existingPreview = document.getElementById('replyPreview');
+    if (existingPreview) existingPreview.remove();
+
+    const replyPreview = document.createElement('div');
+    replyPreview.id = 'replyPreview';
+    replyPreview.className = 'reply-preview';
+    replyPreview.innerHTML = `
+        <div class="reply-preview-content">
+            <div class="reply-preview-header">
+                <i class="bi bi-reply-fill"></i>
+                <span>Replying to <strong>${escapeHtml(replyingToMessage.sender)}</strong></span>
+            </div>
+            <div class="reply-preview-text">${escapeHtml(replyingToMessage.content)}</div>
+        </div>
+        <button class="reply-preview-close" onclick="cancelReply()">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+
+    chatInputContainer.parentElement.insertBefore(replyPreview, chatInputContainer);
+    document.getElementById('messageInput').focus();
+}
+
+function cancelReply() {
+    replyingToMessage = null;
+    const replyPreview = document.getElementById('replyPreview');
+    if (replyPreview) replyPreview.remove();
+}
+
+function scrollToMessage(messageId) {
+    const targetMessage = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (targetMessage) {
+        targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetMessage.classList.add('message-highlight');
+        setTimeout(() => targetMessage.classList.remove('message-highlight'), 2000);
+    } else {
+        ToastNotification.info('Original message not visible');
+    }
+}
+
+// ==================== UPDATE YOUR sendMessage() FUNCTION ====================
+// REPLACE your existing sendMessage() function with this:
+
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
@@ -1703,17 +1789,27 @@ function sendMessage() {
     const chatMessage = {
         sender: currentUsername,
         content: content,
-        type: 'CHAT'
+        type: 'CHAT',
+        replyTo: replyingToMessage ? {  // ✅ ADD THIS
+            id: replyingToMessage.id,
+            sender: replyingToMessage.sender,
+            content: replyingToMessage.content
+        } : null,
+        timestamp: Date.now()  // ✅ ADD THIS
     };
 
     try {
         stompClient.send(`/app/music/chat/${currentRoomName}/send`, {}, JSON.stringify(chatMessage));
         input.value = '';
+        cancelReply();  // ✅ ADD THIS - Clear reply after sending
     } catch (error) {
         console.error('❌ Error sending message:', error);
         ToastNotification.error('Error sending message');
     }
 }
+
+// ==================== UPDATE YOUR displayMessage() FUNCTION ====================
+// REPLACE your existing displayMessage() function with this:
 
 function displayMessage(message) {
     const chatMessages = document.getElementById('chatMessages');
@@ -1723,28 +1819,61 @@ function displayMessage(message) {
     }
 
     const isCurrentUser = message.sender === currentUsername;
+    const messageId = message.timestamp || Date.now();  // ✅ ADD THIS
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'chat-bubble ' + (isCurrentUser ? 'my-message' : 'other-message');
+    messageDiv.dataset.messageId = messageId;  // ✅ ADD THIS
 
-    const time = new Date().toLocaleTimeString('en-US', {
+    const time = new Date(message.timestamp || Date.now()).toLocaleTimeString('en-US', {  // ✅ UPDATE THIS
         hour: '2-digit',
         minute: '2-digit'
     });
 
+    // ✅ ADD THIS - Reply HTML
+    let replyHTML = '';
+    if (message.replyTo) {
+        replyHTML = `
+            <div class="reply-reference" onclick="scrollToMessage(${message.replyTo.id})">
+                <div class="reply-reference-header">
+                    <i class="bi bi-reply-fill"></i>
+                    <span>${escapeHtml(message.replyTo.sender)}</span>
+                </div>
+                <div class="reply-reference-text">${escapeHtml(message.replyTo.content)}</div>
+            </div>
+        `;
+    }
+
     messageDiv.innerHTML = `
         <div class="chat-meta">
-            <span class="sender">${message.sender}</span>
+            <span class="sender">${escapeHtml(message.sender)}</span>
             <span class="time">${time}</span>
         </div>
+        ${replyHTML}
         <div class="bubble-text">
             ${escapeHtml(message.content)}
+        </div>
+        <div class="message-actions">
+            <button class="message-action-btn" 
+                    onclick="setReplyToMessage(${messageId}, '${escapeHtml(message.sender)}', '${escapeHtml(message.content)}')" 
+                    title="Reply">
+                <i class="bi bi-reply"></i>
+            </button>
         </div>
     `;
 
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
+// ==================== ADD ESCAPE KEY HANDLER ====================
+// Add this at the very end of your file (after the Alt+Arrow handlers):
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && replyingToMessage) {
+        cancelReply();
+    }
+});
 
 // ==================== SONG MANAGEMENT ====================
 function displaySongs(songs) {

@@ -9,4 +9,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SyncRequest {
     private String username;
+    private Long timestamp;
 }

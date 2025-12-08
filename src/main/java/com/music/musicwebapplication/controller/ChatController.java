@@ -123,19 +123,47 @@ public class ChatController {
     public void handlePlayback(@DestinationVariable String roomName,
                                @Payload Map<String, Object> msg) {
 
-        log.info("🎵 Playback Event: {}", msg);
+        log.info("🎵 Playback Event → action={}, song={}",
+                msg.get("action"), msg.get("songName"));
 
         PlaybackState state = PlaybackState.fromMap(msg);
 
-        // ✅ Ensure serverTime is set for accurate sync
-        state.setServerTime(System.currentTimeMillis());
+        // Set server timestamp for accurate sync
+        long serverTime = System.currentTimeMillis();
+        state.setServerTime(serverTime);
 
+        // For PLAY action, timestamp should be 0 (start from beginning)
+        if ("PLAY".equals(msg.get("action"))) {
+            state.setTimestamp(0L);
+            state.setPlaying(true);
+            state.setPaused(false);
+            log.info("▶️ PLAY action → Starting song from beginning");
+        }
+        // For RESUME action, use provided timestamp
+        else if ("RESUME".equals(msg.get("action"))) {
+            state.setPlaying(true);
+            state.setPaused(false);
+            log.info("▶️ RESUME action → timestamp={}ms", state.getTimestamp());
+        }
+        // For PAUSE action, save current timestamp
+        else if ("PAUSE".equals(msg.get("action"))) {
+            state.setPlaying(false);
+            state.setPaused(true);
+            log.info("⏸️ PAUSE action → timestamp={}ms", state.getTimestamp());
+        }
+
+        // Save to Redis
         playbackStateService.savePlaybackState(roomName, state);
 
+        log.info("💾 Saved playback state → room={}, valid={}", roomName, state.isValid());
+
+        // Broadcast to all participants
         messagingTemplate.convertAndSend(
                 "/topic/chat/" + roomName + "/playback",
                 msg
         );
+
+        log.info("📡 Broadcast playback event → room={}", roomName);
     }
 
     // -----------------------------------
@@ -145,29 +173,68 @@ public class ChatController {
     public void syncPlayback(@DestinationVariable String roomName,
                              @Payload SyncRequest request) {
 
-        log.info("🔄 Sync Request → room={}, user={}", roomName, request.getUsername());
+        log.info("🔄 Sync Request → room={}, user={}, timestamp={}",
+                roomName, request.getUsername(), request.getTimestamp());
 
+        // Get current playback state from Redis
         Optional<PlaybackState> optionalState = playbackStateService.getPlaybackState(roomName);
 
-        Map<String, Object> syncResponse =
-                buildPlaybackSyncMessage(optionalState.orElse(null));
+        // Build sync response with current server time
+        Map<String, Object> syncResponse = buildPlaybackSyncMessage(optionalState.orElse(null));
 
+        // Add request metadata for debugging
+        syncResponse.put("requestedBy", request.getUsername());
+        syncResponse.put("requestTime", request.getTimestamp());
+        syncResponse.put("responseTime", System.currentTimeMillis());
+
+        log.info("📤 Sending sync response → valid={}, isPlaying={}, song={}",
+                syncResponse.get("valid"),
+                syncResponse.get("isPlaying"),
+                syncResponse.get("songName"));
+
+        // Send response to specific user or broadcast to room
+        // Option 1: Send to everyone (current implementation)
         messagingTemplate.convertAndSend(
                 "/topic/chat/" + roomName + "/playback/state",
                 syncResponse
         );
+
+        // Option 2: Send only to requesting user (more efficient)
+        // messagingTemplate.convertAndSendToUser(
+        //         request.getUsername(),
+        //         "/queue/playback/state",
+        //         syncResponse
+        // );
     }
 
     private Map<String, Object> buildPlaybackSyncMessage(PlaybackState state) {
         Map<String, Object> msg = new HashMap<>();
 
+        // Current server time for sync calculation
+        long currentServerTime = System.currentTimeMillis();
+
         if (state == null || !state.isValid()) {
+            log.info("ℹ️ No valid playback state found");
+            msg.put("valid", false);
             msg.put("isPlaying", false);
             msg.put("isPaused", true);
-            msg.put("valid", false);  // ✅ Add explicit valid flag
+            msg.put("serverTime", currentServerTime);
             return msg;
         }
 
+        // Calculate current playback position
+        long elapsedSinceLastUpdate = currentServerTime - state.getServerTime();
+        long adjustedTimestamp = state.getTimestamp();
+
+        // If playing (not paused), adjust timestamp for elapsed time
+        if (state.isPlaying() && !state.isPaused()) {
+            adjustedTimestamp += elapsedSinceLastUpdate;
+            log.info("⏱️ Adjusted timestamp: original={}, elapsed={}ms, adjusted={}",
+                    state.getTimestamp(), elapsedSinceLastUpdate, adjustedTimestamp);
+        }
+
+        // Build complete sync message
+        msg.put("valid", true);
         msg.put("songFileName", state.getSongFileName());
         msg.put("songName", state.getSongName());
         msg.put("hero", state.getHero());
@@ -177,9 +244,11 @@ public class ChatController {
         msg.put("singer", state.getSinger());
         msg.put("isPlaying", state.isPlaying());
         msg.put("isPaused", state.isPaused());
-        msg.put("timestamp", state.getTimestamp());
-        msg.put("serverTime", state.getServerTime());  // ✅ Use saved serverTime
-        msg.put("valid", state.isValid());  // ✅ Add explicit valid flag
+        msg.put("timestamp", adjustedTimestamp);  // Use adjusted timestamp
+        msg.put("serverTime", currentServerTime);  // Current server time for client sync
+
+        log.info("✅ Built sync message → song={}, timestamp={}ms, isPlaying={}",
+                state.getSongName(), adjustedTimestamp, state.isPlaying());
 
         return msg;
     }

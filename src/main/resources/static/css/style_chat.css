@@ -817,7 +817,138 @@ body {
     cursor: not-allowed;
     transform: none;
 }
+/* Reply Preview */
+.reply-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(124, 58, 237, 0.1);
+    border-left: 3px solid #7c3aed;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
 
+.reply-preview-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #7c3aed;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.reply-preview-text {
+    font-size: 13px;
+    color: #a0a0a0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reply-preview-close {
+    background: none;
+    border: none;
+    color: #a0a0a0;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.reply-preview-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* Reply Reference */
+.reply-reference {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #7c3aed;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reply-reference:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.reply-reference-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #7c3aed;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.reply-reference-text {
+    font-size: 12px;
+    color: #c0c0c0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Message Actions */
+.message-actions {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.chat-bubble {
+    position: relative;
+}
+
+.chat-bubble:hover .message-actions {
+    display: flex;
+}
+
+.message-action-btn {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.message-action-btn:hover {
+    background: rgba(124, 58, 237, 0.9);
+    transform: scale(1.1);
+}
+
+/* Message Highlight */
+.message-highlight {
+    animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(124, 58, 237, 0.3); }
+}
+
+/* Color variations */
+.my-message .reply-reference {
+    border-left-color: #10b981;
+}
+
+.my-message .reply-reference-header {
+    color: #10b981;
+}
 /* ==================== RIGHT PANEL (PARTICIPANTS) ==================== */
 .right-panel {
     background: rgba(255, 255, 255, 0.1);
