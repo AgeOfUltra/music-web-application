@@ -1,6 +1,7 @@
 package com.music.musicwebapplication.exception;
 
 import com.music.musicwebapplication.utils.ErrorResponseUtil;
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
@@ -42,4 +43,14 @@ public class GlobalExceptionHandler {
         model.addAttribute("errorObject",error);
         return new ModelAndView("error");
     }
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ModelAndView handleTokenExpired(ConfessRoomException ex, Model model){
+        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.toString(),
+                ex.getMessage()
+        );
+        model.addAttribute("errorObject",error);
+        return new ModelAndView("error");
+    }
+
 }

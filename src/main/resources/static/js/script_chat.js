@@ -103,7 +103,7 @@ function broadcastFavorites(favorites, action, song, username) {
         return;
     }
 
-    console.log('📤 Broadcasting favorites:', action, song?.songName);
+    // console.log('📤 Broadcasting favorites:', action, song?.songName);
 
     const message = {
         action: action,
@@ -120,7 +120,7 @@ function broadcastFavorites(favorites, action, song, username) {
             JSON.stringify(message)
         );
 
-        console.log('✅ Favorites broadcast successful');
+        // console.log('✅ Favorites broadcast successful');
 
         // Update local state immediately
         roomFavorites = favorites;
@@ -134,11 +134,11 @@ function broadcastFavorites(favorites, action, song, username) {
 }
 
 function handleFavoritesUpdate(message) {
-    console.log('📥 Received favorites update:', message.action);
+    // console.log('📥 Received favorites update:', message.action);
 
     roomFavorites = message.favorites || [];
 
-    console.log('📋 Current favorites:', roomFavorites.map(f => f.songName));
+    // console.log('📋 Current favorites:', roomFavorites.map(f => f.songName));
 
     updateFavoritesDisplay();
     updateAllHeartIcons();
@@ -213,7 +213,7 @@ function updateFavoritesDisplay() {
 }
 
 function updateAllHeartIcons() {
-    console.log('💖 Updating heart icons, favorites count:', roomFavorites.length);
+    // console.log('💖 Updating heart icons, favorites count:', roomFavorites.length);
 
     // Update heart icons in main song list
     const songItems = document.querySelectorAll('#songList .song-item');
@@ -224,7 +224,7 @@ function updateAllHeartIcons() {
             const isFavorite = roomFavorites.some(f => f.fileName === fileName);
             heartIcon.classList.remove('bi-heart', 'bi-heart-fill');
             heartIcon.classList.add(isFavorite ? 'bi-heart-fill' : 'bi-heart');
-            console.log(`  - ${fileName}: ${isFavorite ? 'favorited' : 'not favorited'}`);
+            // console.log(`  - ${fileName}: ${isFavorite ? 'favorited' : 'not favorited'}`);
         }
     });
 
@@ -271,21 +271,21 @@ function playFavoritesPlaylist() {
     playSong(roomFavorites[currentFavoriteIndex]);
 }
 
-function playNextFavorite() {
-    if (!isPlayingFavorites || !isOrganizer) return;
-
-    currentFavoriteIndex++;
-
-    if (currentFavoriteIndex >= roomFavorites.length) {
-        isPlayingFavorites = false;
-        currentFavoriteIndex = 0;
-        ToastNotification.info('Room favorites playlist ended');
-        return;
-    }
-
-    ToastNotification.info(`Playing ${currentFavoriteIndex + 1}/${roomFavorites.length} from favorites`);
-    playSong(roomFavorites[currentFavoriteIndex]);
-}
+// function playNextFavorite() {
+//     if (!isPlayingFavorites || !isOrganizer) return;
+//
+//     currentFavoriteIndex++;
+//
+//     if (currentFavoriteIndex >= roomFavorites.length) {
+//         isPlayingFavorites = false;
+//         currentFavoriteIndex = 0;
+//         ToastNotification.info('Room favorites playlist ended');
+//         return;
+//     }
+//
+//     ToastNotification.info(`Playing ${currentFavoriteIndex + 1}/${roomFavorites.length} from favorites`);
+//     playSong(roomFavorites[currentFavoriteIndex]);
+// }
 
 function stopFavoritesPlaylist() {
     isPlayingFavorites = false;
@@ -302,6 +302,10 @@ function closeFavoritesDrawer() {
 }
 
 function clearAllFavorites() {
+    if (!isOrganizer) {
+        ToastNotification.warning('Only the organizer clear playlist');
+        return;
+    }
     if (roomFavorites.length === 0) return;
 
     if (confirm(`Are you sure you want to clear all ${roomFavorites.length} favorite songs? This will affect all participants.`)) {
@@ -404,42 +408,143 @@ function onSongEnded() {
     const current = currentSongData?.songFileName;
     if (!current) return;
 
+    // console.log('🎵 Song ended:', currentSongData?.songName);
+    // console.log('📊 Current state:', {
+    //     mode: playlistMode,
+    //     playlistIndex: currentPlaylistIndex,
+    //     favoriteIndex: currentFavoriteIndex,
+    //     page: currentPage,
+    //     totalPages: totalPages,
+    //     songsOnPage: allSongsOnPage.length
+    // });
+
     let nextSong = null;
     let nextIndex = -1;
 
+    // ==================== PRIORITY 1: FAVORITES ====================
+    // If song is in favorites, continue with favorites playlist
     const favIndex = roomFavorites.findIndex(s => s.fileName === current);
     if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
         nextIndex = favIndex + 1;
         nextSong = roomFavorites[nextIndex];
         currentFavoriteIndex = nextIndex;
+        currentPlaylistIndex = nextIndex;
         playlistMode = 'favorites';
-    } else if (playlistMode === 'search' && currentPlaylist.length > 0) {
-        const searchIndex = currentPlaylist.findIndex(s => s.fileName === current);
-        if (searchIndex !== -1 && searchIndex < currentPlaylist.length - 1) {
+        // console.log('✅ Next from favorites:', nextSong.songName, 'at index', nextIndex);
+    }
+
+        // ==================== PRIORITY 2: SEARCH RESULTS ====================
+    // If in search mode, continue with search results
+    else if (playlistMode === 'search' && searchSongsList.length > 0) {
+        const searchIndex = searchSongsList.findIndex(s => s.fileName === current);
+
+        if (searchIndex !== -1 && searchIndex < searchSongsList.length - 1) {
+            // Play next in search results
             nextIndex = searchIndex + 1;
-            nextSong = currentPlaylist[nextIndex];
+            nextSong = searchSongsList[nextIndex];
+            currentPlaylist = [...searchSongsList];
             currentPlaylistIndex = nextIndex;
-        }
-    } else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
-        const pageIndex = allSongsOnPage.findIndex(s => s.fileName === current);
-        if (pageIndex !== -1 && pageIndex < allSongsOnPage.length - 1) {
-            nextIndex = pageIndex + 1;
-            nextSong = allSongsOnPage[nextIndex];
-            currentPlaylistIndex = nextIndex;
-        } else {
-            // ⭐ ADD THIS: Check for next page
-            if (currentPage < totalPages - 1) {
-                console.log('📀 End of page - loading next page for auto-play');
-                loadNextPageAndPlay();
+            // console.log('✅ Next from search results:', nextSong.songName, 'at index', nextIndex);
+        } else if (searchIndex !== -1) {
+            // End of search results - check fallback options
+            // console.log('📋 End of search results, checking fallbacks...');
+
+            // Fallback to favorites if current song is in favorites
+            if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
+                playlistMode = 'favorites';
+                currentPlaylistIndex = favIndex;
+                currentFavoriteIndex = favIndex;
+                // console.log('🔄 Switching to favorites mode');
+                // Recursively call to continue with favorites
+                setTimeout(() => onSongEnded(), 100);
                 return;
             }
-            ToastNotification.info('🎵 Playlist ended');
+
+            // Fallback to main playlist
+            if (allSongsOnPage.length > 0) {
+                playlistMode = 'all';
+                currentPlaylistIndex = 0;
+                nextSong = allSongsOnPage[0];
+                // console.log('🔄 Fallback to main playlist:', nextSong.songName);
+            } else {
+                // console.log('🏁 End of search results, no fallback available');
+                ToastNotification.info('🎵 End of search results');
+                return;
+            }
         }
     }
 
+    // ==================== PRIORITY 3: MAIN PLAYLIST (ALL SONGS) ====================
+    else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+        const pageIndex = allSongsOnPage.findIndex(s => s.fileName === current);
+
+        // console.log('📄 Looking for song on page:', {
+        //     foundIndex: pageIndex,
+        //     totalOnPage: allSongsOnPage.length,
+        //     currentPage: currentPage + 1,
+        //     totalPages: totalPages
+        // });
+
+        if (pageIndex !== -1) {
+            // Song found on current page
+            if (pageIndex < allSongsOnPage.length - 1) {
+                // There's a next song on the same page
+                nextIndex = pageIndex + 1;
+                nextSong = allSongsOnPage[nextIndex];
+                currentPlaylistIndex = nextIndex;
+                // console.log('✅ Next song on same page:', nextSong.songName, 'at index', nextIndex);
+            }
+            else {
+                // Last song on current page
+                // console.log('📄 At last song of page', currentPage + 1);
+
+                if (currentPage < totalPages - 1) {
+                    // More pages available - load next page
+                    // console.log('📀 Loading next page...');
+                    loadNextPageAndPlay();
+                    return;
+                } else {
+                    // No more pages
+                    // console.log('🏁 Reached end of all pages');
+                    ToastNotification.info('🎵 Playlist ended');
+                    playlistMode = null;
+                    currentPlaylistIndex = 0;
+                    return;
+                }
+            }
+        }
+        else {
+            // Song not found on current page (edge case)
+            console.warn('⚠️ Current song not found on page, checking next page...');
+
+            if (currentPage < totalPages - 1) {
+                loadNextPageAndPlay();
+                return;
+            } else {
+                // console.log('🏁 No more pages available');
+                ToastNotification.info('🎵 Playlist ended');
+                playlistMode = null;
+                currentPlaylistIndex = 0;
+                return;
+            }
+        }
+    }
+
+    // ==================== NO ACTIVE PLAYLIST MODE ====================
+    else {
+        // console.log('⚠️ No active playlist mode');
+        ToastNotification.info('🎵 Playback ended');
+        return;
+    }
+
+    // ==================== PLAY NEXT SONG ====================
     if (nextSong) {
-        ToastNotification.info(`▶️ Auto-playing: ${nextSong.songName}`);
+        // console.log('▶️ Playing next song:', nextSong.songName);
+        // ToastNotification.info(`▶️ Auto-playing: ${nextSong.songName}`);
         setTimeout(() => playSong(nextSong), 700);
+    } else {
+        // console.log('❌ No next song determined');
+        ToastNotification.info('🎵 Playlist ended');
     }
 }
 
@@ -931,7 +1036,7 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
 
 // ==================== NEW: HANDLE PLAYBACK SYNC RESPONSE ====================
 function handlePlaybackSyncState(syncMsg) {
-    console.log('🔄 [SYNC] Received playback state:', syncMsg);
+    // console.log('🔄 [SYNC] Received playback state:', syncMsg);
 
     // Mark that we've received initial sync
     hasReceivedInitialSync = true;
@@ -951,45 +1056,45 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Check if there's valid playback state
     if (!syncMsg.valid || !syncMsg.songFileName) {
-        console.log('ℹ️ [SYNC] No active playback to sync');
+        // console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
     }
 
     // If organizer, don't sync (they control playback)
     if (isOrganizer) {
-        console.log('⏭️ [SYNC] Skipping sync - user is organizer');
+        // console.log('⏭️ [SYNC] Skipping sync - user is organizer');
         isSyncing = false;
         return;
     }
 
-    console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
-    console.log('📊 [SYNC] State details:', {
-        isPlaying: syncMsg.isPlaying,
-        isPaused: syncMsg.isPaused,
-        timestamp: syncMsg.timestamp,
-        serverTime: syncMsg.serverTime
-    });
+    // console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
+    // console.log('📊 [SYNC] State details:', {
+    //     isPlaying: syncMsg.isPlaying,
+    //     isPaused: syncMsg.isPaused,
+    //     timestamp: syncMsg.timestamp,
+    //     serverTime: syncMsg.serverTime
+    // });
 
     // Calculate adjusted timestamp accounting for network delay
     const serverTime = syncMsg.serverTime || Date.now();
     const clientTime = Date.now();
     const networkDelay = clientTime - serverTime;
 
-    console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
+    // console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
 
     let adjustedTimestamp = syncMsg.timestamp || 0;
 
     // Only adjust if currently playing (not paused)
     if (syncMsg.isPlaying && !syncMsg.isPaused) {
         adjustedTimestamp += networkDelay;
-        console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
-            original: syncMsg.timestamp,
-            networkDelay: networkDelay,
-            adjusted: adjustedTimestamp
-        });
+        // console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
+        //     original: syncMsg.timestamp,
+        //     networkDelay: networkDelay,
+        //     adjusted: adjustedTimestamp
+        // });
     } else {
-        console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
+        // console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
     }
 
     // Set ignore flag to prevent event triggers
@@ -1006,7 +1111,7 @@ function handlePlaybackSyncState(syncMsg) {
         singer: syncMsg.singer
     };
 
-    console.log('📝 [SYNC] Updated current song data:', currentSongData);
+    // console.log('📝 [SYNC] Updated current song data:', currentSongData);
 
     // Update UI
     updateCurrentSongDisplay(
@@ -1019,7 +1124,7 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Build audio source URL
     const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}`;
-    console.log('🔗 [SYNC] Loading audio from:', audioSrc);
+    // console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
     audioPlayer.src = audioSrc;
@@ -1027,24 +1132,24 @@ function handlePlaybackSyncState(syncMsg) {
     const syncAudio = () => {
         const targetTime = adjustedTimestamp / 1000; // Convert to seconds
 
-        console.log('🎯 [SYNC] Setting playback position to:', targetTime, 'seconds');
+        // console.log('🎯 [SYNC] Setting playback position to:', targetTime, 'seconds');
 
         audioPlayer.currentTime = targetTime;
 
         if (syncMsg.isPaused) {
-            console.log('⏸️ [SYNC] Paused state - staying paused');
+            // console.log('⏸️ [SYNC] Paused state - staying paused');
             audioPlayer.pause();
             ignoreLocalEvents = false;
             isSyncing = false;
             ToastNotification.info(`Synced to: ${syncMsg.songName} (Paused)`);
         } else if (syncMsg.isPlaying) {
-            console.log('▶️ [SYNC] Playing state - starting playback');
+            // console.log('▶️ [SYNC] Playing state - starting playback');
             const playPromise = audioPlayer.play();
 
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        console.log('✅ [SYNC] Playback synced successfully');
+                        // console.log('✅ [SYNC] Playback synced successfully');
                         ignoreLocalEvents = false;
                         isSyncing = false;
                         ToastNotification.success(`🎵 Synced: ${syncMsg.songName}`);
@@ -1060,7 +1165,7 @@ function handlePlaybackSyncState(syncMsg) {
                 isSyncing = false;
             }
         } else {
-            console.log('⏹️ [SYNC] No playback state - staying idle');
+            // console.log('⏹️ [SYNC] No playback state - staying idle');
             ignoreLocalEvents = false;
             isSyncing = false;
         }
@@ -1069,14 +1174,14 @@ function handlePlaybackSyncState(syncMsg) {
     // Wait for metadata to load before syncing
     if (audioPlayer.readyState >= 2) {
         // Metadata already loaded
-        console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
+        // console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
         syncAudio();
     } else {
         // Wait for metadata
-        console.log('⏳ [SYNC] Waiting for metadata to load...');
+        // console.log('⏳ [SYNC] Waiting for metadata to load...');
 
         const metadataHandler = () => {
-            console.log('✅ [SYNC] Metadata loaded - syncing now');
+            // console.log('✅ [SYNC] Metadata loaded - syncing now');
             syncAudio();
             audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
         };
@@ -1102,11 +1207,11 @@ function requestPlaybackSync() {
     }
 
     if (isSyncing) {
-        console.log('⏭️ [SYNC] Already syncing - skipping duplicate request');
+        // console.log('⏭️ [SYNC] Already syncing - skipping duplicate request');
         return;
     }
 
-    console.log('🔄 [SYNC] Requesting playback state...');
+    // console.log('🔄 [SYNC] Requesting playback state...');
     isSyncing = true;
 
     const syncRequest = {
@@ -1122,12 +1227,12 @@ function requestPlaybackSync() {
             JSON.stringify(syncRequest)
         );
 
-        console.log('📤 [SYNC] Sync request sent:', syncRequest);
+        // console.log('📤 [SYNC] Sync request sent:', syncRequest);
 
         // Set timeout in case no response
         syncTimeout = setTimeout(() => {
             if (isSyncing && !hasReceivedInitialSync) {
-                console.log('⏱️ [SYNC] No sync response received - assuming no active playback');
+                // console.log('⏱️ [SYNC] No sync response received - assuming no active playback');
                 isSyncing = false;
             }
         }, 5000);  // Increased to 5 seconds
@@ -1268,7 +1373,7 @@ function playNextSong() {
     }
 
     if (nextSong) {
-        ToastNotification.info(`⏭️ Next: ${nextSong.songName}`);
+        // ToastNotification.info(`⏭️ Next: ${nextSong.songName}`);
         broadcastSkipCommand('NEXT', nextSong, nextIndex);
     }
 }
@@ -1336,7 +1441,7 @@ function playPreviousSong() {
     }
 
     if (prevSong) {
-        ToastNotification.info(`⏮️ Previous: ${prevSong.songName}`);
+        // ToastNotification.info(`⏮️ Previous: ${prevSong.songName}`);
         broadcastSkipCommand('PREVIOUS', prevSong, prevIndex);
     }
 }
@@ -1422,39 +1527,63 @@ function updatePlaybackButtons() {
 }
 async function loadNextPageAndPlay() {
     if (currentPage >= totalPages - 1) {
+        // console.log('🏁 Already on last page');
         ToastNotification.info('🎵 No more pages available');
         return;
     }
 
-    ToastNotification.info('Loading next page...');
-    await loadSongsForPage(currentPage + 1);
+    // console.log('📀 Loading page', currentPage + 2, 'of', totalPages);
+    ToastNotification.info(`Loading page ${currentPage + 2}...`);
 
-    // Play first song of new page
-    if (allSongsOnPage.length > 0) {
-        currentPlaylistIndex = 0;
-        playlistMode = 'all';
-        const firstSong = allSongsOnPage[0];
-        ToastNotification.success(`Next page loaded: ${firstSong.songName}`);
-        playSong(firstSong);
+    try {
+        await loadSongsForPage(currentPage + 1);
+
+        // Play first song of new page
+        if (allSongsOnPage.length > 0) {
+            currentPlaylistIndex = 0;
+            playlistMode = 'all';
+            const firstSong = allSongsOnPage[0];
+            // console.log('✅ Page loaded, playing:', firstSong.songName);
+            ToastNotification.success(`Playing: ${firstSong.songName}`);
+            setTimeout(() => playSong(firstSong), 500);
+        } else {
+            console.warn('⚠️ Page loaded but no songs found');
+            ToastNotification.warning('No songs on this page');
+        }
+    } catch (error) {
+        console.error('❌ Error loading next page:', error);
+        ToastNotification.error('Failed to load next page');
     }
 }
 
 async function loadPreviousPageAndPlay() {
     if (currentPage === 0) {
+        // console.log('🏁 Already on first page');
         ToastNotification.info('🎵 Already on first page');
         return;
     }
 
-    ToastNotification.info('Loading previous page...');
-    await loadSongsForPage(currentPage - 1);
+    // console.log('📀 Loading page', currentPage, 'of', totalPages);
+    ToastNotification.info(`Loading page ${currentPage}...`);
 
-    // Play last song of new page
-    if (allSongsOnPage.length > 0) {
-        currentPlaylistIndex = allSongsOnPage.length - 1;
-        playlistMode = 'all';
-        const lastSong = allSongsOnPage[currentPlaylistIndex];
-        ToastNotification.success(`Previous page loaded: ${lastSong.songName}`);
-        playSong(lastSong);
+    try {
+        await loadSongsForPage(currentPage - 1);
+
+        // Play last song of new page
+        if (allSongsOnPage.length > 0) {
+            currentPlaylistIndex = allSongsOnPage.length - 1;
+            playlistMode = 'all';
+            const lastSong = allSongsOnPage[currentPlaylistIndex];
+            // console.log('✅ Page loaded, playing:', lastSong.songName);
+            ToastNotification.success(`Playing: ${lastSong.songName}`);
+            setTimeout(() => playSong(lastSong), 500);
+        } else {
+            console.warn('⚠️ Page loaded but no songs found');
+            ToastNotification.warning('No songs on this page');
+        }
+    } catch (error) {
+        console.error('❌ Error loading previous page:', error);
+        ToastNotification.error('Failed to load previous page');
     }
 }
 // ==================== WEBSOCKET CONNECTION ====================
@@ -1465,7 +1594,7 @@ function connectWebSocket(token) {
     stompClient.connect(
         {'Authorization': `Bearer ${token}`},
         (frame) => {
-            console.log('✅ Connected to WebSocket');
+            // console.log('✅ Connected to WebSocket');
             ToastNotification.success('Connected to chat room');
 
             // Subscribe to all channels...
@@ -1496,7 +1625,7 @@ function connectWebSocket(token) {
 
             // ⭐ CRITICAL: Subscribe to playback sync state responses
             stompClient.subscribe(`/topic/chat/${currentRoomName}/playback/state`, (message) => {
-                console.log('📨 [SYNC] Received sync state message');
+                // console.log('📨 [SYNC] Received sync state message');
                 const syncMsg = JSON.parse(message.body);
                 handlePlaybackSyncState(syncMsg);
             });
@@ -1534,9 +1663,9 @@ function connectWebSocket(token) {
 
             // ⭐ CRITICAL: Request playback sync for late joiners
             // Give server time to process JOIN, then sync
-            console.log('⏳ [SYNC] Scheduling playback sync in 1 second...');
+            // console.log('⏳ [SYNC] Scheduling playback sync in 1 second...');
             setTimeout(() => {
-                console.log('🚀 [SYNC] Initiating playback sync...');
+                // console.log('🚀 [SYNC] Initiating playback sync...');
                 requestPlaybackSync();
             }, 1000);  // Increased delay to ensure JOIN is processed
 
@@ -1655,8 +1784,8 @@ function updateParticipantsDisplay(participants) {
             isOrganizer = p.organizer;
 
             if (wasOrganizer !== isOrganizer) {
-                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
-                    'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
+                // console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
+                //     'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
                 onRoleChange();
 
                 if (isOrganizer) {
@@ -1943,7 +2072,7 @@ function handleFavoriteToggle(heartButton) {
         language: songItem.dataset.language
     };
 
-    console.log('💖 Toggling favorite for:', song.songName);
+    // console.log('💖 Toggling favorite for:', song.songName);
     toggleFavorite(song, heartButton);
 }
 function handleSongClick(element) {
@@ -1962,25 +2091,35 @@ function handleSongClick(element) {
         language: element.dataset.language
     };
 
+    // console.log('🎵 Playing song:', song.songName);
+
+    // Stop favorites playlist if active
     if (isPlayingFavorites) {
-        stopFavoritesPlaylist();
+        isPlayingFavorites = false;
     }
 
+    // Check if song is in favorites
     const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
     if (favIndex !== -1) {
+        // Song is in favorites - use favorites playlist
         playlistMode = 'favorites';
         currentPlaylist = [...roomFavorites];
         currentPlaylistIndex = favIndex;
         currentFavoriteIndex = favIndex;
+        // console.log('📋 Using favorites playlist, index:', favIndex);
     } else {
+        // Song is in main list - use all songs playlist
         playlistMode = 'all';
         currentPlaylist = [...allSongsOnPage];
         currentPlaylistIndex = allSongsOnPage.findIndex(s => s.fileName === song.fileName);
 
         if (currentPlaylistIndex === -1) {
+            // Song not found in current page list (shouldn't happen, but handle it)
             currentPlaylist.push(song);
             currentPlaylistIndex = currentPlaylist.length - 1;
+            // console.warn('⚠️ Song not in page list, added manually');
         }
+        // console.log('📋 Using main playlist, index:', currentPlaylistIndex);
     }
 
     playSong(song);
@@ -2078,30 +2217,41 @@ function handleSearchSongClick(element) {
         language: element.dataset.language
     };
 
+    // console.log('🎵 Playing search result:', song.songName);
+
+    // Stop favorites playlist if active
     if (isPlayingFavorites) {
-        stopFavoritesPlaylist();
+        isPlayingFavorites = false;
     }
 
+    // Check if song is in favorites
     const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
     if (favIndex !== -1) {
+        // Song is in favorites - use favorites playlist
         playlistMode = 'favorites';
         currentPlaylist = [...roomFavorites];
         currentPlaylistIndex = favIndex;
         currentFavoriteIndex = favIndex;
+        // console.log('📋 Using favorites playlist, index:', favIndex);
     } else {
+        // Use search results as playlist
         playlistMode = 'search';
         currentPlaylist = [...searchSongsList];
         currentPlaylistIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
 
         if (currentPlaylistIndex === -1) {
+            // Song not found (shouldn't happen)
             currentPlaylist.push(song);
             currentPlaylistIndex = currentPlaylist.length - 1;
+            // console.warn('⚠️ Song not in search list, added manually');
         }
+        // console.log('📋 Using search playlist, index:', currentPlaylistIndex);
     }
 
     playSong(song);
     closeSearchDrawer();
 }
+
 
 // ==================== UTILITY FUNCTIONS ====================
 function getUserColor(username) {

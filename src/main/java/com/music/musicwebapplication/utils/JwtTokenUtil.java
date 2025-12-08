@@ -1,14 +1,10 @@
 package com.music.musicwebapplication.utils;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.annotation.SessionScope;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -17,7 +13,7 @@ import java.util.Date;
 @Slf4j
 public class JwtTokenUtil {
 
-    private static final long EXPIRY_DATE = 1000 * 60 * 60; // 30 minutes
+    private static final long EXPIRY_DATE = 1000 * 60 * 60*2; // 2 hours
 
     @Value("${jwt.security.secret-key:your-secret-key-here-min-256-bits-long}")
     private String secretString;
@@ -56,6 +52,9 @@ public class JwtTokenUtil {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
+        } catch (ExpiredJwtException e) {
+            log.error("Token has expired: {}", e.getMessage());
+            throw e;
         } catch (JwtException e) {
             log.error("JWT parsing error: {}", e.getMessage());
             throw e;
@@ -74,10 +73,11 @@ public class JwtTokenUtil {
             Date expiration = extractClaims(token).getExpiration();
             if (expiration.before(new Date())) {
                 log.warn("Token has expired");
-                return false;
+                throw new ExpiredJwtException(null, null, "Token has expired"); // ← THROW HERE
             }
 
-            log.info("Token validation successful for user: {}", username);
+
+//            log.info("Token validation successful for user: {}", username);
             return true;
         } catch (JwtException e) {
             log.error("Token validation failed: {}", e.getMessage());

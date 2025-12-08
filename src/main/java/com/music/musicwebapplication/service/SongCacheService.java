@@ -141,9 +141,9 @@ public class SongCacheService {
 
     // ---------- Update Cache ----------
     private void updateCache() {
-        log.info("Db call for cache.");
+
         List<String> latestSongs = repo.findAllSongBySongName(); // DB call
         redisTemplate.opsForValue().set(SONG_CACHE_KEY, latestSongs);
-        System.out.println("♻️ Redis Cache Updated — " + latestSongs.size() + " songs");
+        log.info("Redis Cache Updated —  {} songs",latestSongs.size());
     }
 }
