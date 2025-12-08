@@ -7,5 +7,6 @@ public enum Status {
     SENT,
     READING,
     DONE,
-    EXPIRED
+    EXPIRED,
+    UPLOADED
 }
