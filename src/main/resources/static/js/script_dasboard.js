@@ -1,43 +1,37 @@
-// Toast notification system
+// Bootstrap Toast notification system
 class ToastNotifier {
     constructor() {
         this.container = document.getElementById('toastContainer');
     }
 
     show(message, type = 'error', duration = 5000) {
-        const toast = document.createElement('div');
-        toast.className = `toast-custom toast-${type}`;
-
+        const toastId = 'toast-' + Date.now();
+        const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
         const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
 
-        toast.innerHTML = `
-            <span class="toast-icon">
-                <i class="bi ${icon}"></i>
-            </span>
-            <div class="toast-content">${message}</div>
-            <button type="button" class="toast-close" aria-label="Close">×</button>
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center">
+                        <i class="bi ${icon} me-2 fs-5"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
         `;
 
-        this.container.appendChild(toast);
+        this.container.insertAdjacentHTML('beforeend', toastHtml);
 
-        toast.querySelector('.toast-close').addEventListener('click', () => {
-            this.removeToast(toast);
+        const toastElement = document.getElementById(toastId);
+        const bsToast = new bootstrap.Toast(toastElement, { delay: duration });
+        bsToast.show();
+
+        toastElement.addEventListener('hidden.bs.toast', () => {
+            toastElement.remove();
         });
 
-        if (duration > 0) {
-            setTimeout(() => {
-                this.removeToast(toast);
-            }, duration);
-        }
-
-        return toast;
-    }
-
-    removeToast(toast) {
-        toast.classList.add('removing');
-        setTimeout(() => {
-            toast.remove();
-        }, 300);
+        return toastElement;
     }
 
     success(message, duration = 4000) {
@@ -66,14 +60,11 @@ class SongAutocomplete {
     async init() {
         if (!this.songInput || !this.suggestionsContainer) return;
 
-        // Fetch cached songs on initialization
         await this.fetchCachedSongs();
 
-        // Add event listeners
         this.songInput.addEventListener('input', (e) => this.handleInput(e));
         this.songInput.addEventListener('keydown', (e) => this.handleKeydown(e));
 
-        // Close suggestions when clicking outside
         document.addEventListener('click', (e) => {
             if (!this.songInput.contains(e.target) && !this.suggestionsContainer.contains(e.target)) {
                 this.closeSuggestions();
@@ -113,33 +104,33 @@ class SongAutocomplete {
         const term = searchTerm.toLowerCase();
         return this.cachedSongs.filter(song =>
             song.toLowerCase().includes(term)
-        ).slice(0, 10); // Limit to 10 suggestions
+        ).slice(0, 10);
     }
 
     showSuggestions(songs) {
         this.selectedIndex = -1;
 
         if (songs.length === 0) {
-            this.suggestionsContainer.innerHTML = '<div class="no-suggestions">No matching songs found</div>';
-            this.suggestionsContainer.classList.add('active');
+            this.suggestionsContainer.innerHTML = '<div class="list-group-item text-muted fst-italic">No matching songs found</div>';
+            this.suggestionsContainer.style.display = 'block';
             return;
         }
 
         this.suggestionsContainer.innerHTML = songs.map((song, index) =>
-            `<div class="song-suggestion-item" data-index="${index}" data-song="${this.escapeHtml(song)}">
+            `<a href="#" class="list-group-item list-group-item-action" data-index="${index}" data-song="${this.escapeHtml(song)}">
                 ${this.highlightMatch(song, this.songInput.value)}
-            </div>`
+            </a>`
         ).join('');
 
-        // Add click listeners to suggestion items
-        this.suggestionsContainer.querySelectorAll('.song-suggestion-item').forEach(item => {
+        this.suggestionsContainer.querySelectorAll('.list-group-item').forEach(item => {
             item.addEventListener('click', (e) => {
+                e.preventDefault();
                 const songName = e.currentTarget.getAttribute('data-song');
                 this.selectSong(songName);
             });
         });
 
-        this.suggestionsContainer.classList.add('active');
+        this.suggestionsContainer.style.display = 'block';
     }
 
     highlightMatch(text, searchTerm) {
@@ -148,9 +139,9 @@ class SongAutocomplete {
     }
 
     handleKeydown(e) {
-        if (!this.suggestionsContainer.classList.contains('active')) return;
+        if (this.suggestionsContainer.style.display !== 'block') return;
 
-        const items = this.suggestionsContainer.querySelectorAll('.song-suggestion-item');
+        const items = this.suggestionsContainer.querySelectorAll('.list-group-item');
 
         switch(e.key) {
             case 'ArrowDown':
@@ -182,10 +173,10 @@ class SongAutocomplete {
     updateSelection(items) {
         items.forEach((item, index) => {
             if (index === this.selectedIndex) {
-                item.classList.add('selected');
+                item.classList.add('active');
                 item.scrollIntoView({ block: 'nearest' });
             } else {
-                item.classList.remove('selected');
+                item.classList.remove('active');
             }
         });
     }
@@ -197,7 +188,7 @@ class SongAutocomplete {
     }
 
     closeSuggestions() {
-        this.suggestionsContainer.classList.remove('active');
+        this.suggestionsContainer.style.display = 'none';
         this.selectedIndex = -1;
     }
 
@@ -212,51 +203,7 @@ class SongAutocomplete {
     }
 }
 
-// Modal functions for Create Room
-function openCreateModal() {
-    document.getElementById('createModal').classList.add('active');
-}
-
-function closeCreateModal() {
-    document.getElementById('createModal').classList.remove('active');
-    document.getElementById('createRoomForm').reset();
-}
-
-// Modal functions for Join Room
-function openJoinModal() {
-    document.getElementById('joinModal').classList.add('active');
-}
-
-function closeJoinModal() {
-    document.getElementById('joinModal').classList.remove('active');
-    document.getElementById('joinRoomForm').reset();
-}
-
-// Modal Functions for Send Confess
-function openSendConfessModal() {
-    document.getElementById('sendConfess').classList.add('active');
-}
-
-function closeSendConfessModal() {
-    document.getElementById('sendConfess').classList.remove('active');
-    document.getElementById('sendConfessForm').reset();
-    // Reset the "Other" input field visibility
-    document.getElementById('otherConfessTypeDiv').style.display = 'none';
-    document.getElementById('otherConfessType').required = false;
-}
-
-// Open Request Song Modal
-function openRequestSongModal() {
-    document.getElementById('requestSongModal').classList.add('active');
-}
-
-// Close Request Song Modal
-function closeRequestSongModal() {
-    document.getElementById('requestSongModal').classList.remove('active');
-    document.getElementById('requestSongForm').reset();
-}
-
-// Toggle "Other" input field for confess type
+// Toggle other confess type input
 function toggleOtherInput() {
     const confessType = document.getElementById('confessType').value;
     const otherDiv = document.getElementById('otherConfessTypeDiv');
@@ -272,32 +219,6 @@ function toggleOtherInput() {
     }
 }
 
-// Logout function
-function logout() {
-    window.location.href = '/app/music/public/logout';
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const createModal = document.getElementById('createModal');
-    const joinModal = document.getElementById('joinModal');
-    const sendConfessModal = document.getElementById('sendConfess');
-    const requestSongModal = document.getElementById('requestSongModal');
-
-    if (event.target === requestSongModal) {
-        closeRequestSongModal();
-    }
-    if (event.target === createModal) {
-        closeCreateModal();
-    }
-    if (event.target === joinModal) {
-        closeJoinModal();
-    }
-    if (event.target === sendConfessModal) {
-        closeSendConfessModal();
-    }
-}
-
 // Handle error and success messages on page load
 window.addEventListener('DOMContentLoaded', function() {
     // Initialize song autocomplete
@@ -306,6 +227,12 @@ window.addEventListener('DOMContentLoaded', function() {
     let hasErrors = false;
     let hasConfessErrors = false;
     let hasRequestSongErrors = false;
+
+    // Get Bootstrap modal instances
+    const createModal = new bootstrap.Modal(document.getElementById('createModal'));
+    const joinModal = new bootstrap.Modal(document.getElementById('joinModal'));
+    const confessModal = new bootstrap.Modal(document.getElementById('sendConfess'));
+    const requestSongModal = new bootstrap.Modal(document.getElementById('requestSongModal'));
 
     // Handle field validation errors for Create Room
     const fieldErrorsContainer = document.getElementById('fieldErrors');
@@ -362,7 +289,7 @@ window.addEventListener('DOMContentLoaded', function() {
         const creationError = creationErrorContainer.textContent.trim();
         if (creationError) {
             notifier.error(creationError);
-            openCreateModal();
+            createModal.show();
             hasErrors = true;
         }
     }
@@ -373,7 +300,7 @@ window.addEventListener('DOMContentLoaded', function() {
         const joinError = joinErrorContainer.textContent.trim();
         if (joinError) {
             notifier.error(joinError);
-            openJoinModal();
+            joinModal.show();
             hasErrors = true;
         }
     }
@@ -394,11 +321,11 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Open the appropriate modal if there are errors
     if (hasConfessErrors) {
-        openSendConfessModal();
+        confessModal.show();
     }
 
     if (hasRequestSongErrors) {
-        openRequestSongModal();
+        requestSongModal.show();
     }
 
     // Clear fields ONLY if there are actual errors
