@@ -229,7 +229,6 @@ a:link, a:visited, a:hover, a:active {
 }
 
 .modal {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -238,13 +237,19 @@ a:link, a:visited, a:hover, a:active {
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
+    z-index: 1000;
+    /* Updated centering properties */
+    display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal.active {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
 }
 
 .modal-content {
@@ -259,6 +264,9 @@ a:link, a:visited, a:hover, a:active {
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Added to ensure proper positioning */
+    margin: 0 auto;
+    position: relative;
 }
 
 /* Custom scrollbar for modal */

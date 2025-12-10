@@ -2,10 +2,12 @@ package com.music.musicwebapplication.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.ConfessContainerRequest;
+import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.repo.UserRepo;
 import com.music.musicwebapplication.service.ConfessService;
+import com.music.musicwebapplication.service.SongControllerService;
 import com.music.musicwebapplication.support.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -32,10 +34,12 @@ public class ConfessController {
     private final UserRepo repo;
     private final ObjectMapper objectMapper;
 
-    public ConfessController(ConfessService service, UserRepo repo, ObjectMapper objectMapper) {
+    private final SongControllerService songService;
+    public ConfessController(ConfessService service, UserRepo repo, ObjectMapper objectMapper, SongControllerService songService) {
         this.service = service;
         this.repo = repo;
         this.objectMapper = objectMapper;
+        this.songService = songService;
     }
 
 //    admin validation page controller
@@ -44,19 +48,24 @@ public class ConfessController {
     @GetMapping("/request/inProgress/{user}")
     public String getAllInProgressRequest(@PathVariable(value = "user")String currentUser, Model model){
         Optional<List<Confess>> availableRequest;
+        Optional<List<RequestSongDto>> requestedSongs;
 
         if(currentUser.equals("admin")){
             availableRequest = service.getAllInProgressRequest(Status.IN_PROGRESS);
+            requestedSongs= songService.getAllRequestStatusSong(Status.SENT);
         }else{
             availableRequest=service.getAllRequestForUser(currentUser);
+            requestedSongs = songService.getAllSongForRequestor(currentUser);
         }
 
         if(availableRequest.isEmpty()){
             model.addAttribute("noData","No Pending request");
+            model.addAttribute("noRequestData","No Pending request");
         }else{
             List<ConfessContainerRequest> confessDto = availableRequest.get().stream().map(entity -> objectMapper.convertValue(entity, ConfessContainerRequest.class))
                     .collect(Collectors.toList());
             model.addAttribute("inProgressRequests",confessDto);
+            model.addAttribute("pendingOrCompleted",requestedSongs);
         }
 
         return "adminValidation";

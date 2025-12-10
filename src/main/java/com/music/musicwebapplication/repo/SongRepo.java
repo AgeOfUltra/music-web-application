@@ -1,8 +1,7 @@
 package com.music.musicwebapplication.repo;
 
+import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.entity.Song;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,4 +26,7 @@ public interface SongRepo extends JpaRepository<Song,Long> {
 
     @Query("SELECT s.fileName from Song s")
     List<String> findAllSongBySongName();
+
+    @Query("SELECT s from RequestSong s where s.requestor = :requestor")
+    Optional<List<RequestSong>> findSongsByRequestor(@Param("requestor") String requestor);
 }

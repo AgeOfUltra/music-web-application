@@ -32,9 +32,18 @@
     <div id="confessFieldErrors" style="display: none;">
         <span th:each="error : ${#fields.errors('requestData.*')}" th:text="${error}" class="error-item"></span>
     </div>
+
+    <div id="requestSongFieldErrors" style="display: none;">
+        <span th:each="error : ${#fields.errors('requestSong.*')}" th:text="${error}" class="error-item"></span>
+    </div>
+
     <div id="creationError" style="display: none;" th:text="${creationError}"></div>
     <div id="joinError" style="display: none;" th:text="${joinError}"></div>
     <div id="emailStatus" style="display: none;" th:text="${emailStatus}"></div>
+
+    <!--    flashAttribute error display-->
+    <div id="requestSongError" style="display: none;" th:text="${requestSongError}"></div>
+
 
     <div class="welcome-card">
         <h1 th:text="'Welcome! ' + ${currentUser}"></h1>
@@ -59,6 +68,15 @@
             <p>Send your music and feeling to loved once's</p>
             <button type="button" class="option-btn btn-create">Send Request</button>
         </div>
+
+        <!--        Song request option card -->
+        <div class="option-card" onclick="openRequestSongModal()">
+            <h2>Request your favourite Song</h2>
+            <p>Send request to get it added your favourite song</p>
+            <button type="button" class="option-btn btn-create">Send Song Request</button>
+        </div>
+
+
         <div class="option-card">
             <h2 th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending request' : 'Request Dashboard'">
                 View Pending request
@@ -236,6 +254,72 @@
     </div>
 </div>
 
+<!--Send Song Request Modal-->
+<div id="requestSongModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Request Your Favourite Song</h2>
+            <button type="button" class="close-btn" onclick="closeRequestSongModal()">&times;</button>
+        </div>
+
+        <div style="padding: 10px 20px; margin-bottom: 15px;">
+            <p style="font-style: italic; color: rgba(255, 255, 255, 0.9); margin-bottom: 10px; line-height: 1.6;">
+                Can't find your favorite song? Request it here and we'll add it to our collection!
+            </p>
+            <div style="background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.5); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+                <strong style="color: rgba(255, 255, 255, 0.95);">ℹ️ Note:</strong>
+                <span style="color: rgba(255, 255, 255, 0.85); font-size: 0.9em;">
+                    Please provide accurate song details. Requests are reviewed and processed by our admin team.
+                </span>
+            </div>
+        </div>
+
+        <form th:action="@{/app/music/public/request/song}" id="requestSongForm" th:method="POST" th:object="${requestSong}">
+            <!-- Hidden Field - Requestor -->
+            <!-- Hidden Field - Requestor -->
+            <div class="form-group" style="display: none;">
+                <input type="hidden"
+                       name="requestor"
+                       id="requestor"
+                       th:value="${currentUser}"
+                       readonly>
+            </div>
+
+            <!-- Song Name -->
+            <div class="form-group">
+                <label for="requestSongName">Song Name <span style="color: #ff6b6b;">*</span></label>
+                <input type="text"
+                       id="requestSongName"
+                       th:field="*{songName}"
+                       placeholder="Enter the song name"
+                       >
+            </div>
+
+            <!-- Movie Name -->
+            <div class="form-group">
+                <label for="requestMovieName">Movie Name <span style="color: #ff6b6b;"></span></label>
+                <input type="text"
+                       id="requestMovieName"
+                       th:field="*{movieName}"
+                       placeholder="Enter the movie name"
+                       >
+            </div>
+
+            <!-- Singer Name -->
+            <div class="form-group">
+                <label for="requestSingerName">Singer Name <span style="color: #ff6b6b;">*</span></label>
+                <input type="text"
+                       id="requestSingerName"
+                       th:field="*{singerName}"
+                       placeholder="Enter the singer name"
+                       required>
+            </div>
+
+            <button type="submit" class="submit-btn btn-create">Submit Request</button>
+        </form>
+    </div>
+</div>
+
 <!-- Admin Upload Section -->
 <div class="container" sec:authorize="hasRole('ADMIN')">
     <div class="upload-card">
@@ -280,6 +364,7 @@
     LoaderPlugin.initFormSubmit('createRoomForm');
     LoaderPlugin.initFormSubmit('joinRoomForm');
     LoaderPlugin.initFormSubmit('sendConfessForm');
+    LoaderPlugin.initFormSubmit('requestSongForm');
 
     // Hide loader if there are errors
     LoaderPlugin.hideOnError('creationError');
@@ -287,6 +372,8 @@
     LoaderPlugin.hideOnError('fieldErrors');
     LoaderPlugin.hideOnError('confessFieldErrors');
     LoaderPlugin.hideOnError('emailStatus');
+    LoaderPlugin.hideOnError('requestSongError');
+    LoaderPlugin.hideOnError('requestSongFieldErrors');
 </script>
 <script th:src="@{/js/script_dasboard.js}"></script>
 </body>

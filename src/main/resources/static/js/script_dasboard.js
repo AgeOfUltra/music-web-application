@@ -245,6 +245,17 @@ function closeSendConfessModal() {
     document.getElementById('otherConfessType').required = false;
 }
 
+// Open Request Song Modal
+function openRequestSongModal() {
+    document.getElementById('requestSongModal').classList.add('active');
+}
+
+// Close Request Song Modal
+function closeRequestSongModal() {
+    document.getElementById('requestSongModal').classList.remove('active');
+    document.getElementById('requestSongForm').reset();
+}
+
 // Toggle "Other" input field for confess type
 function toggleOtherInput() {
     const confessType = document.getElementById('confessType').value;
@@ -271,7 +282,11 @@ window.onclick = function(event) {
     const createModal = document.getElementById('createModal');
     const joinModal = document.getElementById('joinModal');
     const sendConfessModal = document.getElementById('sendConfess');
+    const requestSongModal = document.getElementById('requestSongModal');
 
+    if (event.target === requestSongModal) {
+        closeRequestSongModal();
+    }
     if (event.target === createModal) {
         closeCreateModal();
     }
@@ -290,6 +305,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
     let hasErrors = false;
     let hasConfessErrors = false;
+    let hasRequestSongErrors = false;
 
     // Handle field validation errors for Create Room
     const fieldErrorsContainer = document.getElementById('fieldErrors');
@@ -317,6 +333,29 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle request song field errors
+    const requestSongFieldErrorsContainer = document.getElementById('requestSongFieldErrors');
+    if (requestSongFieldErrorsContainer) {
+        const errorItems = requestSongFieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasRequestSongErrors = true;
+            }
+        });
+    }
+
+    // Handle request song error flash attribute
+    const requestSongErrorContainer = document.getElementById('requestSongError');
+    if (requestSongErrorContainer) {
+        const requestSongError = requestSongErrorContainer.textContent.trim();
+        if (requestSongError) {
+            notifier.error(requestSongError);
+            hasRequestSongErrors = true;
+        }
+    }
+
     // Handle creation error
     const creationErrorContainer = document.getElementById('creationError');
     if (creationErrorContainer) {
@@ -340,10 +379,6 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle email status from Send Confess form
-    const urlParams = new URLSearchParams(window.location.search);
-    const status = urlParams.get('status');
-
-    // Check if there's an emailStatus attribute from Thymeleaf
     const emailStatusElement = document.getElementById('emailStatus');
     if (emailStatusElement) {
         const emailStatus = emailStatusElement.textContent.trim();
@@ -362,6 +397,10 @@ window.addEventListener('DOMContentLoaded', function() {
         openSendConfessModal();
     }
 
+    if (hasRequestSongErrors) {
+        openRequestSongModal();
+    }
+
     // Clear fields ONLY if there are actual errors
     if (hasErrors) {
         const roomNameField = document.getElementById('roomName');
@@ -371,5 +410,16 @@ window.addEventListener('DOMContentLoaded', function() {
         if (roomNameField) roomNameField.value = '';
         if (maxCountField) maxCountField.value = '';
         if (joinRoomNameField) joinRoomNameField.value = '';
+    }
+
+    // Clear request song fields if there are errors
+    if (hasRequestSongErrors) {
+        const requestSongNameField = document.getElementById('requestSongName');
+        const requestMovieNameField = document.getElementById('requestMovieName');
+        const requestSingerNameField = document.getElementById('requestSingerName');
+
+        if (requestSongNameField) requestSongNameField.value = '';
+        if (requestMovieNameField) requestMovieNameField.value = '';
+        if (requestSingerNameField) requestSingerNameField.value = '';
     }
 });

@@ -22,9 +22,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -165,5 +167,13 @@ public class SongControllerService {
         }
 
         return "updated";
+    }
+
+    public Optional<List<RequestSongDto>> getAllSongForRequestor(String requestor){
+         return Optional.of(repo.findSongsByRequestor(requestor)
+                 .map(songs -> songs.stream()
+                         .map(song -> objectMapper.convertValue(song, RequestSongDto.class))
+                         .toList())
+                 .orElse(Collections.emptyList()));
     }
 }
