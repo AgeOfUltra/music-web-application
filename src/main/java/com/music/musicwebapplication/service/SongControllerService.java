@@ -1,13 +1,17 @@
 package com.music.musicwebapplication.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.dto.SongContainer;
+import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.entity.Song;
-import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
+import com.music.musicwebapplication.repo.SongRequestRepo;
+import com.music.musicwebapplication.support.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -18,9 +22,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +34,8 @@ public class SongControllerService {
 
     private final S3Client client;
     private final SongRepo repo;
+    private final SongRequestRepo songRequestRepo;
+    private final ObjectMapper objectMapper;
 
 
     @Value("${aws.bucket.name}")
@@ -35,10 +43,11 @@ public class SongControllerService {
 
 
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo){
+    SongControllerService(S3Client client, SongRepo repo, SongRequestRepo songRequestRepo, ObjectMapper objectMapper){
         this.client = client;
         this.repo = repo;
-
+        this.songRequestRepo = songRequestRepo;
+        this.objectMapper = objectMapper;
     }
 
     public String fileUploadHelper(SongContainer container) throws Exception {
@@ -106,28 +115,65 @@ public class SongControllerService {
         return savedSong.get();
     }
 
-//    public ResponseInputStream<GetObjectResponse> getSongStream(String objectKey){
-//
-//        Optional<Song> song = repo.findSongByFileName(objectKey);
-//        if(song.isEmpty()){
-//            log.info("Song not found in DB with name {}",objectKey);
-//           throw new SongNotFoundException("Song not found");
-//        }
-//
-//        GetObjectRequest  getObjectRequest = GetObjectRequest.builder()
-//                .bucket(bucketName)
-//                .key(objectKey)
-//                .build();
-//        return client.getObject(getObjectRequest);
-//
-//    }
-
-    public Page<Song> getAllSongsName(int page, int size) {
+    @Cacheable(
+            value = "AllSongsPaged",
+            key = "{#page, #size}"
+    )
+    public List<Song> getAllSongsName(int page, int size) {
         Pageable pageable = PageRequest.of(page,size, Sort.by("songName").ascending());
-        return  repo.findAll(pageable);
+        return  repo.findAll(pageable).getContent();
     }
 
+    @Cacheable(value="CachedSongs",key="#songName")
     public List<Song> searchSongsByName(String songName) {
+        log.info("request data : {}" , songName);
         return repo.findBySongNameContainingIgnoreCase(songName);
+    }
+
+
+    public String requestedSongSave(RequestSongDto song){
+
+        RequestSong newSong = objectMapper.convertValue(song, RequestSong.class);
+        newSong.setStatus(Status.SENT);
+
+        try{
+            songRequestRepo.save(newSong);
+        }catch (Exception s){
+            log.error("error while saving the requested song {}",s.getMessage());
+            return "Failed";
+        }
+        return "Saved";
+    }
+
+    public Optional<List<RequestSongDto>> getAllRequestStatusSong(Status status){
+
+        return songRequestRepo.findRequestSongByStatus(status);
+
+    }
+
+    public String updateStatusForRequestSong(String songName, Status newStatus,String note){
+        Optional<RequestSong> currentSong = songRequestRepo.findRequestSongBySongName(songName);
+
+        if(currentSong.isEmpty()){
+            return "Song Not found";
+        }
+        try{
+            currentSong.get().setStatus(newStatus);
+            currentSong.get().setNote(note);
+            songRequestRepo.save(currentSong.get());
+        }catch (Exception e){
+            log.error("error while updating thr requested song {}",e.getMessage());
+            return "Failed";
+        }
+
+        return "updated";
+    }
+
+    public Optional<List<RequestSongDto>> getAllSongForRequestor(String requestor){
+         return Optional.of(repo.findSongsByRequestor(requestor)
+                 .map(songs -> songs.stream()
+                         .map(song -> objectMapper.convertValue(song, RequestSongDto.class))
+                         .toList())
+                 .orElse(Collections.emptyList()));
     }
 }

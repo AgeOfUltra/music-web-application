@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connecting Nodes - Admin Validation</title>
+    <title>Connecting Nodes ∞ - Admin Validation</title>
     <style>
         * {
             margin: 0;
@@ -13,9 +13,8 @@
 
         body {
             font-family: "Alan Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background: linear-gradient(135deg,  #764ba2 25%, #00f2fe 100%);
             background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
             overflow-x: hidden;
         }
@@ -549,7 +548,8 @@
 <div class="header">
     <div class="header-content">
         <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="logo">
-        <div class="app-title">Connecting Nodes - Admin Validation</div>
+        <div class="app-title">
+            Connecting Nodes - <span th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending request' : 'Request Dashboard'"></span></div>
     </div>
     <div class="breadcrumb">
         <a th:href="@{/app/music/dashboard}">Dashboard</a>

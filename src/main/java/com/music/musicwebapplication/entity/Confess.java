@@ -47,7 +47,6 @@ public class Confess {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-
     @LastModifiedDate
     @Column(insertable = false)
     private LocalDateTime modifiedAt;

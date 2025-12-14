@@ -1,12 +1,15 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.entity.Song;
+import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.service.SongCacheService;
 import com.music.musicwebapplication.service.SongControllerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -26,11 +29,14 @@ public class PublicSongController {
 
     private final SongControllerService songControllerService;
     private final SongCacheService songCacheService;
+    private final SongRepo repo;
+
 
     @Autowired
-    PublicSongController(SongControllerService songControllerService, SongCacheService songCacheService){
+    PublicSongController(SongControllerService songControllerService, SongCacheService songCacheService, SongRepo repo){
         this.songControllerService = songControllerService;
         this.songCacheService = songCacheService;
+        this.repo = repo;
     }
 
     @GetMapping(value = "/public/streamSong/{name}",produces = "audio/mpeg")
@@ -44,17 +50,27 @@ public class PublicSongController {
     }
 
     @GetMapping("/fetchAllSongs")
-   public ResponseEntity<Page<Song>> getSongsAsRequired(
-           @RequestParam (defaultValue = "0") int page,
-           @RequestParam(defaultValue = "10")int size){
+    public ResponseEntity<Page<Song>> getSongsAsRequired(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        return ResponseEntity.ok(songControllerService.getAllSongsName(page, size));
+        List<Song> content = songControllerService.getAllSongsName(page, size);
+        long total = repo.count();
 
+        Page<Song> pageResult = new PageImpl<>(content, PageRequest.of(page, size), total);
+
+        return ResponseEntity.ok(pageResult);
     }
+
 
     @GetMapping("/searchSong")
     public ResponseEntity<List<Song>> searchSongsByName(@RequestParam String query){
         return ResponseEntity.ok(songControllerService.searchSongsByName(query));
+    }
+
+    @GetMapping("/getAllCachedSongs")
+    public ResponseEntity<List<String>> getAllCachedSongs(){
+        return ResponseEntity.ok(songCacheService.getSongList());
     }
 
 }

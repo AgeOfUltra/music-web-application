@@ -1,7 +1,7 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.CreateRoom;
-import com.music.musicwebapplication.dto.JoinRoom;
+import com.music.musicwebapplication.dto.RoomJoin;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.exception.RoomManageException;
@@ -11,7 +11,6 @@ import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.ColorUsageUtil;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,6 +24,8 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Controller
@@ -46,14 +47,21 @@ public class RoomController {
     public String chatRoom(@RequestParam String roomName,
                            Authentication authentication,
                            Model model) {
+        Optional<Room> availableRoom = rService.getRoomDetailsByHash(roomName);
+        if(availableRoom.isEmpty()){
+            return "redirect:/app/music/dashboard";
+        }
+        Room currentRoom = availableRoom.get();
         model.addAttribute("username", authentication.getName());
-        model.addAttribute("roomName", roomName);
-        model.addAttribute("roomCount", currentParticipantCount(roomName));
-        model.addAttribute("totalCount", rService.getRoomDetails(roomName).getMaxCount());
+        model.addAttribute("roomName", currentRoom.getRoomName());
+        model.addAttribute("roomCode", roomName);
+        model.addAttribute("passCode",currentRoom.getPassCode());
+        model.addAttribute("roomCount", currentParticipantCount(currentRoom.getRoomName()));
+        model.addAttribute("totalCount", rService.getRoomDetails(currentRoom.getRoomName()).getMaxCount());
         model.addAttribute("userColor",colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
         model.addAttribute("darkerColor",colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
         model.addAttribute("jwtToken",sessionService.getToken(authentication.getName()).orElse(null));
-        model.addAttribute("isOrganizer",rService.isUserOrganizer(roomName,authentication.getName()));
+        model.addAttribute("isOrganizer",rService.isUserOrganizer(currentRoom.getRoomName(),authentication.getName()));
         return "chat";
     }
 
@@ -73,10 +81,12 @@ public class RoomController {
         try {
             ResponseEntity<?> response = createRoomApi(newRoom);
             if(response.getStatusCode().equals(HttpStatus.OK)){
+                Room tempRoom = (Room) response.getBody();
+                log.info("what is inside the response : {} ",tempRoom.getRoomHash());
                 log.info("{} room is created successfully !", newRoom);
                 redirectAttributes.addFlashAttribute("roomCreatedSuccessful","Room Created successfully"); // need to show in the chat.html
                 sessionService.updateRoomName(auth.getName(), newRoom.getRoomName());
-                return new ModelAndView("redirect:/app/music/chat?roomName="+newRoom.getRoomName());
+                return new ModelAndView("redirect:/app/music/chat?roomName="+tempRoom.getRoomHash());
             }else{
                 log.error("room created failed! data : {}", response);
                 log.info("room created failed! data : {}", response);
@@ -118,17 +128,34 @@ public class RoomController {
     }
 
     @PostMapping("/room/join")
-//    Actual method for join room
-    public ModelAndView joinRoom(@ModelAttribute("joinRoom")JoinRoom joinRoom,RedirectAttributes redirectAttributes,Authentication auth) {
+    public ModelAndView joinRoomByHash(@ModelAttribute("joinRoom")RoomJoin joinRoom, RedirectAttributes redirectAttributes,Authentication auth){
+//        get the roomUsing passCode and to validate.
+
+        Optional<Room> availableRoom = rService.getRoomDetailsByHash(joinRoom.getRoomCode());
+        if(availableRoom.isEmpty()){
+            log.info("Room joined failed!");
+            redirectAttributes.addFlashAttribute("joinError", "Room Not found");
+            redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
+        if(!availableRoom.get().getPassCode().equals(joinRoom.getPassCode())){
+            log.info("Room joined failed!");
+            redirectAttributes.addFlashAttribute("joinError", "invalid room credentials");
+            redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
+
         ResponseEntity<?> response;
         joinRoom.setParticipantName(auth.getName());
         try{
+            log.info("room name while joining the room by passcode {}",availableRoom.get().getRoomName());
+            joinRoom.setRoomName(availableRoom.get().getRoomName());
             response = joinRoomApi(joinRoom);
             if(response.getStatusCode().equals(HttpStatus.OK)) {
                 log.info("Successfully logged-in! {}",joinRoom);
                 redirectAttributes.addFlashAttribute("roomJoinedSuccessful","Joined the room successfully");
                 sessionService.updateRoomName(auth.getName(), joinRoom.getRoomName());
-                return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomName());
+                return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomCode());
             }else{
                 log.error("room joined failed! data : {}", response);
                 redirectAttributes.addFlashAttribute("joinError", "Unable to join Room! please try again.");
@@ -147,9 +174,9 @@ public class RoomController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
     }
-
 //    API
-    private ResponseEntity<Participant> joinRoomApi(JoinRoom joinRoom) throws Exception{
+
+    private ResponseEntity<Participant> joinRoomApi(RoomJoin joinRoom) throws Exception{
         Participant newParticipant = new Participant();
         newParticipant.setUserName(joinRoom.getParticipantName());
         newParticipant.setOrganizer(false);
@@ -223,7 +250,41 @@ public class RoomController {
         return ResponseEntity.ok("Room cleared");
     }
 
+    @DeleteMapping("/room/exitRoom")
+    public ResponseEntity<?> exitRoom(HttpServletRequest request) {
 
+        String username = loginService.extractUsernameFromJwt(request);
+
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Unauthorized"));
+        }
+
+        try {
+            // ✅ SCENARIO 1: Back button - keep session, clear room only
+            Optional<String> leftRoom = rService.exitFromRoomWithNotification(username, false);
+
+            if (leftRoom.isEmpty()) {
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "message", "Not in any room or already exited"
+                ));
+            }
+
+            log.info("✅ User {} exited room {} (BACK button - session kept)", username, leftRoom.get());
+
+            return ResponseEntity.ok().body(Map.of(
+                    "success", true,
+                    "message", "Successfully exited from room",
+                    "roomName", leftRoom.get()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error exiting room for user {}: {}", username, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error exiting room"));
+        }
+    }
 
 
 }

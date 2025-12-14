@@ -11,19 +11,13 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 
-/**
- * Configuration for Async task execution.
- * Enables @Async annotation support and configures thread pool for async operations.
- */
+
 @Configuration
 @EnableAsync
 @Slf4j
 public class AsyncConfiguration implements AsyncConfigurer {
 
-    /**
-     * Configure the task executor for async operations.
-     * This executor is used for room cleanup operations.
-     */
+
     @Bean(name = "asyncTaskExecutor")
     public Executor asyncTaskExecutor() {
         log.info("🔧 Creating Async Task Executor");
@@ -68,17 +62,13 @@ public class AsyncConfiguration implements AsyncConfigurer {
         return asyncTaskExecutor();
     }
 
-    /**
-     * Exception handler for uncaught exceptions in async methods
-     */
+
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
         return new CustomAsyncExceptionHandler();
     }
 
-    /**
-     * Custom exception handler to log async errors properly
-     */
+
     public static class CustomAsyncExceptionHandler implements AsyncUncaughtExceptionHandler {
 
         @Override

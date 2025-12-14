@@ -46,6 +46,9 @@ public class AdminSongController {
             redirectAttributes.addFlashAttribute("songUploadFailed", "Please provide valid fields");
             return new ModelAndView("redirect:/app/music/admin/songUpload");
         }
+
+        songContainer.setMovie(songContainer.getMovie().replace("'","\\'"));
+        songContainer.setSinger(songContainer.getSinger().replace("'","\\'"));
         ResponseEntity<?> response;
         try {
             response = uploadSongApi(songContainer);
@@ -72,22 +75,14 @@ public class AdminSongController {
     //
     public ResponseEntity<String> uploadSongApi(SongContainer container) throws Exception {
 
-//        try {
         MultipartFile file = container.getFile();
-//            if(file.isEmpty()){
-//                log.info("file is empty");
-//                return ResponseEntity.badRequest().body("File is empty");
-//            }
+
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("audio/")) {
             log.info("incorrect file type");
             return ResponseEntity.badRequest().body("Please upload audio file");
         }
 
-//            if(container.getSongName().isEmpty() || container.getSongName().isBlank()){
-//                log.info("song name is required");
-//                return ResponseEntity.badRequest().body("song name required");
-//            }
         if (!container.getFileName().contains(".mp3")) {
             log.error("Sent file name {}", container.getFileName());
             return ResponseEntity.badRequest().body("Only mp3 files are accepted");
@@ -96,12 +91,6 @@ public class AdminSongController {
         String result = songControllerService.fileUploadHelper(container);
         return ResponseEntity.ok(result);
 
-//        } catch (Exception e) {
-//            log.info("Error while uploading file");
-//            log.error("stack trace : {}", (Object) e.getStackTrace());
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body("Failed to upload song: " + e.getMessage());
-//        }
     }
 
 

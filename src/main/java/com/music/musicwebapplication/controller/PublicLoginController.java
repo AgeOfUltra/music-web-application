@@ -190,21 +190,38 @@ public class PublicLoginController {
         return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
     }
 
+
     @GetMapping("/logout")
     public String logoutUser(HttpServletResponse response, HttpServletRequest request) {
 
         String username = loginService.extractUsernameFromJwt(request);
 
         if (username != null) {
+            try {
+                // ✅ SCENARIO 2: Logout - delete complete session
+                Optional<String> leftRoom = roomService.exitFromRoomWithNotification(username, true);
 
-            Optional<String> leftRoom = roomService.exitFromRoomLogoutHandler(username);
-            sessionService.updateRoomName(username, null);
-            sessionService.deleteUserSession(username);
+                leftRoom.ifPresent(s -> log.info("User {} exited room {} during LOGOUT (session deleted)", username, s));
+
+                // Note: Session already deleted by exitFromRoom if user was in room
+                // But if user wasn't in room, still delete session
+                try {
+                    sessionService.deleteUserSession(username);
+                } catch (Exception e) {
+                    // Already deleted, ignore
+                }
+
+                log.info("✅ User {} logged out successfully", username);
+
+            } catch (Exception e) {
+                log.error("Error during logout for user {}: {}", username, e.getMessage());
+            }
         }
 
-        // 4. remove JWT cookie
+        // Remove JWT cookie
         ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
+                .secure(false) // Set to true in production
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(0)
@@ -216,8 +233,5 @@ public class PublicLoginController {
 
         return "redirect:/app/music/public/login?logout=true";
     }
-
-
-
 
 }

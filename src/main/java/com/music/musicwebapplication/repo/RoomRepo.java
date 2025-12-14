@@ -16,4 +16,7 @@ public interface RoomRepo extends JpaRepository<Room,Long> {
     @Query("SELECT r FROM Room r LEFT JOIN FETCH r.participant WHERE r.roomName = :roomName")
     Optional<Room> findRoomWithParticipantsByRoomName(@Param("roomName") String roomName);
 
+    @Query("SELECT r FROM Room r LEFT JOIN FETCH r.participant WHERE r.roomHash = :hash")
+    Optional<Room> findRoomWithParticipantsByRoomHash(@Param("hash") String hash);
+
 }

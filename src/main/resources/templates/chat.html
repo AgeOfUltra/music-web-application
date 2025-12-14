@@ -4,24 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connecting Notes - Chat Room</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- WebSocket Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
+
     <link rel="stylesheet" th:href="@{/css/style_chat.css}">
-    <title>Connecting Notes ∞ - Chat Room</title>
 </head>
 <body>
-<div class="header">
-    <button class="btn btn-secondary" type="button" onclick="handleBack()">Back</button>
 
-    <div class="header-left">
-        <img th:src="@{/app_logo.png}" alt="Connecting Notes Logo" class="logo">
-        <div class="app-title">CONNECTING NOTES</div>
+<header class="header glass">
+    <div class="container-fluid">
+        <div class="row align-items-center g-2">
+            <!-- Back Button -->
+            <div class="col-auto">
+                <button class="btn btn-glass btn-sm" type="button" onclick="handleBack()">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+            </div>
+
+            <!-- Logo and Title (Centered) -->
+            <div class="col text-center">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <img th:src="@{/app_logo.png}" alt="Logo" class="logo">
+                    <div class="app-title">CONNECTING NOTES</div>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <div class="col-auto">
+                <button class="btn btn-glass btn-sm" type="button" onclick="logout()">
+                    Logout <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </div>
+        </div>
     </div>
-
-    <button class="logout-btn" type="button" onclick="logout()">Logout</button>
-</div>
+</header>
 
 <!-- Success Message Container (hidden) -->
 <div id="successMessageCreate" style="display: none;" th:text="${roomCreatedSuccessful}"></div>
@@ -34,9 +60,25 @@
                 <div class="song-title" id="currentSongTitle">No song playing</div>
                 <div class="song-details" id="currentSongDetails">Select a song to play</div>
             </div>
-            <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
-                <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
+
+            <!-- NEW: Combined audio player and controls in one row -->
+            <div class="audio-controls-container">
+                <button class="playback-btn-inline" onclick="playPreviousSong()" title="Previous Song (Alt + ←)" id="prevSongBtn">
+                    <i class="bi bi-skip-start-fill"></i>
+                </button>
+
+                <div id="audioPlayerWrapper" th:classappend="${isOrganizer} ? 'organizer-audio' : 'readonly-audio'">
+                    <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
+                </div>
+
+                <button class="playback-btn-inline" onclick="playNextSong()" title="Next Song (Alt + →)" id="nextSongBtn">
+                    <i class="bi bi-skip-end-fill"></i>
+                </button>
             </div>
+
+            <div class="keyboard-hint" id="keyboardHint" style="display: none;">
+            </div>
+
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="search-btn" onclick="openSearchDrawer()" style="flex: 1;">
                     <i class="bi bi-search"></i> Search Songs
@@ -79,12 +121,24 @@
 
     <div class="middle-panel">
         <div class="room-header">
-            <div class="room-name" th:text="${roomName}" id="roomName"></div>
+            <div class="room-name" id="roomName">
+                <span th:text="${roomName}"></span>
+                <i class="bi bi-copy" id="copyRoomInfo" title="Copy room details to share with others"></i>
+            </div>
+
             <div class="room-user-info">Logged in as: <span th:text="${username}"></span></div>
             <div class="participant-count" id="participantCount" th:text="'Participants: ' + ${roomCount} + '/' + ${totalCount}"></div>
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="system-message">Welcome to the chat room!</div>
+        </div>
+        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+            <span class="typing-user"></span>
+            <span class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
         </div>
         <div class="chat-input-container">
             <input type="text" class="chat-input" id="messageInput" placeholder="Type a message..."
@@ -110,7 +164,8 @@
         <button class="drawer-close" onclick="closeSearchDrawer()">&times;</button>
     </div>
     <div class="drawer-search">
-        <input type="text" id="searchInput" placeholder="Search by song name..." onkeypress="handleSearchEnter(event)">
+        <label for="searchInput">Search by song/movie name</label>
+        <input type="text" id="searchInput" placeholder="Search by song/movie name..." onkeypress="handleSearchEnter(event)">
         <button class="search-btn" onclick="searchSongs()" style="margin-top: 10px; width: 100%;">Search</button>
     </div>
     <div class="drawer-results" id="searchResults"></div>
@@ -151,11 +206,52 @@
         jwtToken: /*[[${jwtToken}]]*/ '',
         userColor: /*[[${userColor}]]*/ '',
         darkerColor: /*[[${darkerColor}]]*/ '',
+        roomCode: /*[[${roomCode}]]*/ '',
+        passCode: /*[[${passCode}]]*/ '',
         isOrganizer: /*[[${isOrganizer}]]*/ false
+
     };
     /*]]>*/
-</script>
 
+    document.getElementById("copyRoomInfo").addEventListener("click", () => {
+        const roomCode = PAGE_DATA.roomCode;
+        const passCode = PAGE_DATA.passCode || ""; // if you added passCode in PAGE_DATA
+
+        const textToCopy = `Room Code: ${roomCode}\nPasscode: ${passCode}`;
+
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                alert("Copied:\n" + textToCopy);
+            })
+            .catch(err => console.error("Copy failed", err));
+    });
+
+</script>
 <script th:src="@{/js/script_chat.js}"></script>
+<script>
+    // Show keyboard hint only for organizers at page load
+    window.addEventListener('load', () => {
+        const hint = document.getElementById('keyboardHint');
+        if (PAGE_DATA.isOrganizer && hint) {
+            hint.style.display = 'block';
+        }
+
+
+        if (typeof window.updatePlaybackButtons === 'function') {
+            try { window.updatePlaybackButtons(); } catch (e) { console.warn('updatePlaybackButtons call failed', e); }
+        } else {
+            // fallback initializer (doesn't replace any functions)
+            const prevBtn = document.getElementById('prevSongBtn');
+            const nextBtn = document.getElementById('nextSongBtn');
+            if (prevBtn && nextBtn && !PAGE_DATA.isOrganizer) {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                prevBtn.title = 'Only organizer can skip songs';
+                nextBtn.title = 'Only organizer can skip songs';
+            }
+        }
+    });
+
+</script>
 </body>
 </html>

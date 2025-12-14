@@ -1,8 +1,9 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.CreateRoom;
-import com.music.musicwebapplication.dto.JoinRoom;
 import com.music.musicwebapplication.dto.ConfessContainerRequest;
+import com.music.musicwebapplication.dto.RequestSongDto;
+import com.music.musicwebapplication.dto.RoomJoin;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -29,8 +30,12 @@ public class DashboardController {
         if(!model.containsAttribute("requestData")){
             model.addAttribute("requestData",new ConfessContainerRequest());
         }
+
+        if(!model.containsAttribute("requestSong")){
+            model.addAttribute("requestSong",new RequestSongDto());
+        }
         if(!model.containsAttribute("joinRoom")){
-            model.addAttribute("joinRoom",new JoinRoom());
+            model.addAttribute("joinRoom",new RoomJoin());
         }
         return "dashboard";
     }

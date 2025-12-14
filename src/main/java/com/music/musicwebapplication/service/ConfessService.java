@@ -6,11 +6,10 @@ import com.music.musicwebapplication.repo.ConfessRepo;
 import com.music.musicwebapplication.support.Role;
 import com.music.musicwebapplication.support.Status;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
+
 import java.util.*;
 import java.util.random.RandomGenerator;
 
@@ -20,8 +19,13 @@ public class ConfessService {
 
     private final ConfessRepo repo;
     private static final RandomGenerator RNG = RandomGenerator.of("L128X256MixRandom");
-    private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$&";
 
+    @Value("${app.music.room.length}")
+    private int ROOM_LENGTH;
+
+    @Value("${app.music.pass.code.length}")
+    private int PASSCODE_LENGTH;
 
 
     public ConfessService(ConfessRepo repo) {
@@ -30,9 +34,9 @@ public class ConfessService {
 
     public String buildSaveConfessData(ConfessContainerRequest cr){
         //generate : room-name
-        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getRoomName(),8);
+        String roomHash = generateRoomName(cr.getMessage().substring(4,11),cr.getReceiverAlias(),cr.getConfessType(),cr.getSingerName(),cr.getSongName(),cr.getRoomName());
 //        passcode generate
-        String passCode = generatePassCode(5);
+        String passCode = generatePassCode();
 //        created time stamp need to update and duration will be handled later upon open.
 
 //        here we don't have fall back-mechanism , if the duplicate room hash is found
@@ -56,10 +60,17 @@ public class ConfessService {
         return  result.getId() >-1 ? "SUCCESS" : "FAILED";
     }
 
-    private String generateRoomName(String message,String alias,String type,String sender,String song,String roomName,int length){
+    private String generateRoomName(String message,String alias,String type,String sender,String song,String roomName){
         String newStr = (message+alias+type+sender+song+roomName).replace(" ","");
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
+        return generateHashHelper(newStr);
+    }
+    public String generateRoomName(String roomName, int size, String organizer){
+        String newStr = (organizer+roomName+Integer.toString(size)).replace(" ","");
+        return generateHashHelper(newStr);
+    }
+    private String generateHashHelper(String newStr) {
+        StringBuilder sb = new StringBuilder(ROOM_LENGTH);
+        for (int i = 0; i < ROOM_LENGTH; i++) {
             int index = RNG.nextInt(newStr.length());
             sb.append(newStr.charAt(index));
         }
@@ -68,10 +79,11 @@ public class ConfessService {
         log.info("room has generated {} ",hash);
         return hash;
     }
-    private String generatePassCode(int length){
 
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
+    public String generatePassCode(){
+
+        StringBuilder sb = new StringBuilder(PASSCODE_LENGTH);
+        for (int i = 0; i < PASSCODE_LENGTH; i++) {
             int index = RNG.nextInt(CHARSET.length());
             sb.append(CHARSET.charAt(index));
         }
@@ -79,7 +91,6 @@ public class ConfessService {
         log.info("passcode generated {}",passCode);
         return passCode;
     }
-
 
 //    update STATUS 1 -> STATUS 2
 
