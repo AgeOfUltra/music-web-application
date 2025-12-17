@@ -52,6 +52,8 @@ public class AppSecurity {
                                 "app/music/nodes/**",
                                 "/favicon.ico",
                                 "/app_logo.png",
+                                "/app_logo_3_1.png",
+                                "/app_logo_5.png",
                                 "/css/**",
                                 "/js/**"
                         ).permitAll()

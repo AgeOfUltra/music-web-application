@@ -136,6 +136,10 @@ public class SongControllerService {
         RequestSong newSong = objectMapper.convertValue(song, RequestSong.class);
         newSong.setStatus(Status.SENT);
 
+//        need to check if someone already requested the same song.
+
+
+
         try{
             songRequestRepo.save(newSong);
         }catch (Exception s){
@@ -147,10 +151,15 @@ public class SongControllerService {
 
     public Optional<List<RequestSongDto>> getAllRequestStatusSong(Status status){
 
-        return songRequestRepo.findRequestSongByStatus(status);
+        return Optional.of(songRequestRepo.findRequestSongByStatus(status)
+                .map(songs -> songs.stream()
+                        .map(song -> objectMapper.convertValue(song, RequestSongDto.class))
+                        .toList())
+                .orElse(Collections.emptyList()));
 
     }
 
+    // admin song status update service method
     public String updateStatusForRequestSong(String songName, Status newStatus,String note){
         Optional<RequestSong> currentSong = songRequestRepo.findRequestSongBySongName(songName);
 
@@ -175,5 +184,11 @@ public class SongControllerService {
                          .map(song -> objectMapper.convertValue(song, RequestSongDto.class))
                          .toList())
                  .orElse(Collections.emptyList()));
+    }
+
+    public boolean checkSongRequestAvailable(String songName){
+        Optional<RequestSong> currentSong = songRequestRepo.findRequestSongBySongName(songName);
+
+        return currentSong.isPresent() && currentSong.get().getStatus().equals(Status.SENT);
     }
 }

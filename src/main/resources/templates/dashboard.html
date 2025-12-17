@@ -10,18 +10,28 @@
     <link rel="stylesheet" th:href="@{/css/style_dasboard.css}">
 </head>
 <body>
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand d-flex align-items-center" href="#">
-            <img th:src="@{/app_logo.png}" alt="Logo" height="60" class="me-3">
-            <span class="fw-bold fs-5 text-white">CONNECTING NOTES</span>
-        </a>
-        <a th:href="@{/app/music/public/logout}" class="btn btn-light btn-sm">
-            <i class="bi bi-box-arrow-right me-2"></i>Logout
-        </a>
+
+<header class="header glass">
+    <div class="container-fluid">
+        <div class="row align-items-center g-2">
+
+            <!-- Logo and Title (Centered) -->
+            <div class="col text-center">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <img th:src="@{/app_logo_3_1.png}" alt="Logo" class="logo">
+                    <div class="app-title">CONNECTING NOTES</div>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <div class="col-auto">
+                <button class="btn btn-glass btn-sm" type="button" onclick="logout()">
+                    Logout <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </div>
+        </div>
     </div>
-</nav>
+</header>
 
 <!-- Hidden Error Containers -->
 <div id="fieldErrors" style="display: none;">
@@ -118,7 +128,7 @@
         <div class="col-md-12">
             <div class="card h-100">
                 <div class="card-body text-center p-4">
-                    <div class="card-icon mx-auto" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                    <div class="card-icon mx-auto" style="background: linear-gradient(135deg, #a8edea 0%, #f196e0 100%);">
                         <i class="bi bi-clipboard-data-fill"></i>
                     </div>
                     <h3 class="h4 fw-bold mb-3" th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending Requests' : 'Request Dashboard'">
@@ -128,7 +138,7 @@
                         View your request history and status
                     </p>
                     <form th:action="@{/app/music/connect/request/inProgress/{user}(user=${currentUser})}" method="get">
-                        <button type="submit" class="btn btn-gradient" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <button type="submit" class="btn btn-gradient" style="background: linear-gradient(135deg, #a8edea 0%, #ef89d2 100%);">
                             <i class="bi bi-list-task me-2"></i>
                             <span th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending Requests' : 'View My Requests'">
                                     View My Requests
@@ -293,12 +303,18 @@
                             </label>
                             <div class="position-relative">
                                 <input type="text" class="form-control" id="songName" th:field="*{songName}" placeholder="Enter song name" autocomplete="off">
-                                <div id="songSuggestions" class="position-absolute w-100" style="z-index: 1000;"></div>
+                                <div id="songSuggestions" class="list-group"></div>
                             </div>
                         </div>
+
+
                         <div class="col-md-6 mb-3">
                             <label for="singerName" class="form-label">
                                 <i class="bi bi-mic me-2"></i>Singer/Movie Name
+                                <i class="bi bi-info-circle text-info ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="Use this field if no song found in song suggestions"></i>
                             </label>
                             <input type="text" class="form-control" id="singerName" th:field="*{singerName}" placeholder="Enter singer/movie">
                         </div>
@@ -336,7 +352,7 @@
                     </div>
                 </div>
 
-                <form th:action="@{/app/music/public/request/song}" id="requestSongForm" th:method="POST" th:object="${requestSong}">
+                <form th:action="@{/app/music/request/song}" id="requestSongForm" th:method="POST" th:object="${requestSong}">
                     <input type="hidden" name="requestor" id="requestor" th:value="${currentUser}">
 
                     <div class="mb-3">

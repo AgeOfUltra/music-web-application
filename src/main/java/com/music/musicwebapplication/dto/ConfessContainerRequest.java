@@ -37,7 +37,6 @@ public class ConfessContainerRequest {
     @NotBlank(message = "Please enter your favourite song")
     private String songName;
 
-    @NotBlank(message = "Please enter singer name to identify the above song")
     private String singerName;
 
     @NotBlank(message = "Please enter singer name to identify the song")

@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface SongRequestRepo extends JpaRepository<RequestSong,Long> {
 
-    Optional<List<RequestSongDto>> findRequestSongByStatus(Status status);
+    Optional<List<RequestSong>> findRequestSongByStatus(Status status);
 
     Optional<RequestSong> findRequestSongBySongName(String songName);
 }

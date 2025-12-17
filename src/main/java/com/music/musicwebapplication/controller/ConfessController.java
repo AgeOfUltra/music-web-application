@@ -58,14 +58,14 @@ public class ConfessController {
             requestedSongs = songService.getAllSongForRequestor(currentUser);
         }
 
-        if(availableRequest.isEmpty()){
+        if(availableRequest.isEmpty() || requestedSongs.isEmpty()){
             model.addAttribute("noData","No Pending request");
             model.addAttribute("noRequestData","No Pending request");
         }else{
             List<ConfessContainerRequest> confessDto = availableRequest.get().stream().map(entity -> objectMapper.convertValue(entity, ConfessContainerRequest.class))
                     .collect(Collectors.toList());
             model.addAttribute("inProgressRequests",confessDto);
-            model.addAttribute("pendingOrCompleted",requestedSongs);
+            model.addAttribute("pendingOrCompleted",requestedSongs.get());
         }
 
         return "adminValidation";
@@ -97,7 +97,7 @@ public class ConfessController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
-        attribute.addFlashAttribute("emailStatus", "Confess sent for approval!");
+        attribute.addFlashAttribute("emailStatus", "Confess sent for Validation!");
         attribute.addFlashAttribute("requestData", requestData);
         return new ModelAndView("redirect:/app/music/dashboard?status=sentSuccess");
     }

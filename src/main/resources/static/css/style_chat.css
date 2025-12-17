@@ -11,7 +11,7 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
+    background: linear-gradient(135deg, #4c66ea 0%, #5166cd 50%, #8494ed 100%);
     background-size: 400% 400%;
     min-height: 100vh;
     overflow-x: hidden;
@@ -265,7 +265,7 @@ body {
 
 /* Drawer Header Pink Gradient for Favorites */
 .drawer-header.favorites-header {
-    background: linear-gradient(135deg, #ec4899, #be185d);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* Button variants for favorites drawer */
@@ -1033,7 +1033,7 @@ body {
     left: -400px;
     width: 400px;
     height: 100vh;
-    background: rgb(172, 102, 244);
+    background: #5166cd;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 4px 0 20px rgba(31, 38, 135, 0.2);

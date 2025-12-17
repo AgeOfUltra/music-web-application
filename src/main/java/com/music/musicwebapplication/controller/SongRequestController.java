@@ -1,8 +1,8 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.RequestSongDto;
+import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.service.SongControllerService;
-import com.music.musicwebapplication.support.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
-@RequestMapping("/app/music/public")
+@RequestMapping("/app/music")
 @Slf4j
 public class SongRequestController {
 
@@ -32,6 +34,19 @@ public class SongRequestController {
             redirectAttributes.addFlashAttribute("requestSong", requestSongDto);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
+
+        //        check whether the song already exist.
+        List<Song> checkSong = songService.searchSongsByName(requestSongDto.getSongName());
+        if(!checkSong.isEmpty()){
+            redirectAttributes.addFlashAttribute("requestSongError", "Song Already exist in globally");
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
+
+        if(songService.checkSongRequestAvailable(requestSongDto.getSongName())){
+            redirectAttributes.addFlashAttribute("requestSongError", "Song Already requested By Other user");
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
+
         String result = songService.requestedSongSave(requestSongDto);
         if(result.contains("Failed")){
             redirectAttributes.addFlashAttribute("requestSongError", "Request Sent failed. Please try again");
@@ -42,6 +57,20 @@ public class SongRequestController {
         redirectAttributes.addFlashAttribute("requestSongError", "Request Sent Success full");
         return new ModelAndView("redirect:/app/music/dashboard?status=requestSent");
     }
+
+    @PostMapping("/request/update")
+    public ModelAndView adminUpdateActivity(RequestSongDto requestSongDto,RedirectAttributes model){
+        String result = songService.updateStatusForRequestSong(requestSongDto.getSongName(), requestSongDto.getStatus(), requestSongDto.getNote());
+
+        if(result.equals("Song Not found") || result.equals("Failed")){
+            model.addFlashAttribute("errorUpdate","Error Song not found, check Manually!");
+        }else{
+            model.addFlashAttribute("successUpdate","Updated!");
+        }
+
+        return new ModelAndView("redirect:/app/music/connect/request/inProgress/admin");
+    }
+
 
 
 }

@@ -9,28 +9,63 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100% );
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     background-size: 400% 400%;
     min-height: 100vh;
 }
 
 @keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
 }
 
 /* Glass morphism navbar */
-.navbar {
-    background: var(--glass-bg) !important;
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: var(--shadow-md);
+/* Header Styling */
+.header {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border: none;
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 4px 20px rgba(31, 38, 135, 0.15);
+    padding: 10px 5px;
+    margin: 0 5px;
+    border-radius: 16px;
 }
 
-.navbar-brand img {
+.logo {
+    height: 75px;
+    width: auto;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+.app-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    margin: 0;
+}
+
+.btn-glass {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+}
 /* Enhanced cards */
 .card {
     background: var(--card-bg);
@@ -148,6 +183,118 @@ body {
     background: var(--primary-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+/* Song Autocomplete Dropdown Styling */
+
+
+#songSuggestions {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0,0.15);
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 4px;
+    display: none;
+}
+
+#songSuggestions.show {
+    display: block;
+}
+.suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    color: #333;
+    font-size: 14px;
+    background: white;
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+    color: white;
+
+    transform: translateX(4px);
+}
+
+
+.suggestion-item:active {
+    background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
+}
+/* Scrollbar styling for suggestions */
+#songSuggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+
+#songSuggestions::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+#songSuggestions::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 3px;
+}
+
+
+#songSuggestions::-webkit-scrollbar-thumb :hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
+
+}
+
+
+/* No results message */
+
+
+.no-suggestions {
+    padding: 12px 16px;
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* Loading state */
+
+.suggestions-loading {
+    padding: 12px 16px;
+    color: #6c757d;
+    text-align: center;
+    font-size: 14px;
+}
+
+
+.suggestions-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+
+    }
+    to {
+
+        transform: rotate(360deg);
+
+    }
+
+}
+/* Ensure the input has proper focus styling */
+#songName:focus + #songSuggestions {
+    display: block;
+}
+
+/* Make sure the parent container handles overflow properly */
+.song-input-wrapper {
+    position: relative;
 }
 
 /* Responsive adjustments */
