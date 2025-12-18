@@ -77,7 +77,7 @@ class SongAutocomplete {
             const response = await fetch('/app/music/audio/getAllCachedSongs');
             if (response.ok) {
                 this.cachedSongs = await response.json();
-                console.log('Cached songs loaded:', this.cachedSongs.length);
+                // console.log('Cached songs loaded:', this.cachedSongs.length);
             } else {
                 console.error('Failed to fetch cached songs');
                 this.cachedSongs = [];

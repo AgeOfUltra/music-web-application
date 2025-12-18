@@ -323,4 +323,11 @@ public class ChatController {
                 msg
         );
     }
+
+    @MessageMapping("/chat/{roomName}/heartbeat")
+    public void handleHeartbeat(@Payload Map<String, Object> heartbeat,
+                                @DestinationVariable String roomName) {
+        // Just log or ignore - this keeps connection alive
+        // No need to send response
+    }
 }

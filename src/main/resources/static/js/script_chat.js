@@ -45,6 +45,24 @@ let hasReceivedInitialSync = false;
 
 let replyingToMessage = null;
 
+// ==================== GLOBAL ERROR HANDLER ====================
+window.addEventListener('error', (event) => {
+    console.error('❌ Global error:', event.error);
+    if (typeof ToastNotification !== 'undefined') {
+        ToastNotification.error('An unexpected error occurred');
+    }
+    // Prevent default browser error display
+    event.preventDefault();
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('❌ Unhandled promise rejection:', event.reason);
+    if (typeof ToastNotification !== 'undefined') {
+        ToastNotification.error('Operation failed unexpectedly');
+    }
+    event.preventDefault();
+});
+
 // ==================== FAVORITES MANAGEMENT ====================
 function toggleFavorite(song, heartIcon) {
     const songId = song.fileName;
@@ -369,14 +387,13 @@ const onParticipantPlay = (e) => {
         ToastNotification.warning('Only the organizer can control playback');
     }
 };
-
 const onParticipantPause = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
     if (isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted) {
         e.preventDefault();
-        audioPlayer.play().catch(err => console.log('Resume from prevented pause:', err));
+        audioPlayer.play().catch(() => {}); // Silent for participants
     }
 };
 
@@ -606,6 +623,55 @@ function initializePage() {
     loadSongsForPage(0);
     initializeToastNotifications();
 }
+// ==================== NETWORK STATUS MONITORING ====================
+let wasOffline = false;
+
+window.addEventListener('online', () => {
+    if (wasOffline) {
+        ToastNotification.success('🌐 Connection restored. Reconnecting...');
+
+        // Reconnect WebSocket
+        if (stompClient && !stompClient.connected) {
+            setTimeout(() => connectWebSocket(jwtToken), 1000);
+        }
+
+        // Refresh participants
+        setTimeout(() => refreshParticipants(), 2000);
+
+        wasOffline = false;
+    }
+});
+
+window.addEventListener('offline', () => {
+    wasOffline = true;
+    ToastNotification.warning('🌐 No internet connection', 0); // Persistent toast
+});
+
+
+// ==================== FETCH WITH TIMEOUT ====================
+async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${jwtToken}`
+            }
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout');
+        }
+        throw error;
+    }
+}
 
 // ==================== PAGINATION FUNCTIONS ====================
 async function loadSongsForPage(pageNumber) {
@@ -615,9 +681,8 @@ async function loadSongsForPage(pageNumber) {
     showLoadingState();
 
     try {
-        const response = await fetch(
-            `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`,
-            {headers: {'Authorization': `Bearer ${jwtToken}`}}
+        const response = await fetchWithTimeout(
+            `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`
         );
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -633,7 +698,11 @@ async function loadSongsForPage(pageNumber) {
 
     } catch (error) {
         console.error('Error loading songs:', error);
-        ToastNotification.error('Failed to load songs');
+        ToastNotification.error(
+            error.message === 'Request timeout'
+                ? 'Request timed out. Please try again.'
+                : 'Failed to load songs'
+        );
         showEmptyState();
     } finally {
         isLoadingSongs = false;
@@ -652,17 +721,26 @@ function previousPage() {
     }
 }
 
+
 function updatePaginationUI() {
-    const displayPage = currentPage + 1;
-
-    document.querySelector('.current-page').textContent = displayPage;
-    document.querySelector('.total-pages').textContent = totalPages;
-    document.getElementById('currentPageNum').textContent = displayPage;
-    document.getElementById('totalPagesNum').textContent = totalPages;
-
+    const currentPageElement = document.querySelector('.current-page');
+    const totalPagesElement = document.querySelector('.total-pages');
+    const currentPageNum = document.getElementById('currentPageNum');
+    const totalPagesNum = document.getElementById('totalPagesNum');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
+    if (!currentPageElement || !totalPagesElement || !currentPageNum ||
+        !totalPagesNum || !prevBtn || !nextBtn) {
+        console.warn('⚠️ Pagination elements not found');
+        return;
+    }
+
+    const displayPage = currentPage + 1;
+    currentPageElement.textContent = displayPage;
+    totalPagesElement.textContent = totalPages;
+    currentPageNum.textContent = displayPage;
+    totalPagesNum.textContent = totalPages;
     prevBtn.disabled = currentPage === 0;
     nextBtn.disabled = currentPage >= totalPages - 1;
 }
@@ -794,13 +872,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ==================== UPDATE CURRENT SONG DISPLAY ====================
 function updateCurrentSongDisplay(songName, hero, language, movie, singer) {
-    document.getElementById('currentSongTitle').textContent = songName;
+    const titleElement = document.getElementById('currentSongTitle');
+    const detailsElement = document.getElementById('currentSongDetails');
+
+    if (!titleElement || !detailsElement) {
+        console.warn('⚠️ Song display elements not found');
+        return;
+    }
+
+    titleElement.textContent = songName;
     const details = [hero || movie, singer || movie, language]
         .filter(Boolean)
         .join(' • ');
-
-    document.getElementById('currentSongDetails').textContent = details || 'Unknown details';
+    detailsElement.textContent = details || 'Unknown details';
 }
+
 
 // ==================== AUDIO PLAYER CONTROL ====================
 function setupAudioPlayerListeners() {
@@ -1243,7 +1329,20 @@ function requestPlaybackSync() {
     }
 }
 
+function validateSession() {
+    if (!jwtToken || !currentUsername || !currentRoomName) {
+        console.error('❌ Invalid session');
+        ToastNotification.error('Session expired. Redirecting to login...');
+        setTimeout(() => {
+            window.location.href = '/app/music/public/login';
+        }, 2000);
+        return false;
+    }
+    return true;
+}
+
 function playSong(song) {
+    if (!validateSession()) return;
     if (!isOrganizer) {
         ToastNotification.warning('Only the organizer can play songs');
         return;
@@ -1586,17 +1685,66 @@ async function loadPreviousPageAndPlay() {
         ToastNotification.error('Failed to load previous page');
     }
 }
+
+let heartbeatInterval = null;
+let lastHeartbeat = Date.now();
+
+function startHeartbeat() {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+    heartbeatInterval = setInterval(() => {
+        if (stompClient && stompClient.connected) {
+            try {
+                stompClient.send(
+                    `/app/music/chat/${currentRoomName}/heartbeat`,
+                    {},
+                    JSON.stringify({ username: currentUsername, timestamp: Date.now() })
+                );
+                lastHeartbeat = Date.now();
+            } catch (error) {
+                console.error('❌ Heartbeat failed:', error);
+
+                // Check if connection is actually dead
+                if (Date.now() - lastHeartbeat > 15000) {
+                    console.error('❌ Connection appears dead, reconnecting...');
+                    ToastNotification.warning('Connection lost. Reconnecting...');
+                    try {
+                        stompClient.disconnect();
+                    } catch (e) {}
+                    setTimeout(() => connectWebSocket(jwtToken), 1000);
+                }
+            }
+        }
+    }, 10000); // Every 5 seconds
+}
+
+
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
     const socket = new SockJS('/app/music/ws');
     stompClient = Stomp.over(socket);
 
+    stompClient.debug = null;
+
+    // Add connection timeout
+    let connectionTimeout = setTimeout(() => {
+        console.error('❌ WebSocket connection timeout');
+        ToastNotification.error('Connection timeout. Retrying...');
+        if (stompClient) {
+            try {
+                stompClient.disconnect();
+            } catch (e) {}
+        }
+        setTimeout(() => connectWebSocket(token), 2000);
+    }, 10000); // 10 second timeout
+
     stompClient.connect(
         {'Authorization': `Bearer ${token}`},
         (frame) => {
+            clearTimeout(connectionTimeout);
             // console.log('✅ Connected to WebSocket');
             ToastNotification.success('Connected to chat room');
-
+            startHeartbeat();
             // Subscribe to all channels...
             // (keep all existing subscriptions)
 
@@ -1672,13 +1820,16 @@ function connectWebSocket(token) {
             startParticipantRefreshInterval();
         },
         (error) => {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            clearTimeout(connectionTimeout);
             console.error('❌ WebSocket error:', error);
+            const retryDelay = Math.min(3000 * (Math.random() + 1), 10000);
             ToastNotification.error('Connection error. Reconnecting...');
             setTimeout(() => {
                 if (stompClient && !stompClient.connected) {
                     connectWebSocket(token);
                 }
-            }, 3000);
+            }, retryDelay);
         }
     );
 }
@@ -1919,18 +2070,18 @@ function sendMessage() {
         sender: currentUsername,
         content: content,
         type: 'CHAT',
-        replyTo: replyingToMessage ? {  // ✅ ADD THIS
+        replyTo: replyingToMessage ? {
             id: replyingToMessage.id,
             sender: replyingToMessage.sender,
             content: replyingToMessage.content
         } : null,
-        timestamp: Date.now()  // ✅ ADD THIS
+        timestamp: Date.now()
     };
 
     try {
         stompClient.send(`/app/music/chat/${currentRoomName}/send`, {}, JSON.stringify(chatMessage));
         input.value = '';
-        cancelReply();  // ✅ ADD THIS - Clear reply after sending
+        cancelReply();
     } catch (error) {
         console.error('❌ Error sending message:', error);
         ToastNotification.error('Error sending message');
@@ -1948,18 +2099,18 @@ function displayMessage(message) {
     }
 
     const isCurrentUser = message.sender === currentUsername;
-    const messageId = message.timestamp || Date.now();  // ✅ ADD THIS
+    const messageId = message.timestamp || Date.now();
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'chat-bubble ' + (isCurrentUser ? 'my-message' : 'other-message');
-    messageDiv.dataset.messageId = messageId;  // ✅ ADD THIS
+    messageDiv.dataset.messageId = messageId;
 
     const time = new Date(message.timestamp || Date.now()).toLocaleTimeString('en-US', {  // ✅ UPDATE THIS
         hour: '2-digit',
         minute: '2-digit'
     });
 
-    // ✅ ADD THIS - Reply HTML
+
     let replyHTML = '';
     if (message.replyTo) {
         replyHTML = `
@@ -2311,10 +2462,14 @@ let allowUnload = false;
 window.addEventListener('beforeunload', (event) => {
     if (isReload()) {
         allowUnload = true;
+        return;
     }
-    if (!allowUnload) {
+
+    // Only show warning if user is organizer or has active chat
+    if (!allowUnload && (isOrganizer || currentParticipants.length > 1)) {
         event.preventDefault();
-        event.returnValue = '';
+        event.returnValue = 'Are you sure you want to leave? Others are in the room.';
+        return event.returnValue;
     }
 });
 
