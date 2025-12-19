@@ -11,7 +11,6 @@ let ignoreLocalEvents = false;
 let jwtToken = null;
 let audioLoadTimeout = null;
 let currentSongData = null;
-let isClosing = false;
 const userColors = {};
 const colors = ['#1a1a1a', '#2d2d2d', '#3d3d3d', '#505050', '#636363', '#767676'];
 let currentPage = 0;
@@ -600,6 +599,13 @@ function resetAudioOnOrganizerLeave() {
 
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
+    // If page was reloaded, redirect to dashboard instead of re-initializing
+    if (isReload()) {
+        console.log('🔄 Reload detected on page load - redirecting to dashboard');
+        window.location.href = '/app/music/dashboard';
+        return; // Stop initialization
+    }
+
     initializePage();
 };
 
@@ -2458,47 +2464,89 @@ function isReload() {
 }
 
 let allowUnload = false;
+let isClosing = false;
 
-window.addEventListener('beforeunload', (event) => {
-    if (isReload()) {
-        allowUnload = true;
-        return;
-    }
-
-    // Only show warning if user is organizer or has active chat
-    if (!allowUnload && (isOrganizer || currentParticipants.length > 1)) {
-        event.preventDefault();
-        event.returnValue = 'Are you sure you want to leave? Others are in the room.';
-        return event.returnValue;
-    }
-});
-
-window.addEventListener('unload', function () {
-    handleTabClose();
-});
-
-window.addEventListener('pagehide', function (event) {
-    if (event.persisted === false) {
-        handleTabClose();
-    }
-});
-
-function handleTabClose() {
-    if (isReload()) {
-        return;
-    }
-
+function sendExitBeacon() {
+    // Prevent duplicate exit calls
     if (isClosing) {
+        console.log('⏭️ Already exiting via handleBack/logout - skipping beacon');
+        return true;
+    }
+
+    if (!jwtToken || !currentRoomName || !currentUsername) {
+        console.warn('⚠️ Missing credentials for beacon');
+        return false;
+    }
+
+    // ✅ Beacon URL with fullLogout=false (keep user logged in)
+    const beaconUrl = '/app/music/room/exitRoom';
+    const exitData = JSON.stringify({
+        roomName: currentRoomName,
+        username: currentUsername
+    });
+
+    try {
+        const blob = new Blob([exitData], { type: 'application/json' });
+
+        // ✅ CRITICAL: fullLogout=false means keep session (only clear room)
+        const urlWithToken = `${beaconUrl}?token=${encodeURIComponent(jwtToken)}&fullLogout=false`;
+
+        const success = navigator.sendBeacon(urlWithToken, blob);
+        console.log(success ? '✅ Exit beacon sent (keeping session)' : '❌ Beacon send failed');
+
+        return success;
+    } catch (error) {
+        console.error('❌ Beacon error:', error);
+        return false;
+    }
+}
+
+
+window.addEventListener('beforeunload', () => {
+
+    const isCleanExit = sessionStorage.getItem('cleanExit') === 'true';
+    if (isCleanExit) {
+        sessionStorage.removeItem('cleanExit');
         return;
     }
-    isClosing = true;
 
-    if (participantRefreshInterval) {
-        clearInterval(participantRefreshInterval);
+    const isReloading = isReload();
+    if (isReloading) {
+        allowUnload = true;
+        isClosing = true;
+        sendExitBeacon();
+        disconnectWebSocketSilently();  // ✅ CHANGED: Silent disconnect
+        return;
     }
 
-    safeDisconnectWebSocket();
-}
+    // ✅ Ensure single execution
+    if (!allowUnload) {
+        allowUnload = true;
+        isClosing = true;
+        sendExitBeacon();
+        disconnectWebSocketSilently();  // ✅ CHANGED: Silent disconnect
+    }
+});
+
+
+// ==================== UNLOAD: FINAL CLEANUP ====================
+window.addEventListener('unload', function () {
+    if (!isClosing) {
+        console.log('🚪 Unload without beforeunload - sending beacon (keeping session)');
+        sendExitBeacon();
+    }
+
+    disconnectWebSocketSilently();  // ✅ CHANGED: Silent disconnect
+});
+
+// ==================== PAGEHIDE: MOBILE/BFCache SUPPORT ====================
+window.addEventListener('pagehide', function (event) {
+    if (event.persisted === false && !isClosing) {
+        console.log('📱 Pagehide detected - sending beacon (keeping session)');
+        sendExitBeacon();
+        disconnectWebSocketSilently();  // ✅ CHANGED: Silent disconnect
+    }
+});
 
 function safeDisconnectWebSocket() {
     if (stompClient && stompClient.connected) {
@@ -2508,49 +2556,79 @@ function safeDisconnectWebSocket() {
                 type: 'LEAVE',
                 content: `${currentUsername} left the room`
             }));
+
             stompClient.disconnect();
-        } catch (_) {}
+            console.log('✅ WebSocket disconnected gracefully');
+        } catch (e) {
+            console.error('❌ WebSocket disconnect error:', e);
+        }
+    }
+
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
     }
 }
 
+// ✅ NEW FUNCTION: Disconnect WebSocket without triggering backend cleanup
+function disconnectWebSocketSilently() {
+    if (stompClient && stompClient.connected) {
+        try {
+            // ✅ CRITICAL: Do NOT send removeUser message
+            // Just disconnect - backend HTTP request handles cleanup
+            stompClient.disconnect(() => {
+                console.log('✅ WebSocket disconnected silently (no removeUser sent)');
+            });
+        } catch (e) {
+            console.error('❌ WebSocket disconnect error:', e);
+        }
+    }
+
+    // Stop heartbeat
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+    }
+}
 async function handleBack() {
-    if (isClosing) return; // Prevent duplicate calls
+    if (isClosing) {
+        console.log('⏭️ Exit already in progress - skipping duplicate call');
+        return;
+    }
+
+
 
     try {
         allowUnload = true;
         isClosing = true;
+
+        console.log('🔙 Back button clicked - exiting room (keeping session)');
 
         // Stop participant refresh
         if (participantRefreshInterval) {
             clearInterval(participantRefreshInterval);
         }
 
-        // Gracefully disconnect WebSocket (no removeUser message needed)
-        if (stompClient && stompClient.connected) {
-            try {
-                stompClient.disconnect();
-            } catch (e) {
-                console.error("WS disconnect error:", e);
-            }
-        }
+        // ✅ CHANGED: Disconnect WebSocket WITHOUT sending removeUser
+        disconnectWebSocketSilently();
 
-        // Backend handles: room exit + WebSocket notifications + session update
-        const response = await fetch('/app/music/room/exitRoom', {
+        // ✅ CRITICAL: fullLogout=false keeps user logged in
+        const response = await fetch('/app/music/room/exitRoom?fullLogout=false', {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${jwtToken}`,
                 'Content-Type': 'application/json'
-            },
-            keepalive: true
+            }
         });
 
         if (!response.ok) {
-            console.error('Failed to exit room:', response.status);
+            console.error('❌ Failed to exit room:', response.status);
+        } else {
+            console.log('✅ Room exit successful (session kept)');
         }
 
+        sessionStorage.setItem('cleanExit', 'true');
+
     } catch (error) {
-        console.error("Error during back navigation:", error);
-        // Continue to dashboard even on error
+        console.error("❌ Error during back navigation:", error);
     } finally {
         // Navigate to dashboard (user stays logged in)
         window.location.href = '/app/music/dashboard';
@@ -2558,12 +2636,17 @@ async function handleBack() {
 }
 
 async function logout() {
-    if (logoutInProgress) return;
+    if (logoutInProgress) {
+        console.log('⏭️ Logout already in progress');
+        return;
+    }
     logoutInProgress = true;
 
     try {
         allowUnload = true;
         isClosing = true;
+
+        console.log('🚪 Logout initiated - will be handled by logout endpoint');
 
         // Stop participant refresh
         if (participantRefreshInterval) {
@@ -2571,20 +2654,16 @@ async function logout() {
         }
 
         // Gracefully disconnect WebSocket
-        if (stompClient && stompClient.connected) {
-            try {
-                stompClient.disconnect();
-            } catch (e) {
-                console.error("WS disconnect error:", e);
-            }
-        }
+        safeDisconnectWebSocket();
 
-        // Backend handles: room exit + session clear + JWT removal
+        // ✅ Backend logout endpoint handles:
+        // 1. Exit room (with fullLogout=true)
+        // 2. Delete session
+        // 3. Clear JWT cookie
         window.location.href = '/app/music/public/logout';
 
     } catch (err) {
-        console.error("Logout error:", err);
-        // Still attempt logout
+        console.error("❌ Logout error:", err);
         window.location.href = '/app/music/public/logout';
     }
 }

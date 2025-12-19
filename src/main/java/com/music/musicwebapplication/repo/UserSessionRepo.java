@@ -23,4 +23,8 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
                         @Param("roomName") String roomName);
 
     void deleteByUsername(String username);
+
+
+    @Query("SELECT s from UserSession s where s.username = :username and s.roomName = :roomName")
+    UserSession findByUsernameAndRoomName(String username, String roomName);
 }

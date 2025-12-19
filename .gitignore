@@ -32,3 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 /song-cache/
+
+# .gitignore
+.env
+*.env
+.env.local
+.env.*.local

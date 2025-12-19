@@ -1,20 +1,26 @@
 package com.music.musicwebapplication.controller;
 
+import com.music.musicwebapplication.dto.ChatMessage;
 import com.music.musicwebapplication.dto.CreateRoom;
 import com.music.musicwebapplication.dto.RoomJoin;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.ColorUsageUtil;
+import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +28,7 @@ import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,12 +42,18 @@ public class RoomController {
     private final ColorUsageUtil colorUsageUtil;
     private final PublicLoginService loginService;
     private final UserSessionService sessionService;
-    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, PublicLoginService loginService, UserSessionService sessionService){
+    private final JwtTokenUtil jwtUtil;
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
+    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, PublicLoginService loginService,
+                          UserSessionService sessionService, JwtTokenUtil jwtUtil,
+                          SimpMessagingTemplate simpMessagingTemplate) {
         this.rService = rService;
         this.colorUsageUtil = colorUsageUtil;
         this.loginService = loginService;
         this.sessionService = sessionService;
+        this.jwtUtil = jwtUtil;
+        this.simpMessagingTemplate = simpMessagingTemplate;
     }
 
     @GetMapping("/chat")
@@ -48,71 +61,66 @@ public class RoomController {
                            Authentication authentication,
                            Model model) {
         Optional<Room> availableRoom = rService.getRoomDetailsByHash(roomName);
-        if(availableRoom.isEmpty()){
+        if (availableRoom.isEmpty()) {
             return "redirect:/app/music/dashboard";
         }
         Room currentRoom = availableRoom.get();
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomName", currentRoom.getRoomName());
         model.addAttribute("roomCode", roomName);
-        model.addAttribute("passCode",currentRoom.getPassCode());
+        model.addAttribute("passCode", currentRoom.getPassCode());
         model.addAttribute("roomCount", currentParticipantCount(currentRoom.getRoomName()));
         model.addAttribute("totalCount", rService.getRoomDetails(currentRoom.getRoomName()).getMaxCount());
-        model.addAttribute("userColor",colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
-        model.addAttribute("darkerColor",colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
-        model.addAttribute("jwtToken",sessionService.getToken(authentication.getName()).orElse(null));
-        model.addAttribute("isOrganizer",rService.isUserOrganizer(currentRoom.getRoomName(),authentication.getName()));
+        model.addAttribute("userColor", colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
+        model.addAttribute("darkerColor", colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
+        model.addAttribute("jwtToken", sessionService.getToken(authentication.getName()).orElse(null));
+        model.addAttribute("isOrganizer", rService.isUserOrganizer(currentRoom.getRoomName(), authentication.getName()));
         return "chat";
     }
 
-//        Actual method
     @PostMapping("/room/create")
-    public ModelAndView createRoom(@Valid @ModelAttribute("newRoom") CreateRoom newRoom, Errors error, RedirectAttributes redirectAttributes, Authentication auth) {
-
-        if(error.hasErrors()){
+    public ModelAndView createRoom(@Valid @ModelAttribute("newRoom") CreateRoom newRoom, Errors error,
+                                   RedirectAttributes redirectAttributes, Authentication auth) {
+        if (error.hasErrors()) {
             log.error("Room validation failed due to error : {}", error);
             log.info("failed Data ! : {}", newRoom);
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.newRoom", error);
             redirectAttributes.addFlashAttribute("newRoom", newRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
+
         newRoom.setCreatedBy(auth.getName());
-        log.info("Room created by {} ",newRoom.getCreatedBy());
+        log.info("Room created by {} ", newRoom.getCreatedBy());
+
         try {
             ResponseEntity<?> response = createRoomApi(newRoom);
-            if(response.getStatusCode().equals(HttpStatus.OK)){
+            if (response.getStatusCode().equals(HttpStatus.OK)) {
                 Room tempRoom = (Room) response.getBody();
-                log.info("what is inside the response : {} ",tempRoom.getRoomHash());
+                log.info("what is inside the response : {} ", tempRoom.getRoomHash());
                 log.info("{} room is created successfully !", newRoom);
-                redirectAttributes.addFlashAttribute("roomCreatedSuccessful","Room Created successfully"); // need to show in the chat.html
+                redirectAttributes.addFlashAttribute("roomCreatedSuccessful", "Room Created successfully");
                 sessionService.updateRoomName(auth.getName(), newRoom.getRoomName());
-                return new ModelAndView("redirect:/app/music/chat?roomName="+tempRoom.getRoomHash());
-            }else{
+                return new ModelAndView("redirect:/app/music/chat?roomName=" + tempRoom.getRoomHash());
+            } else {
                 log.error("room created failed! data : {}", response);
-                log.info("room created failed! data : {}", response);
-                redirectAttributes.addFlashAttribute("creationError","room creation failed. Please try again."); // need to show in dashboard.html
+                redirectAttributes.addFlashAttribute("creationError", "room creation failed. Please try again.");
                 redirectAttributes.addFlashAttribute("newRoom", newRoom);
                 return new ModelAndView("redirect:/app/music/dashboard");
             }
-
         } catch (RoomManageException | RoomNotFoundException e) {
             log.error("Room creation error: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("creationError", e.getMessage());
             redirectAttributes.addFlashAttribute("newRoom", newRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
-
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Unexpected error during room creation: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("creationError", "An unexpected error occurred: " + e.getMessage());
             redirectAttributes.addFlashAttribute("newRoom", newRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
-
-
     }
-//    API
-    private ResponseEntity<Room> createRoomApi(CreateRoom newRoom ) throws Exception{
+
+    private ResponseEntity<Room> createRoomApi(CreateRoom newRoom) throws Exception {
         Room roomBuild = new Room();
         roomBuild.setRoomName(newRoom.getRoomName());
         roomBuild.setMaxCount(newRoom.getMaxCount());
@@ -124,21 +132,20 @@ public class RoomController {
         roomBuild.setParticipant(participants);
         Room room = rService.createRoom(roomBuild);
         return ResponseEntity.ok(room);
-
     }
 
     @PostMapping("/room/join")
-    public ModelAndView joinRoomByHash(@ModelAttribute("joinRoom")RoomJoin joinRoom, RedirectAttributes redirectAttributes,Authentication auth){
-//        get the roomUsing passCode and to validate.
-
+    public ModelAndView joinRoomByHash(@ModelAttribute("joinRoom") RoomJoin joinRoom,
+                                       RedirectAttributes redirectAttributes, Authentication auth) {
         Optional<Room> availableRoom = rService.getRoomDetailsByHash(joinRoom.getRoomCode());
-        if(availableRoom.isEmpty()){
+        if (availableRoom.isEmpty()) {
             log.info("Room joined failed!");
             redirectAttributes.addFlashAttribute("joinError", "Room Not found");
             redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
-        if(!availableRoom.get().getPassCode().equals(joinRoom.getPassCode())){
+
+        if (!availableRoom.get().getPassCode().equals(joinRoom.getPassCode())) {
             log.info("Room joined failed!");
             redirectAttributes.addFlashAttribute("joinError", "invalid room credentials");
             redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
@@ -147,44 +154,44 @@ public class RoomController {
 
         ResponseEntity<?> response;
         joinRoom.setParticipantName(auth.getName());
-        try{
-            log.info("room name while joining the room by passcode {}",availableRoom.get().getRoomName());
+
+        try {
+            log.info("room name while joining the room by passcode {}", availableRoom.get().getRoomName());
             joinRoom.setRoomName(availableRoom.get().getRoomName());
             response = joinRoomApi(joinRoom);
-            if(response.getStatusCode().equals(HttpStatus.OK)) {
-                log.info("Successfully logged-in! {}",joinRoom);
-                redirectAttributes.addFlashAttribute("roomJoinedSuccessful","Joined the room successfully");
+
+            if (response.getStatusCode().equals(HttpStatus.OK)) {
+                log.info("Successfully logged-in! {}", joinRoom);
+                redirectAttributes.addFlashAttribute("roomJoinedSuccessful", "Joined the room successfully");
                 sessionService.updateRoomName(auth.getName(), joinRoom.getRoomName());
-                return new ModelAndView("redirect:/app/music/chat?roomName="+ joinRoom.getRoomCode());
-            }else{
+                return new ModelAndView("redirect:/app/music/chat?roomName=" + joinRoom.getRoomCode());
+            } else {
                 log.error("room joined failed! data : {}", response);
                 redirectAttributes.addFlashAttribute("joinError", "Unable to join Room! please try again.");
                 redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
                 return new ModelAndView("redirect:/app/music/dashboard");
             }
-        }catch (RoomManageException | RoomNotFoundException e){
+        } catch (RoomManageException | RoomNotFoundException e) {
             log.error("Room join error: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("joinError", e.getMessage());
             redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
-        } catch(Exception e){
+        } catch (Exception e) {
             log.error("Unexpected error during room join: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("joinError", "An unexpected error occurred: " + e.getMessage());
             redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
     }
-//    API
 
-    private ResponseEntity<Participant> joinRoomApi(RoomJoin joinRoom) throws Exception{
+    private ResponseEntity<Participant> joinRoomApi(RoomJoin joinRoom) throws Exception {
         Participant newParticipant = new Participant();
         newParticipant.setUserName(joinRoom.getParticipantName());
         newParticipant.setOrganizer(false);
-        Participant participant = rService.joinRoom(joinRoom.getRoomName(),newParticipant);
+        Participant participant = rService.joinRoom(joinRoom.getRoomName(), newParticipant);
         return ResponseEntity.ok(participant);
     }
 
-    //upon logout or participant leave from the room
     @DeleteMapping("/room/leave")
     public ResponseEntity<Boolean> leaveRoom(@RequestParam String roomName, Authentication auth) {
         boolean isLeft = rService.exitFromRoom(roomName, auth.getName());
@@ -192,47 +199,41 @@ public class RoomController {
     }
 
     @GetMapping("/room/getRoom")
-    public ResponseEntity<Room> getRoomInformation(@RequestParam String roomName){
+    public ResponseEntity<Room> getRoomInformation(@RequestParam String roomName) {
         Room room = rService.getRoomDetails(roomName);
         return ResponseEntity.ok(room);
-
     }
 
-    private int getAvailableParticipants(String roomName){
+    private int getAvailableParticipants(String roomName) {
         ResponseEntity<Integer> participants = getAvailableCount(roomName);
-        if(participants.getStatusCode().equals(HttpStatus.OK) && participants.getBody() != null){
+        if (participants.getStatusCode().equals(HttpStatus.OK) && participants.getBody() != null) {
             return participants.getBody();
-
         }
         return 0;
     }
 
-//    @GetMapping("/room/getAvailability")
-    private ResponseEntity<Integer> getAvailableCount(String roomName){
+    private ResponseEntity<Integer> getAvailableCount(String roomName) {
         Room room = rService.getRoomDetails(roomName);
         int availableCount = room.getMaxCount() - room.getParticipant().size();
         return ResponseEntity.ok(availableCount);
     }
 
-    private int currentParticipantCount(String roomName){
+    private int currentParticipantCount(String roomName) {
         ResponseEntity<Integer> participants = currentParticipantCountApi(roomName);
-        if(participants.getStatusCode().equals(HttpStatus.OK) && participants.getBody() != null){
+        if (participants.getStatusCode().equals(HttpStatus.OK) && participants.getBody() != null) {
             return participants.getBody();
         }
         return 0;
     }
 
-    private ResponseEntity<Integer> currentParticipantCountApi(String roomName){
-
+    private ResponseEntity<Integer> currentParticipantCountApi(String roomName) {
         Room room = rService.getRoomDetails(roomName);
-        int availableCount =  room.getParticipant().size();
+        int availableCount = room.getParticipant().size();
         return ResponseEntity.ok(availableCount);
     }
 
-
-//    API to get all participants in a room
     @GetMapping("/room/getAllParticipants")
-    public ResponseEntity<List<Participant>> getAllParticipants(String roomName){
+    public ResponseEntity<List<Participant>> getAllParticipants(String roomName) {
         Room room = rService.getRoomDetails(roomName);
         List<Participant> participants = room.getParticipant();
         return ResponseEntity.ok(participants);
@@ -240,51 +241,181 @@ public class RoomController {
 
     @PostMapping("/room/clearRoomSession")
     public ResponseEntity<?> clearRoomSession(HttpServletRequest request) {
-
         String username = loginService.extractUsernameFromJwt(request);
-
         if (username != null) {
             sessionService.updateRoomName(username, null);
         }
-
         return ResponseEntity.ok("Room cleared");
     }
 
+    // ==================== ✅ BEACON POST REQUEST (for page reload/close) ====================
+    @PostMapping("/room/exitRoom")
+    public ResponseEntity<?> exitRoomBeacon(
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false, defaultValue = "false") boolean fullLogout,
+            HttpServletRequest request) {
+
+        log.info("🚨 Beacon POST request received - exitRoom");
+        return exitRoomInternal(token, null, fullLogout, request);
+    }
+
+    // ==================== ✅ DELETE REQUEST (for back button) ====================
     @DeleteMapping("/room/exitRoom")
-    public ResponseEntity<?> exitRoom(HttpServletRequest request) {
+    public ResponseEntity<?> exitRoomDelete(
+            @RequestParam(required = false) String token,
+            @RequestParam(required = false, defaultValue = "false") boolean fullLogout,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest request) {
 
-        String username = loginService.extractUsernameFromJwt(request);
+        log.info("🔙 DELETE request received - exitRoom (fullLogout={})", fullLogout);
 
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "Unauthorized"));
+        // ✅ KEY: Mark this as intentional exit (back button, not tab close)
+        // Extract username first
+        String jwtToken = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwtToken = authHeader.substring(7);
+        } else if (token != null) {
+            jwtToken = token;
         }
 
-        try {
-            // ✅ SCENARIO 1: Back button - keep session, clear room only
-            Optional<String> leftRoom = rService.exitFromRoomWithNotification(username, false);
+        if (jwtToken != null) {
+            String username = jwtUtil.getUserNameFromToken(jwtToken);
+            if (username != null) {
+                // Mark as intentional - back button should NOT delete session
+                sessionService.setIntentionalLogout(username, false);
+                log.info("🔖 Marked back button exit for {}: intentionalLogout=false", username);
+            }
+        }
 
-            if (leftRoom.isEmpty()) {
-                return ResponseEntity.ok().body(Map.of(
+        return exitRoomInternal(token, authHeader, fullLogout, request);
+    }
+
+    // ==================== ✅ CORE EXIT LOGIC ====================
+    public ResponseEntity<?> exitRoomInternal(
+            String token,
+            String authHeader,
+            boolean fullLogout,
+            HttpServletRequest request) {
+        try {
+            String jwtToken = null;
+
+            // Get token from either header or query param
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwtToken = authHeader.substring(7);
+            } else if (token != null) {
+                jwtToken = token;
+            } else {
+                return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                        .body(Map.of("error", "No authentication token provided"));
+            }
+
+            // Validate token
+            String username = jwtUtil.getUserNameFromToken(jwtToken);
+            if (username == null || !jwtUtil.validateToken(username, username, jwtToken)) {
+                return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid token"));
+            }
+
+            // Get current session
+            UserSession session = sessionService.getUserSession(username);
+            if (session == null) {
+                log.info("ℹ️ No active session for user {}", username);
+                return ResponseEntity.ok(Map.of(
                         "success", true,
-                        "message", "Not in any room or already exited"
+                        "message", "No active session"
                 ));
             }
 
-            log.info("✅ User {} exited room {} (BACK button - session kept)", username, leftRoom.get());
+            String roomName = session.getRoomName();
+            if (roomName == null) {
+                log.info("ℹ️ User {} not in any room", username);
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Not in any room"
+                ));
+            }
 
-            return ResponseEntity.ok().body(Map.of(
+            log.info("🚪 EXIT ROOM: User {} leaving room {} (fullLogout={})",
+                    username, roomName, fullLogout);
+
+            // ✅ CRITICAL: Check intent flag to determine actual behavior
+            // This overrides the fullLogout parameter for better control
+            boolean shouldDelete = fullLogout; // Default to parameter value
+
+            // If intentionalLogout flag is set, respect it
+            boolean isIntentional = session.isIntentionalLogout();
+            if (!isIntentional) {
+                shouldDelete = false; // Back button - keep session
+                log.info("🔖 Intent flag detected: keeping session for {}", username);
+            }
+
+            // Exit from room with proper session handling
+            boolean removed = rService.exitFromRoom(roomName, username, shouldDelete);
+
+            if (!removed) {
+                log.warn("⚠️ User {} exit from room {} returned false (concurrent operation)",
+                        username, roomName);
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Exit processed (concurrent operation)",
+                        "alreadyRemoved", true
+                ));
+            }
+
+            log.info("✅ User {} successfully removed from room {} (session {})",
+                    username, roomName, shouldDelete ? "DELETED" : "KEPT");
+
+            // Reset the intent flag after processing
+            sessionService.resetIntentionalLogout(username);
+
+            // Try to broadcast updates
+            try {
+                Room updatedRoom = rService.getRoomDetails(roomName);
+
+                simpMessagingTemplate.convertAndSend(
+                        "/topic/chat/" + roomName + "/participants",
+                        updatedRoom.getParticipant()
+                );
+
+                ChatMessage leaveMsg = new ChatMessage();
+                leaveMsg.setSender(username);
+                leaveMsg.setType(String.valueOf(ChatMessage.MessageType.LEAVE));
+                leaveMsg.setContent(username + " left the room");
+                leaveMsg.setTimestamp(System.currentTimeMillis());
+
+                simpMessagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMsg);
+
+                log.info("✅ Broadcasted exit notifications for user {} in room {}", username, roomName);
+
+            } catch (RoomNotFoundException e) {
+                log.info("ℹ️ Room {} no longer exists (last organizer left)", roomName);
+            } catch (Exception e) {
+                log.error("❌ Error broadcasting WebSocket notifications: {}", e.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Successfully exited from room",
-                    "roomName", leftRoom.get()
+                    "message", "Successfully exited room",
+                    "roomName", roomName,
+                    "sessionDeleted", shouldDelete
+            ));
+
+        } catch (CannotAcquireLockException e) {
+            log.warn("⚠️ Database deadlock in exitRoom (concurrent operations) - treating as success: {}",
+                    e.getMessage());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Exit processed by concurrent operation",
+                    "note", "Deadlock avoided"
             ));
 
         } catch (Exception e) {
-            log.error("Error exiting room for user {}: {}", username, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", "Error exiting room"));
+            log.error("❌ Error in exitRoom: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "error", "Error exiting room: " + e.getMessage()
+                    ));
         }
     }
-
-
 }

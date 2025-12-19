@@ -350,3 +350,9 @@ window.addEventListener('DOMContentLoaded', function() {
         if (requestSingerNameField) requestSingerNameField.value = '';
     }
 });
+
+function dashboardLogout() {
+
+        window.location.href = '/app/music/public/logout';
+
+   }

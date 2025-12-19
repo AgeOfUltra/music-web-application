@@ -3,6 +3,7 @@ package com.music.musicwebapplication.service;
 import com.music.musicwebapplication.controller.ChatController;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.repo.ParticipantRepo;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -27,6 +29,8 @@ public class RoomService {
     private final PlaybackStateService playbackStateService;
    private final UserSessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    private final ConcurrentHashMap<String, String> exitingUsers = new ConcurrentHashMap<>();
 
     public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService, UserSessionService sessionService, SimpMessagingTemplate messagingTemplate) {
         this.repo = repo;
@@ -78,154 +82,204 @@ public class RoomService {
     }
 
 
-    @Transactional
-    public Optional<String> exitFromRoomWithNotification(String username, boolean clearCompleteSession) {
-        Optional<String> roomNameOpt = sessionService.getRoomName(username);
+//    @Transactional
+//    public Optional<String> exitFromRoomWithNotification(String username, boolean clearCompleteSession) {
+//        Optional<String> roomNameOpt = sessionService.getRoomName(username);
+//
+//        if (roomNameOpt.isEmpty()) {
+//            log.warn("User {} attempted to exit but is not in any room", username);
+//            return Optional.empty();
+//        }
+//
+//        String roomName = roomNameOpt.get();
+//
+//        Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
+//        if (roomOpt.isEmpty()) {
+//            log.warn("Room {} not found for user {}", roomName, username);
+//            playbackStateService.clearFavorites(roomName);
+//            playbackStateService.clearPlaybackState(roomName);
+//
+//            // Clear session based on strategy
+//            if (clearCompleteSession) {
+//                sessionService.deleteUserSession(username);
+//            } else {
+//                sessionService.updateRoomName(username, null);
+//            }
+//            return Optional.of(roomName);
+//        }
+//
+//        Room room = roomOpt.get();
+//        boolean userExists = room.getParticipant().stream()
+//                .anyMatch(p -> p.getUserName().equals(username));
+//
+//        if (!userExists) {
+//            log.warn("User {} not found in room {}", username, roomName);
+//
+//            // Clear session based on strategy
+//            if (clearCompleteSession) {
+//                sessionService.deleteUserSession(username);
+//            } else {
+//                sessionService.updateRoomName(username, null);
+//            }
+//            return Optional.empty();
+//        }
+//
+//        boolean isLastOrganizer = room.getParticipant().size() == 1 &&
+//                room.getParticipant().get(0).isOrganizer() &&
+//                room.getParticipant().get(0).getUserName().equals(username);
+//
+//        // ✅ Pass strategy to core method
+//        exitFromRoom(roomName, username, clearCompleteSession);
+//
+//        // Broadcast if room still exists
+//        if (!isLastOrganizer) {
+//            try {
+//                Map<String, Object> leaveMessage = new HashMap<>();
+//                leaveMessage.put("sender", username);
+//                leaveMessage.put("type", "LEAVE");
+//                leaveMessage.put("content", username + " left the room");
+//
+//                messagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMessage);
+//
+//                Optional<Room> updatedRoom = repo.findRoomByRoomName(roomName);
+//                if (updatedRoom.isPresent()) {
+//                    List<Participant> participants = updatedRoom.get().getParticipant();
+//                    messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
+//                    log.info("✅ Broadcasted participant update for room {}", roomName);
+//                }
+//            } catch (Exception e) {
+//                log.error("Error broadcasting room exit for user {} in room {}: {}",
+//                        username, roomName, e.getMessage());
+//            }
+//        } else {
+//            log.info("Room {} was deleted after last organizer {} left", roomName, username);
+//        }
+//
+//        return Optional.of(roomName);
+//    }
 
-        if (roomNameOpt.isEmpty()) {
-            log.warn("User {} attempted to exit but is not in any room", username);
-            return Optional.empty();
-        }
+//    // ✅ Backward compatibility
+//    @Transactional
+//    public Optional<String> exitFromRoomWithNotification(String username) {
+//        return exitFromRoomWithNotification(username, false);
+//    }
 
-        String roomName = roomNameOpt.get();
-
-        Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
-        if (roomOpt.isEmpty()) {
-            log.warn("Room {} not found for user {}", roomName, username);
-            playbackStateService.clearFavorites(roomName);
-            playbackStateService.clearPlaybackState(roomName);
-
-            // Clear session based on strategy
-            if (clearCompleteSession) {
-                sessionService.deleteUserSession(username);
-            } else {
-                sessionService.updateRoomName(username, null);
-            }
-            return Optional.of(roomName);
-        }
-
-        Room room = roomOpt.get();
-        boolean userExists = room.getParticipant().stream()
-                .anyMatch(p -> p.getUserName().equals(username));
-
-        if (!userExists) {
-            log.warn("User {} not found in room {}", username, roomName);
-
-            // Clear session based on strategy
-            if (clearCompleteSession) {
-                sessionService.deleteUserSession(username);
-            } else {
-                sessionService.updateRoomName(username, null);
-            }
-            return Optional.empty();
-        }
-
-        boolean isLastOrganizer = room.getParticipant().size() == 1 &&
-                room.getParticipant().get(0).isOrganizer() &&
-                room.getParticipant().get(0).getUserName().equals(username);
-
-        // ✅ Pass strategy to core method
-        exitFromRoom(roomName, username, clearCompleteSession);
-
-        // Broadcast if room still exists
-        if (!isLastOrganizer) {
-            try {
-                Map<String, Object> leaveMessage = new HashMap<>();
-                leaveMessage.put("sender", username);
-                leaveMessage.put("type", "LEAVE");
-                leaveMessage.put("content", username + " left the room");
-
-                messagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMessage);
-
-                Optional<Room> updatedRoom = repo.findRoomByRoomName(roomName);
-                if (updatedRoom.isPresent()) {
-                    List<Participant> participants = updatedRoom.get().getParticipant();
-                    messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
-                    log.info("✅ Broadcasted participant update for room {}", roomName);
-                }
-            } catch (Exception e) {
-                log.error("Error broadcasting room exit for user {} in room {}: {}",
-                        username, roomName, e.getMessage());
-            }
-        } else {
-            log.info("Room {} was deleted after last organizer {} left", roomName, username);
-        }
-
-        return Optional.of(roomName);
-    }
-
-    // ✅ Backward compatibility
-    @Transactional
-    public Optional<String> exitFromRoomWithNotification(String username) {
-        return exitFromRoomWithNotification(username, false);
-    }
 
     @Transactional
     public boolean exitFromRoom(String roomName, String userName, boolean clearCompleteSession) {
+        // ✅ PREVENT RACE CONDITION: Check if user is already exiting
+        String exitKey = roomName + ":" + userName;
 
-        Room room = repo.findRoomByRoomName(roomName)
-                .orElseThrow(() -> new RoomNotFoundException("Room not found: " + roomName));
+        // Try to mark user as exiting (returns null if already exiting)
+        if (exitingUsers.putIfAbsent(exitKey, "EXITING") != null) {
+            log.warn("⚠️ User {} already exiting from room {} - skipping duplicate call", userName, roomName);
+            return false;
+        }
 
-        List<Participant> participants = room.getParticipant();
+        try {
+            // Add a small lock to prevent concurrent database operations
+            synchronized (exitKey.intern()) {
 
-        Participant leavingUser = participants.stream()
-                .filter(p -> p.getUserName().equals(userName))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("User " + userName + " is not in room: " + roomName));
+                Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
+                if (roomOpt.isEmpty()) {
+                    log.warn("⚠️ Room {} not found - already deleted", roomName);
 
-        boolean isOrganizer = leavingUser.isOrganizer();
-        int currentSize = participants.size();
+                    // Clean up session if needed
+                    UserSession session = sessionService.getUserSession(userName);
+                    if (session != null && roomName.equals(session.getRoomName())) {
+                        if (clearCompleteSession) {
+                            sessionService.deleteUserSession(userName);
+                            log.info("Session DELETED for {} (room already deleted)", userName);
+                        } else {
+                            sessionService.updateRoomName(userName, null);
+                            log.info("RoomName CLEARED for {} (room already deleted)", userName);
+                        }
+                    }
+                    return false;
+                }
 
-        // ---------- LAST ORGANIZER: DELETE ROOM + REDIS ----------
-        if (currentSize == 1 && isOrganizer) {
-            repo.delete(room);
+                Room room = roomOpt.get();
+                List<Participant> participants = room.getParticipant();
 
-            playbackStateService.clearFavorites(roomName);
-            playbackStateService.clearPlaybackState(roomName);
+                // Check if user is actually in the room
+                Optional<Participant> leavingUserOpt = participants.stream()
+                        .filter(p -> p.getUserName().equals(userName))
+                        .findFirst();
 
-            // ✅ Session handling based on exit type
-            if (clearCompleteSession) {
-                sessionService.deleteUserSession(userName);
-                log.info("Room {} deleted. Session DELETED for {}", roomName, userName);
-            } else {
-                sessionService.updateRoomName(userName, null);
-                log.info("Room {} deleted. RoomName CLEARED for {}", roomName, userName);
+                if (leavingUserOpt.isEmpty()) {
+                    log.warn("⚠️ User {} not found in room {} - already removed", userName, roomName);
+
+                    // Clean up session if user has stale room reference
+                    UserSession session = sessionService.getUserSession(userName);
+                    if (session != null && roomName.equals(session.getRoomName())) {
+                        if (clearCompleteSession) {
+                            sessionService.deleteUserSession(userName);
+                            log.info("Session DELETED for {} (user already removed)", userName);
+                        } else {
+                            sessionService.updateRoomName(userName, null);
+                            log.info("RoomName CLEARED for {} (user already removed)", userName);
+                        }
+                    }
+                    return false;
+                }
+
+                Participant leavingUser = leavingUserOpt.get();
+                boolean isOrganizer = leavingUser.isOrganizer();
+                int currentSize = participants.size();
+
+                // ---------- LAST ORGANIZER: DELETE ROOM + REDIS ----------
+                if (currentSize == 1 && isOrganizer) {
+                    repo.delete(room);
+                    playbackStateService.clearFavorites(roomName);
+                    playbackStateService.clearPlaybackState(roomName);
+
+                    // ✅ Session handling based on exit type
+                    if (clearCompleteSession) {
+                        sessionService.deleteUserSession(userName);
+                        log.info("Room {} deleted. Session DELETED for {}", roomName, userName);
+                    } else {
+                        sessionService.updateRoomName(userName, null);
+                        log.info("Room {} deleted. RoomName CLEARED for {}", roomName, userName);
+                    }
+                    return true;
+                }
+
+                // ---------- TRANSFER ORGANIZER ROLE ----------
+                if (isOrganizer && currentSize > 1) {
+                    participants.stream()
+                            .filter(p -> !p.getUserName().equals(userName))
+                            .findFirst()
+                            .ifPresent(newOrg -> {
+                                newOrg.setOrganizer(true);
+                                participantRepo.save(newOrg);
+                                log.info("Organizer role transferred from {} to {} in room {}",
+                                        userName, newOrg.getUserName(), roomName);
+                            });
+                }
+
+                // ---------- REMOVE PARTICIPANT ----------
+                participants.remove(leavingUser);
+                leavingUser.setRoom(null);
+                leavingUser.setOrganizer(false);
+                participantRepo.delete(leavingUser);
+                repo.save(room);
+
+                // ✅ Session handling based on exit type
+                if (clearCompleteSession) {
+                    sessionService.deleteUserSession(userName);
+                    log.info("User {} removed from room {}. Session DELETED.", userName, roomName);
+                } else {
+                    sessionService.updateRoomName(userName, null);
+                    log.info("User {} removed from room {}. RoomName CLEARED.", userName, roomName);
+                }
+
+                return true;
             }
-
-            return true;
+        } finally {
+            // ✅ Always remove the exit lock after operation completes
+            exitingUsers.remove(exitKey);
+            log.debug("🔓 Released exit lock for {}", exitKey);
         }
-
-        // ---------- TRANSFER ORGANIZER ROLE ----------
-        if (isOrganizer && currentSize > 1) {
-            participants.stream()
-                    .filter(p -> !p.getUserName().equals(userName))
-                    .findFirst()
-                    .ifPresent(newOrg -> {
-                        newOrg.setOrganizer(true);
-                        participantRepo.save(newOrg);
-                        log.info("Organizer role transferred from {} to {} in room {}",
-                                userName, newOrg.getUserName(), roomName);
-                    });
-        }
-
-        // ---------- REMOVE PARTICIPANT ----------
-        participants.remove(leavingUser);
-        leavingUser.setRoom(null);
-        leavingUser.setOrganizer(false);
-
-        participantRepo.delete(leavingUser);
-        repo.save(room);
-
-        // ✅ Session handling based on exit type
-        if (clearCompleteSession) {
-            sessionService.deleteUserSession(userName);
-            log.info("User {} removed from room {}. Session DELETED.", userName, roomName);
-        } else {
-            sessionService.updateRoomName(userName, null);
-            log.info("User {} removed from room {}. RoomName CLEARED.", userName, roomName);
-        }
-
-        return true;
     }
 
     // ✅ Keep backward compatibility - default to clearing room only
