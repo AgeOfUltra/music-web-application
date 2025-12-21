@@ -3,7 +3,7 @@ package com.music.musicwebapplication.controller;
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
 import com.music.musicwebapplication.service.RegisterUserService;
-import com.music.musicwebapplication.support.Role;
+import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

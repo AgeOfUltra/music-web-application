@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.dto;
 
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import com.music.musicwebapplication.utils.validation.UniqueValidator;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

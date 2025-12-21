@@ -8,7 +8,7 @@ import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.repo.UserRepo;
 import com.music.musicwebapplication.service.ConfessService;
 import com.music.musicwebapplication.service.SongControllerService;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;

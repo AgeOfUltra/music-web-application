@@ -1,4 +1,4 @@
-package com.music.musicwebapplication.support;
+package com.music.musicwebapplication.enums;
 
 public enum Permissions {
     MUSIC_READ,

@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.dto.ChatMessage;
+import com.music.musicwebapplication.chatDto.ChatMessage;
 import com.music.musicwebapplication.dto.CreateRoom;
 import com.music.musicwebapplication.dto.RoomJoin;
 import com.music.musicwebapplication.entity.Participant;
@@ -8,10 +8,10 @@ import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
+import com.music.musicwebapplication.service.PlaybackStateService;
 import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
-import com.music.musicwebapplication.utils.ColorUsageUtil;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,31 +29,28 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Controller
 @RequestMapping("/app/music")
 public class RoomController {
     private final RoomService rService;
-    private final ColorUsageUtil colorUsageUtil;
     private final PublicLoginService loginService;
     private final UserSessionService sessionService;
     private final JwtTokenUtil jwtUtil;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final PlaybackStateService playbackStateService;
 
-    public RoomController(RoomService rService, ColorUsageUtil colorUsageUtil, PublicLoginService loginService,
+    public RoomController(RoomService rService, PublicLoginService loginService,
                           UserSessionService sessionService, JwtTokenUtil jwtUtil,
-                          SimpMessagingTemplate simpMessagingTemplate) {
+                          SimpMessagingTemplate simpMessagingTemplate, PlaybackStateService playbackStateService) {
         this.rService = rService;
-        this.colorUsageUtil = colorUsageUtil;
         this.loginService = loginService;
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
         this.simpMessagingTemplate = simpMessagingTemplate;
+        this.playbackStateService = playbackStateService;
     }
 
     @GetMapping("/chat")
@@ -71,8 +68,6 @@ public class RoomController {
         model.addAttribute("passCode", currentRoom.getPassCode());
         model.addAttribute("roomCount", currentParticipantCount(currentRoom.getRoomName()));
         model.addAttribute("totalCount", rService.getRoomDetails(currentRoom.getRoomName()).getMaxCount());
-        model.addAttribute("userColor", colorUsageUtil.getUserColors(authentication.getName()).get("userColor"));
-        model.addAttribute("darkerColor", colorUsageUtil.getUserColors(authentication.getName()).get("darkerColor"));
         model.addAttribute("jwtToken", sessionService.getToken(authentication.getName()).orElse(null));
         model.addAttribute("isOrganizer", rService.isUserOrganizer(currentRoom.getRoomName(), authentication.getName()));
         return "chat";
@@ -366,7 +361,40 @@ public class RoomController {
             log.info("✅ User {} successfully removed from room {} (session {})",
                     username, roomName, shouldDelete ? "DELETED" : "KEPT");
 
-            // Reset the intent flag after processing
+// ⭐ NEW CODE STARTS HERE
+// Check if the user who left was the organizer
+            try {
+                Room updatedRoom = rService.getRoomDetails(roomName);
+
+                // If no organizer remains, clear playback state
+                boolean hasOrganizer = updatedRoom.getParticipant().stream()
+                        .anyMatch(Participant::isOrganizer);
+
+                if (!hasOrganizer) {
+                    log.info("🎵 No organizer in room {} - clearing playback state", roomName);
+                    playbackStateService.clearPlaybackState(roomName);
+
+                    // Broadcast STOP action to all remaining participants
+                    Map<String, Object> stopMessage = new HashMap<>();
+                    stopMessage.put("action", "STOP");
+                    stopMessage.put("controller", "SYSTEM");
+                    stopMessage.put("timestamp", 0L);
+
+                    simpMessagingTemplate.convertAndSend(
+                            "/topic/chat/" + roomName + "/playback",
+                            stopMessage
+                    );
+
+                    log.info("✅ Cleared playback state and broadcasted STOP for room: {}", roomName);
+                }
+            } catch (RoomNotFoundException e) {
+                log.info("ℹ️ Room {} no longer exists after organizer left", roomName);
+            } catch (Exception e) {
+                log.error("❌ Error clearing playback state: {}", e.getMessage());
+            }
+// ⭐ NEW CODE ENDS HERE
+
+// Reset the intent flag after processing
             sessionService.resetIntentionalLogout(username);
 
             // Try to broadcast updates

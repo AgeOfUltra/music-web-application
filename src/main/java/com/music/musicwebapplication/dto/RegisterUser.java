@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.dto;
 
-import com.music.musicwebapplication.support.Role;
+import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.utils.validation.UniqueValidator;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

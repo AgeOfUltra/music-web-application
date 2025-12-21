@@ -1,4 +1,4 @@
-package com.music.musicwebapplication.support;
+package com.music.musicwebapplication.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

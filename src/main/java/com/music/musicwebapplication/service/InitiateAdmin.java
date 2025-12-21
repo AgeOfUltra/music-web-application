@@ -2,12 +2,10 @@ package com.music.musicwebapplication.service;
 
 import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.repo.UserRepo;
-import com.music.musicwebapplication.support.Role;
+import com.music.musicwebapplication.enums.Role;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 //@Component
 @Slf4j

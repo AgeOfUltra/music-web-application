@@ -1,4 +1,4 @@
-package com.music.musicwebapplication.support;
+package com.music.musicwebapplication.enums;
 
 public enum Status {
     IN_PROGRESS,

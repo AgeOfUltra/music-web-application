@@ -9,7 +9,7 @@ import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
-import com.music.musicwebapplication.support.Role;
+import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +34,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @Controller

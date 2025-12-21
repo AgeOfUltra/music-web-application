@@ -3,7 +3,7 @@ package com.music.musicwebapplication.schedulers;
 import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.repo.ConfessRepo;
 import com.music.musicwebapplication.service.EmailAgentService;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;

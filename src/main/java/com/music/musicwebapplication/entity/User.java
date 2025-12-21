@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.entity;
 
-import com.music.musicwebapplication.support.Role;
+import com.music.musicwebapplication.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,7 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 

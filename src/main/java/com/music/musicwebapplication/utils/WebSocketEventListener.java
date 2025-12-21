@@ -1,24 +1,21 @@
 package com.music.musicwebapplication.utils;
 
-import com.music.musicwebapplication.dto.ChatMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Map;
 
-@Component
+//@Component
 @Slf4j
 @RequiredArgsConstructor
 public class WebSocketEventListener {
 
     private final SimpMessagingTemplate messageTemplate;
 
-    @EventListener
+//    @EventListener
     public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
         try {
             StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());

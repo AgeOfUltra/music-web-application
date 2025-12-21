@@ -1,4 +1,4 @@
-    package com.music.musicwebapplication.dto;
+    package com.music.musicwebapplication.chatDto;
 
     import lombok.AllArgsConstructor;
     import lombok.Builder;

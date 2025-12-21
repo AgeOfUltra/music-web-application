@@ -10,7 +10,6 @@ import com.music.musicwebapplication.repo.ParticipantRepo;
 import com.music.musicwebapplication.repo.RoomRepo;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,17 +27,15 @@ public class RoomService {
     private final ConfessService serviceConfess;
     private final PlaybackStateService playbackStateService;
    private final UserSessionService sessionService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     private final ConcurrentHashMap<String, String> exitingUsers = new ConcurrentHashMap<>();
 
-    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService, UserSessionService sessionService, SimpMessagingTemplate messagingTemplate) {
+    public RoomService(RoomRepo repo, ParticipantRepo participantRepo, ConfessService serviceConfess, PlaybackStateService playbackStateService, UserSessionService sessionService) {
         this.repo = repo;
         this.participantRepo = participantRepo;
         this.serviceConfess = serviceConfess;
         this.playbackStateService = playbackStateService;
         this.sessionService = sessionService;
-        this.messagingTemplate = messagingTemplate;
     }
     @Transactional
     public Room createRoom(Room room){
@@ -81,88 +78,6 @@ public class RoomService {
         return participantRepo.save(participant);
     }
 
-
-//    @Transactional
-//    public Optional<String> exitFromRoomWithNotification(String username, boolean clearCompleteSession) {
-//        Optional<String> roomNameOpt = sessionService.getRoomName(username);
-//
-//        if (roomNameOpt.isEmpty()) {
-//            log.warn("User {} attempted to exit but is not in any room", username);
-//            return Optional.empty();
-//        }
-//
-//        String roomName = roomNameOpt.get();
-//
-//        Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
-//        if (roomOpt.isEmpty()) {
-//            log.warn("Room {} not found for user {}", roomName, username);
-//            playbackStateService.clearFavorites(roomName);
-//            playbackStateService.clearPlaybackState(roomName);
-//
-//            // Clear session based on strategy
-//            if (clearCompleteSession) {
-//                sessionService.deleteUserSession(username);
-//            } else {
-//                sessionService.updateRoomName(username, null);
-//            }
-//            return Optional.of(roomName);
-//        }
-//
-//        Room room = roomOpt.get();
-//        boolean userExists = room.getParticipant().stream()
-//                .anyMatch(p -> p.getUserName().equals(username));
-//
-//        if (!userExists) {
-//            log.warn("User {} not found in room {}", username, roomName);
-//
-//            // Clear session based on strategy
-//            if (clearCompleteSession) {
-//                sessionService.deleteUserSession(username);
-//            } else {
-//                sessionService.updateRoomName(username, null);
-//            }
-//            return Optional.empty();
-//        }
-//
-//        boolean isLastOrganizer = room.getParticipant().size() == 1 &&
-//                room.getParticipant().get(0).isOrganizer() &&
-//                room.getParticipant().get(0).getUserName().equals(username);
-//
-//        // ✅ Pass strategy to core method
-//        exitFromRoom(roomName, username, clearCompleteSession);
-//
-//        // Broadcast if room still exists
-//        if (!isLastOrganizer) {
-//            try {
-//                Map<String, Object> leaveMessage = new HashMap<>();
-//                leaveMessage.put("sender", username);
-//                leaveMessage.put("type", "LEAVE");
-//                leaveMessage.put("content", username + " left the room");
-//
-//                messagingTemplate.convertAndSend("/topic/chat/" + roomName, leaveMessage);
-//
-//                Optional<Room> updatedRoom = repo.findRoomByRoomName(roomName);
-//                if (updatedRoom.isPresent()) {
-//                    List<Participant> participants = updatedRoom.get().getParticipant();
-//                    messagingTemplate.convertAndSend("/topic/chat/" + roomName + "/participants", participants);
-//                    log.info("✅ Broadcasted participant update for room {}", roomName);
-//                }
-//            } catch (Exception e) {
-//                log.error("Error broadcasting room exit for user {} in room {}: {}",
-//                        username, roomName, e.getMessage());
-//            }
-//        } else {
-//            log.info("Room {} was deleted after last organizer {} left", roomName, username);
-//        }
-//
-//        return Optional.of(roomName);
-//    }
-
-//    // ✅ Backward compatibility
-//    @Transactional
-//    public Optional<String> exitFromRoomWithNotification(String username) {
-//        return exitFromRoomWithNotification(username, false);
-//    }
 
 
     @Transactional
@@ -312,10 +227,6 @@ public class RoomService {
                 .anyMatch(p -> p.getUserName().equals(username) && p.isOrganizer())).orElse(false);
 
     }
-
-
-
-
 
     @PreDestroy
     private void clearRooms(){

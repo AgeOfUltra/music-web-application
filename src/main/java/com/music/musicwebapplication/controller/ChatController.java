@@ -241,6 +241,32 @@ public class ChatController {
         log.info("🔄 Sync Request → room={}, user={}, timestamp={}",
                 roomName, request.getUsername(), request.getTimestamp());
 
+        // ⭐ NEW CODE: Check if room has an organizer
+        try {
+            Room room = roomService.getRoomDetails(roomName);
+
+            boolean hasOrganizer = room.getParticipant().stream()
+                    .anyMatch(Participant::isOrganizer);
+
+            if (!hasOrganizer) {
+                log.info("ℹ️ No organizer in room {} - returning invalid sync state", roomName);
+
+                Map<String, Object> emptyResponse = new HashMap<>();
+                emptyResponse.put("valid", false);
+                emptyResponse.put("isPlaying", false);
+                emptyResponse.put("isPaused", false);
+                emptyResponse.put("serverTime", System.currentTimeMillis());
+
+                messagingTemplate.convertAndSend(
+                        "/topic/chat/" + roomName + "/playback/state",
+                        emptyResponse
+                );
+                return;
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Could not verify organizer presence: {}", e.getMessage());
+        }
+
         // Get current playback state from Redis
         Optional<PlaybackState> optionalState = playbackStateService.getPlaybackState(roomName);
 

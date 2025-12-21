@@ -287,22 +287,6 @@ function playFavoritesPlaylist() {
     playSong(roomFavorites[currentFavoriteIndex]);
 }
 
-// function playNextFavorite() {
-//     if (!isPlayingFavorites || !isOrganizer) return;
-//
-//     currentFavoriteIndex++;
-//
-//     if (currentFavoriteIndex >= roomFavorites.length) {
-//         isPlayingFavorites = false;
-//         currentFavoriteIndex = 0;
-//         ToastNotification.info('Room favorites playlist ended');
-//         return;
-//     }
-//
-//     ToastNotification.info(`Playing ${currentFavoriteIndex + 1}/${roomFavorites.length} from favorites`);
-//     playSong(roomFavorites[currentFavoriteIndex]);
-// }
-
 function stopFavoritesPlaylist() {
     isPlayingFavorites = false;
     currentFavoriteIndex = 0;
@@ -595,6 +579,41 @@ function resetAudioOnOrganizerLeave() {
     isPlayingFavorites = false;
     currentFavoriteIndex = 0;
 }
+function resetAudioPlayer() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (!audioPlayer) return;
+
+    console.log('🔄 Resetting audio player to clean state');
+
+    try {
+        // Stop playback
+        audioPlayer.pause();
+
+        // Clear source completely
+        audioPlayer.src = "";
+        audioPlayer.removeAttribute("src");
+        audioPlayer.load(); // Force browser to clear cache
+
+        // Reset currentTime
+        audioPlayer.currentTime = 0;
+
+    } catch (e) {
+        console.warn('⚠️ Audio reset error:', e);
+    }
+
+    // Clear UI
+    document.getElementById('currentSongTitle').textContent = "No song playing";
+    document.getElementById('currentSongDetails').textContent = "Select a song to play";
+
+    // Clear state variables
+    currentSongData = null;
+    ignoreLocalEvents = false;
+    isPlayingFavorites = false;
+    currentFavoriteIndex = 0;
+    playlistMode = null;
+    currentPlaylist = [];
+    currentPlaylistIndex = 0;
+}
 
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
@@ -611,8 +630,13 @@ function initializePage() {
     currentRoomName = PAGE_DATA.roomName;
     currentUsername = PAGE_DATA.username;
     jwtToken = PAGE_DATA.jwtToken;
-    currentUserColor = PAGE_DATA.userColor;
-    currentUserDarkerColor = PAGE_DATA.darkerColor;
+
+    // ⭐ ADD THIS LINE - Reset audio BEFORE anything else
+    resetAudioPlayer();
+
+// Initialize current user's colors
+    currentUserColor = getColorForUser(currentUsername);
+    currentUserDarkerColor = getDarkerShade(currentUserColor);
     isOrganizer = PAGE_DATA.isOrganizer;
 
     if (!jwtToken || !currentUsername || !currentRoomName) {
@@ -977,7 +1001,7 @@ function handlePlaybackCommand(playbackMsg) {
 
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
-    const newSrc = `/app/music/audio/public/streamSong/${playbackMsg.songFileName}`;
+    const newSrc = `/app/music/audio/public/streamSong/${playbackMsg.songFileName}?t=${Date.now()}`;
 
     currentSongData = {
         songFileName: playbackMsg.songFileName,
@@ -1146,6 +1170,12 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Check if there's valid playback state
     if (!syncMsg.valid || !syncMsg.songFileName) {
+        // ⭐ CRITICAL FIX: Force reset if audio is playing from cache
+        if (audioPlayer.src && !audioPlayer.paused) {
+            console.log('⚠️ [SYNC] Audio playing from cache - forcing reset');
+            resetAudioPlayer();
+            ToastNotification.info('No active playback in room');
+        }
         // console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
@@ -1213,7 +1243,7 @@ function handlePlaybackSyncState(syncMsg) {
     );
 
     // Build audio source URL
-    const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}`;
+    const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}?t=${Date.now()}`;
     // console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
@@ -1956,7 +1986,18 @@ function updateParticipantsDisplay(participants) {
         }
     });
 }
-
+function getColorForUser(username) {
+    if (!userColors[username]) {
+        // Generate consistent color based on username hash
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = username.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const colorIndex = Math.abs(hash) % colors.length;
+        userColors[username] = colors[colorIndex];
+    }
+    return userColors[username];
+}
 function updatePermissionNotice() {
     const notice = document.getElementById('permissionNotice');
     if (!isOrganizer) {
@@ -2410,10 +2451,7 @@ function handleSearchSongClick(element) {
 
 // ==================== UTILITY FUNCTIONS ====================
 function getUserColor(username) {
-    if (!userColors[username]) {
-        userColors[username] = colors[Object.keys(userColors).length % colors.length];
-    }
-    return userColors[username];
+    return getColorForUser(username);  // Reuse the same logic
 }
 
 function getDarkerShade(color) {

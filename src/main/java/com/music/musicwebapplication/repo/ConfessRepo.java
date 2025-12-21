@@ -1,7 +1,7 @@
 package com.music.musicwebapplication.repo;
 
 import com.music.musicwebapplication.entity.Confess;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

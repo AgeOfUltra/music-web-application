@@ -7,7 +7,7 @@ import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.repo.SongRequestRepo;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,11 +22,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -124,10 +120,16 @@ public class SongControllerService {
         return  repo.findAll(pageable).getContent();
     }
 
-    @Cacheable(value="CachedSongs",key="#songName")
-    public List<Song> searchSongsByName(String songName) {
-        log.info("request data : {}" , songName);
-        return repo.findBySongNameContainingIgnoreCase(songName);
+//    @Cacheable(value="CachedSongs", key="#songName.toLowerCase().trim()")
+//    public List<Song> searchSongsByName(String songName) {
+//        log.info("🔍 DATABASE QUERY for: {}", songName);
+//        return repo.findBySongNameContainingIgnoreCase(songName);
+//    }
+
+    @Cacheable(value="CachedSongsPattern", key="#prefix.toLowerCase().substring(0, Math.min(2, #prefix.length()))")
+    public List<Song> searchSongsByName(String prefix) {
+        log.info("🔍 Database query for prefix: {}", prefix);
+        return repo.findBySongNameContainingIgnoreCase(prefix);
     }
 
 
@@ -135,10 +137,6 @@ public class SongControllerService {
 
         RequestSong newSong = objectMapper.convertValue(song, RequestSong.class);
         newSong.setStatus(Status.SENT);
-
-//        need to check if someone already requested the same song.
-
-
 
         try{
             songRequestRepo.save(newSong);

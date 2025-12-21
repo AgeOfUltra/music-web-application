@@ -1,7 +1,7 @@
 package com.music.musicwebapplication.entity;
 
-import com.music.musicwebapplication.support.Role;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Role;
+import com.music.musicwebapplication.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -4,13 +4,12 @@ import com.music.musicwebapplication.dto.NodeLogin;
 import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.exception.ConfessRoomException;
 import com.music.musicwebapplication.service.ConfessService;
-import com.music.musicwebapplication.support.Status;
+import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Timestamp;
 import java.util.Map;
 import java.util.Optional;
 
