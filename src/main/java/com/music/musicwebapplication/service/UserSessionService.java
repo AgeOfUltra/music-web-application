@@ -42,8 +42,8 @@ public class UserSessionService {
         session.setUsername(username);
         session.setRoomName(null);
         session.setIntentionalLogout(false);
-        session.setCreatedAt(LocalDateTime.now()); // Track creation time
-        session.setLastAccessedAt(LocalDateTime.now());
+//        session.setCreatedAt(LocalDateTime.now()); // Track creation time
+//        session.setLastAccessedAt(LocalDateTime.now());
 
         repo.save(session);
 
@@ -57,20 +57,25 @@ public class UserSessionService {
 
     @Transactional
     public void updateRoomName(String username, String roomName) {
-        repo.updateRoomName(username, roomName);
+        Optional<UserSession> sessionOpt = repo.findByUsername(username);
 
-        // ✅ Update last accessed time
-        updateLastAccessedTime(username);
+        if (sessionOpt.isPresent()) {
+            UserSession session = sessionOpt.get();
+            session.setRoomName(roomName);
+//            session.setLastAccessedAt(LocalDateTime.now());
+            repo.save(session);
 
-        // ✅ Refresh Redis TTL on activity
-        refreshRedisSessionTTL(username);
+            log.info("✅ Updated roomName for {} to: {}", username, roomName);
+        } else {
+            log.warn("⚠️ No session found for user: {}", username);
+        }
     }
 
-    @Transactional
-    public void clearRoomForUser(String username) {
-        repo.updateRoomName(username, null);
-        updateLastAccessedTime(username);
-    }
+//    @Transactional
+//    public void clearRoomForUser(String username) {
+//        repo.updateRoomName(username, null);
+//        updateLastAccessedTime(username);
+//    }
 
     /**
      * Sets the intentional logout flag for a user
@@ -81,7 +86,7 @@ public class UserSessionService {
         if (sessionOpt.isPresent()) {
             UserSession session = sessionOpt.get();
             session.setIntentionalLogout(intentional);
-            session.setLastAccessedAt(LocalDateTime.now());
+//            session.setLastAccessedAt(LocalDateTime.now());
             repo.save(session);
             log.info("🔖 Set intentionalLogout={} for user {}", intentional, username);
         } else {
@@ -123,15 +128,15 @@ public class UserSessionService {
     /**
      * Updates last accessed time for session activity tracking
      */
-    @Transactional
-    public void updateLastAccessedTime(String username) {
-        Optional<UserSession> sessionOpt = repo.findByUsername(username);
-        if (sessionOpt.isPresent()) {
-            UserSession session = sessionOpt.get();
-            session.setLastAccessedAt(LocalDateTime.now());
-            repo.save(session);
-        }
-    }
+//    @Transactional
+//    public void updateLastAccessedTime(String username) {
+//        Optional<UserSession> sessionOpt = repo.findByUsername(username);
+//        if (sessionOpt.isPresent()) {
+//            UserSession session = sessionOpt.get();
+//            session.setLastAccessedAt(LocalDateTime.now());
+//            repo.save(session);
+//        }
+//    }
 
     // ==================== REDIS TTL MANAGEMENT ====================
 
@@ -304,7 +309,7 @@ public class UserSessionService {
 
         // ✅ Refresh activity on access
         if (user.isPresent()) {
-            updateLastAccessedTime(username);
+//            updateLastAccessedTime(username);
             refreshRedisSessionTTL(username);
         }
 

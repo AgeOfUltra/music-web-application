@@ -1,6 +1,7 @@
 package com.music.musicwebapplication.repo;
 
 import com.music.musicwebapplication.entity.UserSession;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,10 +18,6 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
 
     Optional<UserSession> findByUsername(String username);
 
-    @Modifying
-    @Query("UPDATE UserSession u SET u.roomName = :roomName WHERE u.username = :username")
-    void updateRoomName(@Param("username") String username,
-                        @Param("roomName") String roomName);
 
     void deleteByUsername(String username);
 

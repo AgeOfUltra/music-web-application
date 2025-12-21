@@ -249,13 +249,14 @@ public class RoomController {
     }
 
     // ==================== ✅ BEACON POST REQUEST (for page reload/close) ====================
-    @PostMapping("/room/exitRoom")
+    @PostMapping("/room/exitRoom/beacon")
     public ResponseEntity<?> exitRoomBeacon(
             @RequestParam(required = false) String token,
             @RequestParam(required = false, defaultValue = "false") boolean fullLogout,
             HttpServletRequest request) {
 
         log.info("🚨 Beacon POST request received - exitRoom");
+        log.info("🔙 DELETE request received via Beacon - exitRoom (fullLogout={})", fullLogout);
         return exitRoomInternal(token, null, fullLogout, request);
     }
 
