@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +25,7 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
 
     @Query("SELECT s from UserSession s where s.username = :username and s.roomName = :roomName")
     UserSession findByUsernameAndRoomName(String username, String roomName);
+
+    @Query("Select s from UserSession s where s.roomName is null")
+    Optional<List<UserSession>> getUserSessionByRoomNameEmpty();
 }

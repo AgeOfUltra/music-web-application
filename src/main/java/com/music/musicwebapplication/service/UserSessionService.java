@@ -180,7 +180,7 @@ public class UserSessionService {
     public boolean isSessionActiveInRedis(String username) {
         try {
             String redisKey = "session:" + username;
-            return Boolean.TRUE.equals(redisTemplate.hasKey(redisKey));
+            return redisTemplate.hasKey(redisKey);
         } catch (Exception e) {
             log.error("❌ Failed to check Redis session for {}: {}", username, e.getMessage());
             return false;
@@ -212,7 +212,7 @@ public class UserSessionService {
         log.info("🧹 Starting scheduled session cleanup...");
 
         try {
-            LocalDateTime cutoffTime = LocalDateTime.now().minusHours(sessionTtlHours);
+            LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(sessionTtlHours);
 
             // Find all sessions
             List<UserSession> allSessions = repo.findAll();

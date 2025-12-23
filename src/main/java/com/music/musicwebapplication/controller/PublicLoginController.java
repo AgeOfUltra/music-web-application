@@ -192,6 +192,7 @@ public class PublicLoginController {
     }
 
     private ResponseEntity<String> registerUserApi(RegisterUser newUser) {
+        newUser.setUsername(newUser.getUsername().trim());
         newUser.setRole(Role.LISTENER);
         String result = userService.registerUser(newUser);
         return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;

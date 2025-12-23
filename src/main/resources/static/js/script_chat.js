@@ -632,7 +632,7 @@ function initializePage() {
     jwtToken = PAGE_DATA.jwtToken;
 
     // ⭐ ADD THIS LINE - Reset audio BEFORE anything else
-    resetAudioPlayer();
+    // resetAudioPlayer();
 
 // Initialize current user's colors
     currentUserColor = getColorForUser(currentUsername);
@@ -1149,8 +1149,9 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
 }
 
 // ==================== NEW: HANDLE PLAYBACK SYNC RESPONSE ====================
+// ==================== FIXED: HANDLE PLAYBACK SYNC RESPONSE ====================
 function handlePlaybackSyncState(syncMsg) {
-    // console.log('🔄 [SYNC] Received playback state:', syncMsg);
+    console.log('🔄 [SYNC] Received playback state:', syncMsg);
 
     // Mark that we've received initial sync
     hasReceivedInitialSync = true;
@@ -1168,53 +1169,72 @@ function handlePlaybackSyncState(syncMsg) {
         return;
     }
 
-    // Check if there's valid playback state
+    // ⭐ CRITICAL FIX: Check if there's valid playback state
     if (!syncMsg.valid || !syncMsg.songFileName) {
-        // ⭐ CRITICAL FIX: Force reset if audio is playing from cache
-        if (audioPlayer.src && !audioPlayer.paused) {
-            console.log('⚠️ [SYNC] Audio playing from cache - forcing reset');
+        // ✅ FORCE RESET: Clear any cached/playing audio
+        if (audioPlayer.src || !audioPlayer.paused) {
+            console.log('⚠️ [SYNC] No valid state but audio present - forcing reset');
             resetAudioPlayer();
             ToastNotification.info('No active playback in room');
         }
-        // console.log('ℹ️ [SYNC] No active playback to sync');
+        console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
     }
 
     // If organizer, don't sync (they control playback)
     if (isOrganizer) {
-        // console.log('⏭️ [SYNC] Skipping sync - user is organizer');
+        console.log('⏭️ [SYNC] Skipping sync - user is organizer');
+
+        // ⭐ NEW: If organizer and no local playback, but server has state, reset server state
+        if (!currentSongData && syncMsg.valid) {
+            console.log('⚠️ [SYNC] New organizer has no playback but server does - this is stale state');
+            // Optionally: Send a message to clear server-side state
+            // For now, just ignore and let the organizer control from scratch
+        }
+
         isSyncing = false;
         return;
     }
 
-    // console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
-    // console.log('📊 [SYNC] State details:', {
-    //     isPlaying: syncMsg.isPlaying,
-    //     isPaused: syncMsg.isPaused,
-    //     timestamp: syncMsg.timestamp,
-    //     serverTime: syncMsg.serverTime
-    // });
+    // ⭐ NEW: Additional validation - check if sync message is stale
+    const serverTime = syncMsg.serverTime || Date.now();
+    const messageAge = Date.now() - serverTime;
+
+    if (messageAge > 30000) { // Message older than 30 seconds
+        console.warn('⚠️ [SYNC] Received stale sync message (age:', messageAge, 'ms) - ignoring');
+        resetAudioPlayer();
+        isSyncing = false;
+        return;
+    }
+
+    console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
+    console.log('📊 [SYNC] State details:', {
+        isPlaying: syncMsg.isPlaying,
+        isPaused: syncMsg.isPaused,
+        timestamp: syncMsg.timestamp,
+        serverTime: syncMsg.serverTime,
+        messageAge: messageAge
+    });
 
     // Calculate adjusted timestamp accounting for network delay
-    const serverTime = syncMsg.serverTime || Date.now();
     const clientTime = Date.now();
     const networkDelay = clientTime - serverTime;
 
-    // console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
+    console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
 
     let adjustedTimestamp = syncMsg.timestamp || 0;
 
     // Only adjust if currently playing (not paused)
     if (syncMsg.isPlaying && !syncMsg.isPaused) {
         adjustedTimestamp += networkDelay;
-        // console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
-        //     original: syncMsg.timestamp,
-        //     networkDelay: networkDelay,
-        //     adjusted: adjustedTimestamp
-        // });
+        console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
+            original: syncMsg.timestamp,
+            networkDelay: networkDelay,
+            adjusted: adjustedTimestamp
+        });
     } else {
-        // console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
+        console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
     }
 
     // Set ignore flag to prevent event triggers
@@ -1231,7 +1251,7 @@ function handlePlaybackSyncState(syncMsg) {
         singer: syncMsg.singer
     };
 
-    // console.log('📝 [SYNC] Updated current song data:', currentSongData);
+    console.log('📝 [SYNC] Updated current song data:', currentSongData);
 
     // Update UI
     updateCurrentSongDisplay(
@@ -1244,7 +1264,7 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Build audio source URL
     const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}?t=${Date.now()}`;
-    // console.log('🔗 [SYNC] Loading audio from:', audioSrc);
+    console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
     audioPlayer.src = audioSrc;
@@ -1252,24 +1272,24 @@ function handlePlaybackSyncState(syncMsg) {
     const syncAudio = () => {
         const targetTime = adjustedTimestamp / 1000; // Convert to seconds
 
-        // console.log('🎯 [SYNC] Setting playback position to:', targetTime, 'seconds');
+        console.log('🎯 [SYNC] Setting playback position to:', targetTime, 'seconds');
 
         audioPlayer.currentTime = targetTime;
 
         if (syncMsg.isPaused) {
-            // console.log('⏸️ [SYNC] Paused state - staying paused');
+            console.log('⏸️ [SYNC] Paused state - staying paused');
             audioPlayer.pause();
             ignoreLocalEvents = false;
             isSyncing = false;
             ToastNotification.info(`Synced to: ${syncMsg.songName} (Paused)`);
         } else if (syncMsg.isPlaying) {
-            // console.log('▶️ [SYNC] Playing state - starting playback');
+            console.log('▶️ [SYNC] Playing state - starting playback');
             const playPromise = audioPlayer.play();
 
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        // console.log('✅ [SYNC] Playback synced successfully');
+                        console.log('✅ [SYNC] Playback synced successfully');
                         ignoreLocalEvents = false;
                         isSyncing = false;
                         ToastNotification.success(`🎵 Synced: ${syncMsg.songName}`);
@@ -1285,7 +1305,7 @@ function handlePlaybackSyncState(syncMsg) {
                 isSyncing = false;
             }
         } else {
-            // console.log('⏹️ [SYNC] No playback state - staying idle');
+            console.log('⏹️ [SYNC] No playback state - staying idle');
             ignoreLocalEvents = false;
             isSyncing = false;
         }
@@ -1293,15 +1313,13 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Wait for metadata to load before syncing
     if (audioPlayer.readyState >= 2) {
-        // Metadata already loaded
-        // console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
+        console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
         syncAudio();
     } else {
-        // Wait for metadata
-        // console.log('⏳ [SYNC] Waiting for metadata to load...');
+        console.log('⏳ [SYNC] Waiting for metadata to load...');
 
         const metadataHandler = () => {
-            // console.log('✅ [SYNC] Metadata loaded - syncing now');
+            console.log('✅ [SYNC] Metadata loaded - syncing now');
             syncAudio();
             audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
         };
@@ -1922,6 +1940,7 @@ async function refreshParticipants() {
 }
 
 // ==================== PARTICIPANTS DISPLAY ====================
+// ==================== ENHANCED: UPDATE PARTICIPANTS DISPLAY ====================
 function updateParticipantsDisplay(participants) {
     const participantsList = document.getElementById('participantsList');
     const participantCount = document.getElementById('participantCount');
@@ -1932,12 +1951,22 @@ function updateParticipantsDisplay(participants) {
 
     const currentOrganizerUser = participants.find(p => p.organizer)?.userName || null;
 
-    if (lastKnownOrganizer !== null) {
-        const organizerStillExists = participants.some(p => p.userName === lastKnownOrganizer);
+    // ⭐ CRITICAL FIX: Detect organizer change
+    if (lastKnownOrganizer !== null && lastKnownOrganizer !== currentOrganizerUser) {
+        console.warn("🎭 ORGANIZER CHANGED:", lastKnownOrganizer, "→", currentOrganizerUser);
 
-        if (!organizerStillExists) {
-            console.warn("🎵 Organizer actually LEFT — resetting audio");
-            resetAudioOnOrganizerLeave();
+        // Check if previous organizer left
+        const previousOrganizerStillExists = participants.some(p => p.userName === lastKnownOrganizer);
+
+        if (!previousOrganizerStillExists) {
+            console.warn("🎵 Previous organizer LEFT — resetting audio for all participants");
+            resetAudioPlayer();
+
+            // ⭐ NEW: If we're NOT the new organizer, request sync from new state
+            if (!isOrganizer && currentOrganizerUser !== currentUsername) {
+                console.log("🔄 Requesting fresh sync after organizer change");
+                setTimeout(() => requestPlaybackSync(), 500);
+            }
         }
     }
 
@@ -1969,23 +1998,33 @@ function updateParticipantsDisplay(participants) {
             isOrganizer = p.organizer;
 
             if (wasOrganizer !== isOrganizer) {
-                // console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
-                //     'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
+                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
+                    'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
                 onRoleChange();
 
                 if (isOrganizer) {
                     ToastNotification.success('🎉 You are now the organizer!');
+                    // ⭐ NEW: Clear any stale playback state when becoming organizer
+                    resetAudioPlayer();
                 } else {
                     ToastNotification.info('You are now a participant');
-                }
-            }
 
-            if (wasOrganizer && !isOrganizer) {
-                resetAudioOnOrganizerLeave();
+                    // Reset audio and request sync
+                    console.log('⬇️ Demoted to participant - resetting audio and syncing');
+                    resetAudioPlayer();
+
+                    setTimeout(() => {
+                        if (!isOrganizer) {
+                            console.log('🔄 Requesting sync as new participant');
+                            requestPlaybackSync();
+                        }
+                    }, 500);
+                }
             }
         }
     });
 }
+
 function getColorForUser(username) {
     if (!userColors[username]) {
         // Generate consistent color based on username hash

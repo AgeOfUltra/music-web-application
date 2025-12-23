@@ -170,6 +170,10 @@ public class RoomService {
                                 log.info("Organizer role transferred from {} to {} in room {}",
                                         userName, newOrg.getUserName(), roomName);
                             });
+
+                    // 🆕 Clear playback state when organizer changes
+                    playbackStateService.clearPlaybackState(roomName);
+                    log.info("🧹 Cleared playback state due to organizer transfer in room {}", roomName);
                 }
 
                 // ---------- REMOVE PARTICIPANT ----------

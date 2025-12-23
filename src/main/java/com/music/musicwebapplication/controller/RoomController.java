@@ -17,10 +17,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.StaleObjectStateException;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -85,6 +87,7 @@ public class RoomController {
         }
 
         newRoom.setCreatedBy(auth.getName());
+        newRoom.setRoomName(newRoom.getRoomName().trim());
         log.info("Room created by {} ", newRoom.getCreatedBy());
 
         try {
@@ -134,14 +137,15 @@ public class RoomController {
                                        RedirectAttributes redirectAttributes, Authentication auth) {
         Optional<Room> availableRoom = rService.getRoomDetailsByHash(joinRoom.getRoomCode());
         if (availableRoom.isEmpty()) {
-            log.info("Room joined failed!");
+            log.info("Room joined failed! with details {}",joinRoom);
             redirectAttributes.addFlashAttribute("joinError", "Room Not found");
             redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
+        joinRoom.setRoomCode(joinRoom.getRoomCode().trim());
         if (!availableRoom.get().getPassCode().equals(joinRoom.getPassCode())) {
-            log.info("Room joined failed!");
+            log.info("Room joined failed! {}",joinRoom);
             redirectAttributes.addFlashAttribute("joinError", "invalid room credentials");
             redirectAttributes.addFlashAttribute("roomJoin", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
@@ -429,7 +433,19 @@ public class RoomController {
                     "sessionDeleted", shouldDelete
             ));
 
-        } catch (CannotAcquireLockException e) {
+        }
+        catch (ObjectOptimisticLockingFailureException | StaleObjectStateException e) {
+            log.warn("⚠️ Concurrent modification in exitRoom (user already removed) - treating as success: {}",
+                    e.getMessage());
+
+            // This is actually fine - another request already removed the user
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Exit processed by concurrent operation",
+                    "note", "User already removed"
+            ));
+
+        }catch (CannotAcquireLockException e) {
             log.warn("⚠️ Database deadlock in exitRoom (concurrent operations) - treating as success: {}",
                     e.getMessage());
             return ResponseEntity.ok(Map.of(
