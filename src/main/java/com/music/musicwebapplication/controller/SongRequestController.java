@@ -1,6 +1,7 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.RequestSongDto;
+import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.service.SongControllerService;
 import jakarta.validation.Valid;
@@ -36,7 +37,7 @@ public class SongRequestController {
         }
 
         //        check whether the song already exist.
-        List<Song> checkSong = songService.searchSongsByName(requestSongDto.getSongName());
+        List<SongDto> checkSong = songService.searchSongsByName(requestSongDto.getSongName());
         if(!checkSong.isEmpty()){
             redirectAttributes.addFlashAttribute("requestSongError", "Song Already exist in globally");
             return new ModelAndView("redirect:/app/music/dashboard");

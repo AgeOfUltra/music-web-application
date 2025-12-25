@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SongDto {
+public class SongDto{
     private String songName;
     private String fileName;
     private String movie;

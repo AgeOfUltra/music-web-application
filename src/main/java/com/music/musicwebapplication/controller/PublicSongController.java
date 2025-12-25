@@ -1,5 +1,6 @@
 package com.music.musicwebapplication.controller;
 
+import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.service.SongCacheService;
@@ -50,21 +51,24 @@ public class PublicSongController {
     }
 
     @GetMapping("/fetchAllSongs")
-    public ResponseEntity<Page<Song>> getSongsAsRequired(
+    public ResponseEntity<Page<SongDto>> getSongsAsRequired(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        List<Song> content = songControllerService.getAllSongsName(page, size);
+        List<SongDto> content =
+                songControllerService.getAllSongsName(page, size);
+
         long total = repo.count();
 
-        Page<Song> pageResult = new PageImpl<>(content, PageRequest.of(page, size), total);
-
-        return ResponseEntity.ok(pageResult);
+        return ResponseEntity.ok(
+                new PageImpl<>(content, PageRequest.of(page, size), total)
+        );
     }
 
 
+
     @GetMapping("/searchSong")
-    public ResponseEntity<List<Song>> searchSongsByName(@RequestParam String query){
+    public ResponseEntity<List<SongDto>> searchSongsByName(@RequestParam String query){
         return ResponseEntity.ok(songControllerService.searchSongsByName(query));
     }
 

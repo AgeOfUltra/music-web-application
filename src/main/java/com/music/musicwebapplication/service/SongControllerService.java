@@ -3,15 +3,20 @@ package com.music.musicwebapplication.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.dto.SongContainer;
+import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.repo.SongRequestRepo;
 import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.annotations.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -63,7 +68,7 @@ public class SongControllerService {
             String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
-            Song uploadedSong = updateSongInDb(container,url);
+            SongDto uploadedSong = updateSongInDb(container,url);
             log.info("song saved with name {}",uploadedSong.getSongName());
 
             return "Song uploaded and saved successfully";
@@ -93,7 +98,13 @@ public class SongControllerService {
 
 
 
-    protected Song updateSongInDb(SongContainer song, String url){
+    @Caching(
+            evict = {
+                    @CacheEvict( value ="AllSongsPaged", allEntries = true),
+                    @CacheEvict(value = "CachedSongsPattern",allEntries = true)
+            }
+    )
+    protected SongDto updateSongInDb(SongContainer song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
         newSong.setFileName(song.getFileName());
@@ -108,28 +119,42 @@ public class SongControllerService {
 
         Optional<Song> savedSong = Optional.of(repo.save(newSong));
 
-        return savedSong.get();
+        return toDto(savedSong.get());
     }
 
-    @Cacheable(
-            value = "AllSongsPaged",
-            key = "{#page, #size}"
+
+    @Cacheable(value = "AllSongsPaged", key = "{#page, #size}")
+    public List<SongDto> getAllSongsName(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("songName"));
+        return repo.findAll(pageable)
+                .getContent()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+
+    // Add this method
+    private SongDto toDto(Song song) {
+        SongDto dto = new SongDto();
+        dto.setSongName(song.getSongName());
+        dto.setFileName(song.getFileName());
+        dto.setMovie(song.getMovie());
+        dto.setSinger(song.getSinger());
+        dto.setSongType(song.getSongType());
+        dto.setHero(song.getHero());
+        dto.setHeroine(song.getHeroine());
+        dto.setLanguage(song.getLanguage());
+        return dto;
+    }
+
+   @Cacheable(
+            value = "CachedSongsPattern",
+            key = "#prefix.toLowerCase().substring(0, #prefix.length() > 2 ? 2 : #prefix.length())"
     )
-    public List<Song> getAllSongsName(int page, int size) {
-        Pageable pageable = PageRequest.of(page,size, Sort.by("songName").ascending());
-        return  repo.findAll(pageable).getContent();
-    }
-
-//    @Cacheable(value="CachedSongs", key="#songName.toLowerCase().trim()")
-//    public List<Song> searchSongsByName(String songName) {
-//        log.info("🔍 DATABASE QUERY for: {}", songName);
-//        return repo.findBySongNameContainingIgnoreCase(songName);
-//    }
-
-    @Cacheable(value="CachedSongsPattern", key="#prefix.toLowerCase().substring(0, Math.min(2, #prefix.length()))")
-    public List<Song> searchSongsByName(String prefix) {
+    public List<SongDto> searchSongsByName(String prefix) {
         log.info("🔍 Database query for prefix: {}", prefix);
-        return repo.findBySongNameContainingIgnoreCase(prefix);
+        return repo.findBySongNameContainingIgnoreCase(prefix).stream().map(s -> objectMapper.convertValue(s, SongDto.class)).toList();
     }
 
 
