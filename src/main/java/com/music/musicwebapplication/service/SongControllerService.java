@@ -10,13 +10,11 @@ import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.repo.SongRequestRepo;
 import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.annotations.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -101,7 +99,8 @@ public class SongControllerService {
     @Caching(
             evict = {
                     @CacheEvict( value ="AllSongsPaged", allEntries = true),
-                    @CacheEvict(value = "CachedSongsPattern",allEntries = true)
+                    @CacheEvict(value = "CachedSongsPattern",allEntries = true),
+                    @CacheEvict(value = "CachedFileNames",allEntries = true)
             }
     )
     protected SongDto updateSongInDb(SongContainer song, String url){
@@ -157,6 +156,11 @@ public class SongControllerService {
         return repo.findBySongNameContainingIgnoreCase(prefix).stream().map(s -> objectMapper.convertValue(s, SongDto.class)).toList();
     }
 
+    @Cacheable(value = "CachedFileNames")
+    public List<String> getSongList() {
+        log.info("cache hit for songs fileNames");
+        return repo.getSongsByFileName();
+    }
 
     public String requestedSongSave(RequestSongDto song){
 

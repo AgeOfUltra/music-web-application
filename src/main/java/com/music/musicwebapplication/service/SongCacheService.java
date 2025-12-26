@@ -25,8 +25,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -60,11 +58,6 @@ public class SongCacheService {
         log.info("Song cache directory initialized at: {}", cacheDir.toAbsolutePath());
     }
 
-    @PostConstruct
-    public void loadOnStartup() {
-        log.info("cache initial request");
-        updateCache();
-    }
 
     @Cacheable(value = "songCacheMetadata", key = "#objectKey")
     public String cacheSongIfNeeded(String objectKey) throws IOException {
@@ -128,22 +121,4 @@ public class SongCacheService {
         }
     }
 
-//    @Scheduled(cron = "0 0 */1 * * *")
-    public void refreshSongCache() {
-       updateCache();
-    }
-    // ---------- Fetch From Cache ----------
-    public List<String> getSongList() {
-        log.info("cache hit for cache songs");
-        Object cached = redisTemplate.opsForValue().get(SONG_CACHE_KEY);
-        return cached != null ? (List<String>) cached : new ArrayList<>();
-    }
-
-    // ---------- Update Cache ----------
-    private void updateCache() {
-
-        List<String> latestSongs = repo.findAllSongBySongName(); // DB call
-        redisTemplate.opsForValue().set(SONG_CACHE_KEY, latestSongs);
-        log.info("Redis Cache Updated —  {} songs",latestSongs.size());
-    }
 }

@@ -10,6 +10,8 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import java.time.Duration;
+
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
 @Configuration
@@ -25,6 +27,13 @@ public class AppConfig {
     @Value("${cloud.aws.region.static}")
     private String region;
 
+
+    @Value("${aws.s3.api-call-timeout}")
+    private int apiCallTimeout;
+
+    @Value("${aws.s3.api-attempt-timeout}")
+    private int apiAttemptTimeout;
+
     @Bean
     public ModelMapper mapper()
     {
@@ -36,6 +45,8 @@ public class AppConfig {
         return  S3Client.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(awsBasicCredentials))
+                .overrideConfiguration(cfg->cfg.apiCallTimeout(Duration.ofSeconds(apiCallTimeout))
+                        .apiCallAttemptTimeout(Duration.ofSeconds(apiAttemptTimeout)))
                 .build();
     }
 }

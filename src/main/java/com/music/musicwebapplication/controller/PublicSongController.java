@@ -65,8 +65,6 @@ public class PublicSongController {
         );
     }
 
-
-
     @GetMapping("/searchSong")
     public ResponseEntity<List<SongDto>> searchSongsByName(@RequestParam String query){
         return ResponseEntity.ok(songControllerService.searchSongsByName(query));
@@ -74,7 +72,7 @@ public class PublicSongController {
 
     @GetMapping("/getAllCachedSongs")
     public ResponseEntity<List<String>> getAllCachedSongs(){
-        return ResponseEntity.ok(songCacheService.getSongList());
+        return ResponseEntity.ok(songControllerService.getSongList());
     }
 
 }
