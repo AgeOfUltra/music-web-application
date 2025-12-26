@@ -41,8 +41,17 @@ let isSyncing = false;
 let syncTimeout = null;
 let hasReceivedInitialSync = false;
 
+let playbackDebounceTimer = null;
+let lastPlaybackAction = null;
+let lastPlaybackTimestamp = 0;
+
 let replyingToMessage = null;
 let logoutInProgress = false;
+// ================== Constants ===============================
+const DEBOUNCE_DELAY = 300;
+const METADATA_TIMEOUT = 60000;
+const DUPLICATE_EVENT_THRESHOLD = 500;
+
 // ==================== GLOBAL ERROR HANDLER ====================
 window.addEventListener('error', (event) => {
     console.error('❌ Global error:', event.error);
@@ -327,13 +336,40 @@ const onOrganizerPause = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
     if (!isOrganizer) return;
+
     if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
-        const playbackMessage = {
-            action: 'PAUSE',
-            timestamp: Math.floor(audioPlayer.currentTime * 1000),
-            controller: currentUsername
-        };
-        stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
+        // ⭐ Clear previous debounce timer
+        if (playbackDebounceTimer) {
+            clearTimeout(playbackDebounceTimer);
+        }
+
+        const currentTime = Math.floor(audioPlayer.currentTime * 1000);
+
+        // ⭐ Prevent duplicate PAUSE events
+        if (lastPlaybackAction === 'PAUSE' && Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
+            // console.log('⏭️ Skipping duplicate PAUSE event');
+            return;
+        }
+
+        // ⭐ Debounce: only send after 300ms of stability
+        playbackDebounceTimer = setTimeout(() => {
+            lastPlaybackAction = 'PAUSE';
+            lastPlaybackTimestamp = currentTime;
+
+            const playbackMessage = {
+                action: 'PAUSE',
+                timestamp: currentTime,
+                controller: currentUsername
+            };
+
+            stompClient.send(
+                `/app/music/chat/${currentRoomName}/playback`,
+                {},
+                JSON.stringify(playbackMessage)
+            );
+
+            // console.log('📤 Sent PAUSE event at', currentTime, 'ms');
+        }, DEBOUNCE_DELAY); // ⭐ 300ms debounce
     }
 };
 
@@ -341,18 +377,47 @@ const onOrganizerPlay = (e) => {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
     if (!isOrganizer) return;
+
     if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src && currentSongData) {
-        const playbackMessage = {
-            action: 'RESUME',
-            timestamp: Math.floor(audioPlayer.currentTime * 1000),
-            controller: currentUsername,
-            songFileName: currentSongData.songFileName,
-            songName: currentSongData.songName,
-            hero: currentSongData.hero,
-            heroine: currentSongData.heroine,
-            language: currentSongData.language
-        };
-        stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
+        // ⭐ Clear previous debounce timer
+        if (playbackDebounceTimer) {
+            clearTimeout(playbackDebounceTimer);
+        }
+
+        const currentTime = Math.floor(audioPlayer.currentTime * 1000);
+        const action = currentTime > 1000 ? 'RESUME' : 'PLAY';
+
+        // ⭐ Prevent duplicate RESUME events
+        if (action === 'RESUME' && lastPlaybackAction === 'RESUME' &&
+            Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
+            // console.log('⏭️ Skipping duplicate RESUME event');
+            return;
+        }
+
+        // ⭐ Debounce: only send after 300ms of stability
+        playbackDebounceTimer = setTimeout(() => {
+            lastPlaybackAction = action;
+            lastPlaybackTimestamp = currentTime;
+
+            const playbackMessage = {
+                action: action,
+                timestamp: currentTime,
+                controller: currentUsername,
+                songFileName: currentSongData.songFileName,
+                songName: currentSongData.songName,
+                hero: currentSongData.hero,
+                heroine: currentSongData.heroine,
+                language: currentSongData.language
+            };
+
+            stompClient.send(
+                `/app/music/chat/${currentRoomName}/playback`,
+                {},
+                JSON.stringify(playbackMessage)
+            );
+
+            // console.log('📤 Sent', action, 'event at', currentTime, 'ms');
+        }, DEBOUNCE_DELAY); // ⭐ 300ms debounce
     }
 };
 
@@ -553,6 +618,14 @@ function onRoleChange() {
     updateAudioControls();
     updatePlaybackButtons();
 
+    // ⭐ ADD THIS: Clear any pending debounced events
+    if (playbackDebounceTimer) {
+        clearTimeout(playbackDebounceTimer);
+        playbackDebounceTimer = null;
+    }
+    lastPlaybackAction = null;
+    lastPlaybackTimestamp = 0;
+
     const desired = isOrganizer ? 'organizer' : 'participant';
     if (boundAudioRole !== desired) {
         bindAudioHandlersForRole(desired);
@@ -583,7 +656,7 @@ function resetAudioPlayer() {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
 
-    console.log('🔄 Resetting audio player to clean state');
+    // console.log('🔄 Resetting audio player to clean state');
 
     try {
         // Stop playback
@@ -618,7 +691,7 @@ function resetAudioPlayer() {
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
     if (isReload()) {
-        console.log('🔄 Reload detected on page load - redirecting to dashboard');
+        // console.log('🔄 Reload detected on page load - redirecting to dashboard');
         window.location.href = '/app/music/dashboard';
         return;
     }
@@ -860,7 +933,7 @@ const ToastNotification = {
         toastDiv.classList.add('removing');
         setTimeout(() => {
             toastDiv.remove();
-        }, 300);
+        }, DEBOUNCE_DELAY);
     },
 
     success: function (message, duration = 3000) {
@@ -931,11 +1004,23 @@ function setupAudioPlayerListeners() {
 
 // ==================== PLAYBACK HANDLING ====================
 function handlePlaybackCommand(playbackMsg) {
+    // console.log('🔔 handlePlaybackCommand triggered:', {
+    //     action: playbackMsg.action,
+    //     songName: playbackMsg.songName,
+    //     ignoreLocalEvents: ignoreLocalEvents,
+    //     audioPlayerExists: !!document.getElementById('audioPlayer')
+    // });
     const audioPlayer = document.getElementById('audioPlayer');
 
     if (!audioPlayer) {
         console.error('❌ Audio player not found in handlePlaybackCommand!');
         return;
+    }
+
+    // ⭐ FIX 5: Clear the playback timeout since we got a response
+    if (window.currentPlaybackTimeout) {
+        clearTimeout(window.currentPlaybackTimeout);
+        window.currentPlaybackTimeout = null;
     }
 
     ignoreLocalEvents = true;
@@ -1001,6 +1086,13 @@ function handlePlaybackCommand(playbackMsg) {
 
 
 function handlePlayCommand(audioPlayer, playbackMsg) {
+    // console.log('🎵 handlePlayCommand called:', {
+    //     songName: playbackMsg.songName,
+    //     fileName: playbackMsg.songFileName,
+    //     currentSrc: audioPlayer.src,
+    //     ignoreLocalEvents: ignoreLocalEvents
+    // });
+
     const newSrc = `/app/music/audio/public/streamSong/${playbackMsg.songFileName}?t=${Date.now()}`;
 
     currentSongData = {
@@ -1015,58 +1107,72 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
     updateCurrentSongDisplay(playbackMsg.songName, playbackMsg.hero, playbackMsg.language, playbackMsg.movie, playbackMsg.singer);
 
     const isOwnAction = playbackMsg.controller === currentUsername;
-    if (isOwnAction) {
-        ToastNotification.info(`🎵 Now Playing: ${playbackMsg.songName}`);
-    } else {
-        ToastNotification.info(`🎵 ${playbackMsg.controller} is playing: ${playbackMsg.songName}`);
+
+    // ⭐ Show appropriate toast
+    if (!isOwnAction) {
+        ToastNotification.info(`🎵 ${playbackMsg.controller} is playing: ${playbackMsg.songName}`, 2000);
     }
 
-    let sourceChanged = true;
-    try {
-        const existingPath = audioPlayer.src ? new URL(audioPlayer.src).pathname : '';
-        const newPath = new URL(newSrc, window.location.origin).pathname;
-        sourceChanged = existingPath !== newPath;
-    } catch (err) {
-        sourceChanged = audioPlayer.src !== newSrc;
-    }
+    // ⭐ FIX: Simplified source change detection
+    const currentSrc = audioPlayer.src || '';
+    const sourceChanged = !currentSrc.includes(playbackMsg.songFileName);
 
-    if (sourceChanged) {
-        audioPlayer.src = newSrc;
-    }
+    // console.log('🔍 Source check:', {
+    //     currentSrc: currentSrc,
+    //     newSrc: newSrc,
+    //     sourceChanged: sourceChanged
+    // });
+
+    // ⭐ ALWAYS set the source to ensure it loads
+    audioPlayer.src = newSrc;
+    // console.log('✅ Audio source set to:', newSrc);
 
     const startTime = playbackMsg.timestamp ? playbackMsg.timestamp / 1000 : 0;
 
-    if (sourceChanged) {
-        let metadataLoaded = false;
+    // ⭐ FIX: Always wait for metadata, even if source "didn't change"
+    let metadataLoaded = false;
 
-        const metadataHandler = () => {
-            metadataLoaded = true;
-            audioPlayer.currentTime = startTime;
+    const metadataHandler = () => {
+        // console.log('📊 Metadata loaded successfully');
+        metadataLoaded = true;
+        audioPlayer.currentTime = startTime;
 
-            const playPromise = audioPlayer.play();
+        const playPromise = audioPlayer.play();
 
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        ignoreLocalEvents = false;
-                    })
-                    .catch(err => {
-                        console.error('   ❌ Play error:', err.message);
-                        ignoreLocalEvents = false;
-                    });
-            } else {
-                ignoreLocalEvents = false;
-            }
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    ignoreLocalEvents = false;
+                    // console.log('✅ Playback started successfully');
+                    if (isOwnAction) {
+                        ToastNotification.success(`✅ Now Playing: ${playbackMsg.songName}`, 500);
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Play error:', err.message);
+                    ignoreLocalEvents = false;
+                    ToastNotification.error(`❌ Failed to play: ${playbackMsg.songName}`, 4000);
+                });
+        } else {
+            ignoreLocalEvents = false;
+        }
 
-            audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
-            if (audioLoadTimeout) clearTimeout(audioLoadTimeout);
-        };
+        audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
+        if (audioLoadTimeout) clearTimeout(audioLoadTimeout);
+    };
 
+    // ⭐ Check if metadata is already loaded
+    if (audioPlayer.readyState >= 2) {
+        // console.log('📊 Metadata already available, playing immediately');
+        metadataHandler();
+    } else {
+        // console.log('⏳ Waiting for metadata to load...');
         audioPlayer.addEventListener('loadedmetadata', metadataHandler, {once: true});
 
+        // ⭐ Timeout for large files
         audioLoadTimeout = setTimeout(() => {
             if (!metadataLoaded) {
-                console.warn('   ⚠️ Metadata loading timeout (8s), attempting to play anyway');
+                console.warn('⚠️ Metadata loading timeout (60s)');
                 audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
 
                 audioPlayer.currentTime = startTime;
@@ -1076,32 +1182,18 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
                     playPromise
                         .then(() => {
                             ignoreLocalEvents = false;
+                            ToastNotification.success(`✅ Now Playing: ${playbackMsg.songName}`, 3000);
                         })
                         .catch(err => {
-                            console.error('   ❌ Play error after timeout:', err.message);
+                            console.error('❌ Play error after timeout:', err.message);
                             ignoreLocalEvents = false;
+                            ToastNotification.error('❌ Song took too long to load. Please try again.', 5000);
                         });
                 } else {
                     ignoreLocalEvents = false;
                 }
             }
-        }, 8000);
-    } else {
-        audioPlayer.currentTime = startTime;
-
-        const playPromise = audioPlayer.play();
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    ignoreLocalEvents = false;
-                })
-                .catch(err => {
-                    console.error('   ❌ Play error:', err.message);
-                    ignoreLocalEvents = false;
-                });
-        } else {
-            ignoreLocalEvents = false;
-        }
+        }, METADATA_TIMEOUT); // 60 seconds
     }
 }
 
@@ -1148,10 +1240,9 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
     }
 }
 
-// ==================== NEW: HANDLE PLAYBACK SYNC RESPONSE ====================
 // ==================== FIXED: HANDLE PLAYBACK SYNC RESPONSE ====================
 function handlePlaybackSyncState(syncMsg) {
-    console.log('🔄 [SYNC] Received playback state:', syncMsg);
+    // console.log('🔄 [SYNC] Received playback state:', syncMsg);
 
     // Mark that we've received initial sync
     hasReceivedInitialSync = true;
@@ -1173,22 +1264,22 @@ function handlePlaybackSyncState(syncMsg) {
     if (!syncMsg.valid || !syncMsg.songFileName) {
         // ✅ FORCE RESET: Clear any cached/playing audio
         if (audioPlayer.src || !audioPlayer.paused) {
-            console.log('⚠️ [SYNC] No valid state but audio present - forcing reset');
+            // console.log('⚠️ [SYNC] No valid state but audio present - forcing reset');
             resetAudioPlayer();
             ToastNotification.info('No active playback in room');
         }
-        console.log('ℹ️ [SYNC] No active playback to sync');
+        // console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
     }
 
     // If organizer, don't sync (they control playback)
     if (isOrganizer) {
-        console.log('⏭️ [SYNC] Skipping sync - user is organizer');
+        // console.log('⏭️ [SYNC] Skipping sync - user is organizer');
 
         // ⭐ NEW: If organizer and no local playback, but server has state, reset server state
         if (!currentSongData && syncMsg.valid) {
-            console.log('⚠️ [SYNC] New organizer has no playback but server does - this is stale state');
+            // console.log('⚠️ [SYNC] New organizer has no playback but server does - this is stale state');
             // Optionally: Send a message to clear server-side state
             // For now, just ignore and let the organizer control from scratch
         }
@@ -1208,33 +1299,33 @@ function handlePlaybackSyncState(syncMsg) {
         return;
     }
 
-    console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
-    console.log('📊 [SYNC] State details:', {
-        isPlaying: syncMsg.isPlaying,
-        isPaused: syncMsg.isPaused,
-        timestamp: syncMsg.timestamp,
-        serverTime: syncMsg.serverTime,
-        messageAge: messageAge
-    });
+    // console.log('🎵 [SYNC] Syncing to active song:', syncMsg.songName);
+    // console.log('📊 [SYNC] State details:', {
+    //     isPlaying: syncMsg.isPlaying,
+    //     isPaused: syncMsg.isPaused,
+    //     timestamp: syncMsg.timestamp,
+    //     serverTime: syncMsg.serverTime,
+    //     messageAge: messageAge
+    // });
 
     // Calculate adjusted timestamp accounting for network delay
     const clientTime = Date.now();
     const networkDelay = clientTime - serverTime;
 
-    console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
+    // console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
 
     let adjustedTimestamp = syncMsg.timestamp || 0;
 
     // Only adjust if currently playing (not paused)
     if (syncMsg.isPlaying && !syncMsg.isPaused) {
         adjustedTimestamp += networkDelay;
-        console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
-            original: syncMsg.timestamp,
-            networkDelay: networkDelay,
-            adjusted: adjustedTimestamp
-        });
+        // console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
+        //     original: syncMsg.timestamp,
+        //     networkDelay: networkDelay,
+        //     adjusted: adjustedTimestamp
+        // });
     } else {
-        console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
+        // console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
     }
 
     // Set ignore flag to prevent event triggers
@@ -1251,7 +1342,7 @@ function handlePlaybackSyncState(syncMsg) {
         singer: syncMsg.singer
     };
 
-    console.log('📝 [SYNC] Updated current song data:', currentSongData);
+    // console.log('📝 [SYNC] Updated current song data:', currentSongData);
 
     // Update UI
     updateCurrentSongDisplay(
@@ -1264,7 +1355,7 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Build audio source URL
     const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}?t=${Date.now()}`;
-    console.log('🔗 [SYNC] Loading audio from:', audioSrc);
+    // console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
     audioPlayer.src = audioSrc;
@@ -1277,19 +1368,19 @@ function handlePlaybackSyncState(syncMsg) {
         audioPlayer.currentTime = targetTime;
 
         if (syncMsg.isPaused) {
-            console.log('⏸️ [SYNC] Paused state - staying paused');
+            // console.log('⏸️ [SYNC] Paused state - staying paused');
             audioPlayer.pause();
             ignoreLocalEvents = false;
             isSyncing = false;
             ToastNotification.info(`Synced to: ${syncMsg.songName} (Paused)`);
         } else if (syncMsg.isPlaying) {
-            console.log('▶️ [SYNC] Playing state - starting playback');
+            // console.log('▶️ [SYNC] Playing state - starting playback');
             const playPromise = audioPlayer.play();
 
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        console.log('✅ [SYNC] Playback synced successfully');
+                        // console.log('✅ [SYNC] Playback synced successfully');
                         ignoreLocalEvents = false;
                         isSyncing = false;
                         ToastNotification.success(`🎵 Synced: ${syncMsg.songName}`);
@@ -1305,7 +1396,7 @@ function handlePlaybackSyncState(syncMsg) {
                 isSyncing = false;
             }
         } else {
-            console.log('⏹️ [SYNC] No playback state - staying idle');
+            // console.log('⏹️ [SYNC] No playback state - staying idle');
             ignoreLocalEvents = false;
             isSyncing = false;
         }
@@ -1313,13 +1404,13 @@ function handlePlaybackSyncState(syncMsg) {
 
     // Wait for metadata to load before syncing
     if (audioPlayer.readyState >= 2) {
-        console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
+        // console.log('✅ [SYNC] Metadata already loaded - syncing immediately');
         syncAudio();
     } else {
-        console.log('⏳ [SYNC] Waiting for metadata to load...');
+        // console.log('⏳ [SYNC] Waiting for metadata to load...');
 
         const metadataHandler = () => {
-            console.log('✅ [SYNC] Metadata loaded - syncing now');
+            // console.log('✅ [SYNC] Metadata loaded - syncing now');
             syncAudio();
             audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
         };
@@ -1412,6 +1503,18 @@ function playSong(song) {
         return;
     }
 
+    // ⭐ FIX 1: Reset ignoreLocalEvents flag before starting
+    ignoreLocalEvents = false;
+
+    // ⭐ FIX 2: Clear any pending audio load timeouts
+    if (audioLoadTimeout) {
+        clearTimeout(audioLoadTimeout);
+        audioLoadTimeout = null;
+    }
+
+    // ⭐ REMOVE OR COMMENT OUT THIS LINE - No loading toast needed
+    ToastNotification.info(`⏳ Loading ${song.songName}...`, 2500);
+
     const playbackMessage = {
         action: 'PLAY',
         songFileName: song.fileName,
@@ -1431,9 +1534,23 @@ function playSong(song) {
             {},
             messageJson
         );
+
+        // console.log('📤 Sent PLAY command for:', song.songName);
+
+        // ⭐ FIX 4: Add timeout to detect if WebSocket message was lost
+        const playbackTimeout = setTimeout(() => {
+            console.warn('⚠️ No playback response received within 5 seconds');
+            ToastNotification.warning('Song loading timeout. Click again to retry.', 3000);
+            ignoreLocalEvents = false; // Reset flag
+        }, 5000);
+
+        // Store timeout ID so handlePlaybackCommand can clear it
+        window.currentPlaybackTimeout = playbackTimeout;
+
     } catch (error) {
         console.error('❌ Error sending playback message:', error);
         ToastNotification.error('Failed to play song');
+        ignoreLocalEvents = false; // Reset flag on error
     }
 }
 
@@ -1696,7 +1813,7 @@ async function loadNextPageAndPlay() {
             const firstSong = allSongsOnPage[0];
             // console.log('✅ Page loaded, playing:', firstSong.songName);
             ToastNotification.success(`Playing: ${firstSong.songName}`);
-            setTimeout(() => playSong(firstSong), 500);
+            setTimeout(() => playSong(firstSong), DUPLICATE_EVENT_THRESHOLD);
         } else {
             console.warn('⚠️ Page loaded but no songs found');
             ToastNotification.warning('No songs on this page');
@@ -1727,7 +1844,7 @@ async function loadPreviousPageAndPlay() {
             const lastSong = allSongsOnPage[currentPlaylistIndex];
             // console.log('✅ Page loaded, playing:', lastSong.songName);
             ToastNotification.success(`Playing: ${lastSong.songName}`);
-            setTimeout(() => playSong(lastSong), 500);
+            setTimeout(() => playSong(lastSong), DUPLICATE_EVENT_THRESHOLD);
         } else {
             console.warn('⚠️ Page loaded but no songs found');
             ToastNotification.warning('No songs on this page');
@@ -1965,7 +2082,7 @@ function updateParticipantsDisplay(participants) {
             // ⭐ NEW: If we're NOT the new organizer, request sync from new state
             if (!isOrganizer && currentOrganizerUser !== currentUsername) {
                 console.log("🔄 Requesting fresh sync after organizer change");
-                setTimeout(() => requestPlaybackSync(), 500);
+                setTimeout(() => requestPlaybackSync(), DUPLICATE_EVENT_THRESHOLD);
             }
         }
     }
@@ -2018,7 +2135,7 @@ function updateParticipantsDisplay(participants) {
                             console.log('🔄 Requesting sync as new participant');
                             requestPlaybackSync();
                         }
-                    }, 500);
+                    }, DUPLICATE_EVENT_THRESHOLD);
                 }
             }
         }
@@ -2560,7 +2677,7 @@ function sendExitBeacon(fullLogout) {
         const blob = new Blob([exitData], { type: 'application/json' });
         const success = navigator.sendBeacon(beaconUrl, blob);
 
-        console.log(success ? '✅ Exit beacon sent' : '❌ Beacon send failed');
+        // console.log(success ? '✅ Exit beacon sent' : '❌ Beacon send failed');
         return success;
     } catch (error) {
         console.error('❌ Beacon error:', error);
@@ -2584,7 +2701,7 @@ window.addEventListener('beforeunload', (event) => {
     const isReloading = nav && nav.type === "reload";
 
     if (isReloading) {
-        console.log('🔄 Page reload detected - exiting room via beacon');
+        // console.log('🔄 Page reload detected - exiting room via beacon');
 
         allowUnload = true;
         isClosing = true;
@@ -2601,7 +2718,7 @@ window.addEventListener('beforeunload', (event) => {
     // ==================== 3. TAB/BROWSER CLOSE ====================
     // ✅ Exit room + Session expires naturally (server-side timeout)
     if (!allowUnload) {
-        console.log('🚪 Tab/Browser close detected - exiting room via beacon');
+        // console.log('🚪 Tab/Browser close detected - exiting room via beacon');
 
         allowUnload = true;
         isClosing = true;
@@ -2636,7 +2753,7 @@ function sendExitBeaconSync() {
         }));
 
         if (xhr.status === 200) {
-            console.log('✅ Synchronous exit successful (reload)');
+            // console.log('✅ Synchronous exit successful (reload)');
         } else {
             console.error('❌ Synchronous exit failed:', xhr.status);
         }
@@ -2652,7 +2769,7 @@ function sendExitBeaconSync() {
 // ==================== UNLOAD: FINAL CLEANUP ====================
 window.addEventListener('unload', function () {
     if (!isClosing) {
-        console.log('🚪 Unload without beforeunload - sending beacon');
+        // console.log('🚪 Unload without beforeunload - sending beacon');
         sendExitBeacon(false);
     }
     disconnectWebSocketSilently();
@@ -2661,7 +2778,7 @@ window.addEventListener('unload', function () {
 // ==================== PAGEHIDE: MOBILE/BFCache SUPPORT ====================
 window.addEventListener('pagehide', function (event) {
     if (event.persisted === false && !isClosing) {
-        console.log('📱 Pagehide detected - sending beacon');
+        // console.log('📱 Pagehide detected - sending beacon');
         sendExitBeacon(false);
         disconnectWebSocketSilently();
     }
@@ -2678,7 +2795,7 @@ function safeDisconnectWebSocket() {
             }));
 
             stompClient.disconnect();
-            console.log('✅ WebSocket disconnected gracefully (LEAVE sent)');
+            // console.log('✅ WebSocket disconnected gracefully (LEAVE sent)');
         } catch (e) {
             console.error('❌ WebSocket disconnect error:', e);
         }
@@ -2694,7 +2811,7 @@ function disconnectWebSocketSilently() {
     if (stompClient && stompClient.connected) {
         try {
             stompClient.disconnect(() => {
-                console.log('✅ WebSocket disconnected silently');
+                // console.log('✅ WebSocket disconnected silently');
             });
         } catch (e) {
             console.error('❌ WebSocket disconnect error:', e);
@@ -2709,7 +2826,7 @@ function disconnectWebSocketSilently() {
 
 async function handleBack() {
     if (isClosing) {
-        console.log('⏭️ Exit already in progress - skipping duplicate call');
+        // console.log('⏭️ Exit already in progress - skipping duplicate call');
         return;
     }
 
@@ -2717,7 +2834,7 @@ async function handleBack() {
         allowUnload = true;
         isClosing = true;
 
-        console.log('🔙 Back button clicked - exiting room (keeping session)');
+        // console.log('🔙 Back button clicked - exiting room (keeping session)');
 
         // Stop participant refresh
         if (participantRefreshInterval) {
@@ -2743,7 +2860,7 @@ async function handleBack() {
         if (!response.ok) {
             console.error('❌ Failed to exit room:', response.status);
         } else {
-            console.log('✅ Room exit successful (session kept)');
+            // console.log('✅ Room exit successful (session kept)');
         }
 
         // Mark clean exit to prevent beforeunload interference
@@ -2761,7 +2878,7 @@ async function handleBack() {
 // ✅ Exit room + Full logout + Redirect to login
 async function logout() {
     if (logoutInProgress) {
-        console.log('⏭️ Logout already in progress');
+        // console.log('⏭️ Logout already in progress');
         return;
     }
     logoutInProgress = true;
@@ -2770,7 +2887,7 @@ async function logout() {
         allowUnload = true;
         isClosing = true;
 
-        console.log('🚪 Logout initiated - full cleanup');
+        // console.log('🚪 Logout initiated - full cleanup');
 
         // Stop participant refresh
         if (participantRefreshInterval) {
@@ -2798,7 +2915,7 @@ async function logout() {
             });
 
             if (response.ok) {
-                console.log('✅ Room exit successful (full logout)');
+                // console.log('✅ Room exit successful (full logout)');
             }
         } catch (error) {
             console.error('❌ Logout API error:', error);
