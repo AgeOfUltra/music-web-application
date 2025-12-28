@@ -6,7 +6,7 @@
 
 body {
     font-family: "Alan Sans", sans-serif;
-    background: linear-gradient(135deg, #764ba2 25%, #f093fb 50%);
+    background: linear-gradient(135deg, #023a6e 0%, #023d61 100%);
     background-size: 400% 400%;
     min-height: 100vh;
     display: flex;

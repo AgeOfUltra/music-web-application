@@ -31,7 +31,7 @@ public class RequestScheduler {
     @Scheduled(cron = "0 */2 * * * *")
     public void sendScheduledEmail() {
 
-        Optional<List<Confess>> approvedConfessions = confessRepo.findByStatus(Status.APPROVED);
+        Optional<List<Confess>> approvedConfessions = Optional.of(confessRepo.findByStatus(Status.APPROVED));
 
         for (Confess c : approvedConfessions.get()) {
             try {
@@ -75,7 +75,7 @@ public class RequestScheduler {
 
     @Scheduled(cron = "0 */2 * * * *")
     public void updateExpiry(){
-        Optional<List<Confess>> doneRequest =  confessRepo.findByStatus(Status.DONE);
+        Optional<List<Confess>> doneRequest =  Optional.of(confessRepo.findByStatus(Status.DONE));
 
         doneRequest.ifPresent(c-> c.forEach(a -> {
             try{

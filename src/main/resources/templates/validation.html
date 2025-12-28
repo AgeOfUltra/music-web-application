@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecting Nodes ∞ - Admin Validation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/style_validation.css}">
+
+</head>
+<body>
+<!-- LOADER FRAGMENT -->
+<div th:replace="~{fragments/loader}"></div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer"></div>
+
+<!-- HIDDEN MESSAGE CONTAINERS -->
+<div class="d-none">
+    <span id="noDataMessage" th:if="${noData}" th:text="${noData}"></span>
+    <span id="successMessage" th:if="${successUpdate}" th:text="${successUpdate}"></span>
+    <span id="errorMessage" th:if="${errorUpdate}" th:text="${errorUpdate}"></span>
+    <span id="noRequestDataMessage" th:if="${noRequestData}" th:text="${noRequestData}"></span>
+</div>
+
+<!-- HEADER -->
+<header class="header glass">
+    <div class="container-fluid">
+        <!-- Logo and Title (Centered) -->
+        <div class="col text-center">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+                <img th:src="@{/app_logo_wn.png}" alt="Logo" class="logo">
+                <div class="app-title">CONNECTING NOTES</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- PAGE TITLE AND BREADCRUMB -->
+<div class="container-fluid px-3 px-md-4 mb-4">
+    <div class="glass rounded-4 p-3 p-md-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <!-- Page Title -->
+            <h2 class="h5 mb-0" style="color: #70b6e8;">
+                <i class="bi bi-clipboard-check me-2"></i>
+                <span th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending request' : 'Request Dashboard'"></span>
+            </h2>
+
+            <!-- Breadcrumb Navigation -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/app/music/dashboard}">
+                            <i class="bi bi-house-door me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Validation</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CONTAINER -->
+<main class="container-fluid px-3 px-md-4 pb-4">
+    <!-- CONFESS REQUESTS SECTION -->
+    <div class="card glass rounded-4 mb-4">
+        <div class="card-header rounded-top-4 py-3">
+            <h2 class="h5 mb-0">
+                <i class="bi bi-clock-history me-2"></i>In Progress Requests
+            </h2>
+        </div>
+
+        <div class="card-body p-3 p-md-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th scope="col">Initiated By</th>
+                        <th scope="col">Sender Name</th>
+                        <th scope="col">Sender Email</th>
+                        <th scope="col">Room Name</th>
+                        <th scope="col">Receiver Alias</th>
+                        <th scope="col">Confess Type</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Song Name</th>
+                        <th scope="col">Singer Name</th>
+                        <th scope="col">Message</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Note</th>
+                        <th scope="col" sec:authorize="hasRole('ADMIN')">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="request : ${inProgressRequests}">
+                        <td th:text="${request.initiatedBy}">John Doe</td>
+                        <td th:text="${request.senderOriginalName}">John Smith</td>
+                        <td th:text="${request.senderEmail}"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="563c393e3816332e373b263a337835393b">[email&#160;protected]</a></td>
+                        <td th:text="${request.roomName}">Love Room</td>
+                        <td th:text="${request.receiverAlias}">Jane</td>
+                        <td th:text="${request.confessType}">Romantic</td>
+                        <td th:text="${request.email}"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fa889f999f938c9f88ba9f829b978a969fd4999597">[email&#160;protected]</a></td>
+                        <td th:text="${request.songName}">Perfect</td>
+                        <td th:text="${request.singerName}">Ed Sheeran</td>
+                        <td>
+                            <button class="btn btn-sm btn-glass btn-message"
+                                    th:data-message="${request.message}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#messageModal"
+                                    onclick="openMessageModal(this)">
+                                <i class="bi bi-envelope-open me-1"></i>View Message
+                            </button>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${request.status.toString() == 'APPROVED' ? 'bg-success' : (request.status.toString() == 'REJECTED' ? 'bg-danger' : 'bg-warning')}"
+                                  th:text="${request.status}">
+                                IN_PROGRESS
+                            </span>
+                        </td>
+                        <td>
+                            <span th:text="${request.note != null and !#strings.isEmpty(request.note) ? request.note : 'No notes yet'}"
+                                  th:classappend="${request.note != null and !#strings.isEmpty(request.note) ? 'note-text' : 'note-text empty'}">
+                                No notes yet
+                            </span>
+                        </td>
+                        <td sec:authorize="hasRole('ADMIN')">
+                            <button class="btn btn-sm btn-glass btn-update"
+                                    th:if="${request.status.toString() == 'IN_PROGRESS'}"
+                                    th:data-roomhash="${request.roomHash}"
+                                    th:data-initiatedby="${request.initiatedBy}"
+                                    th:data-sendername="${request.senderOriginalName}"
+                                    th:data-senderemail="${request.senderEmail}"
+                                    th:data-roomname="${request.roomName}"
+                                    th:data-receiveralias="${request.receiverAlias}"
+                                    th:data-confesstype="${request.confessType}"
+                                    th:data-email="${request.email}"
+                                    th:data-songname="${request.songName}"
+                                    th:data-singername="${request.singerName}"
+                                    th:data-message="${request.message}"
+                                    th:data-status="${request.status}"
+                                    th:data-note="${request.note}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#confessUpdateModal"
+                                    onclick="openConfessUpdateModal(this)">
+                                <i class="bi bi-pencil-square me-1"></i>Update
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION DIVIDER -->
+    <div class="section-divider"></div>
+
+    <!-- SONG REQUESTS SECTION -->
+    <div class="card glass rounded-4">
+        <div class="card-header rounded-top-4 py-3">
+            <h2 class="h5 mb-0">
+                <i class="bi bi-music-note-beamed me-2"></i>User Song Requests
+            </h2>
+        </div>
+
+        <div class="card-body p-3 p-md-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th scope="col">Requestor</th>
+                        <th scope="col">Song Name</th>
+                        <th scope="col">Movie Name</th>
+                        <th scope="col">Singer Name</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Note</th>
+                        <th scope="col" sec:authorize="hasRole('ADMIN')">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="songRequest : ${pendingOrCompleted}">
+                        <td th:text="${songRequest.requestor}">User123</td>
+                        <td th:text="${songRequest.songName}">Shape of You</td>
+                        <td th:text="${songRequest.movieName ?: 'N/A'}">Album</td>
+                        <td th:text="${songRequest.singerName}">Ed Sheeran</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${songRequest.status.toString() == 'DONE' ? 'bg-success' : (songRequest.status.toString() == 'REJECTED' ? 'bg-danger' : 'bg-warning')}"
+                                  th:text="${songRequest.status}">
+                                PENDING
+                            </span>
+                        </td>
+                        <td>
+                            <span th:text="${songRequest.note != null and !#strings.isEmpty(songRequest.note) ? songRequest.note : 'No notes yet'}"
+                                  th:classappend="${songRequest.note != null and !#strings.isEmpty(songRequest.note) ? 'note-text' : 'note-text empty'}">
+                                No notes yet
+                            </span>
+                        </td>
+                        <td sec:authorize="hasRole('ADMIN')">
+                            <button class="btn btn-sm btn-glass btn-update-song"
+                                    th:data-requestor="${songRequest.requestor}"
+                                    th:data-songname="${songRequest.songName}"
+                                    th:data-moviename="${songRequest.movieName}"
+                                    th:data-singername="${songRequest.singerName}"
+                                    th:data-status="${songRequest.status}"
+                                    th:data-note="${songRequest.note}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#songUpdateModal"
+                                    onclick="openSongUpdateModal(this)">
+                                <i class="bi bi-pencil-square me-1"></i>Update
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- MESSAGE MODAL -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content glass-strong rounded-4 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">
+                    <i class="bi bi-chat-quote me-2"></i>Confession Message
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="messageContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- CONFESS UPDATE MODAL (for confess requests - Admin only) -->
+<div class="modal fade" id="confessUpdateModal" tabindex="-1" aria-labelledby="confessUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-strong rounded-4 shadow-lg">
+            <form th:action="@{/app/music/connect/admin/update/request}" th:method="post" id="confessUpdateForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confessUpdateModalLabel">
+                        <i class="bi bi-pencil-square me-2"></i>Update Confess Request
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Hidden fields to preserve all DTO data -->
+                    <input type="hidden" name="roomHash" id="confessRoomHash">
+                    <input type="hidden" name="initiatedBy" id="confessInitiatedBy">
+                    <input type="hidden" name="senderOriginalName" id="confessSenderName">
+                    <input type="hidden" name="senderEmail" id="confessSenderEmail">
+                    <input type="hidden" name="roomName" id="confessRoomName">
+                    <input type="hidden" name="receiverAlias" id="confessReceiverAlias">
+                    <input type="hidden" name="confessType" id="confessType">
+                    <input type="hidden" name="email" id="confessEmail">
+                    <input type="hidden" name="songName" id="confessSongName">
+                    <input type="hidden" name="singerName" id="confessSingerName">
+                    <input type="hidden" name="message" id="confessMessage">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-person me-1"></i>Initiated By:
+                            </label>
+                            <div class="form-info" id="displayInitiatedBy"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-person-badge me-1"></i>Sender Name:
+                            </label>
+                            <div class="form-info" id="displaySenderName"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-envelope me-1"></i>Sender Email:
+                            </label>
+                            <div class="form-info" id="displaySenderEmail"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-door-open me-1"></i>Room Name:
+                            </label>
+                            <div class="form-info" id="displayRoomName"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-person-heart me-1"></i>Receiver Alias:
+                            </label>
+                            <div class="form-info" id="displayReceiverAlias"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-tag me-1"></i>Confess Type:
+                            </label>
+                            <div class="form-info" id="displayConfessType"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-envelope-at me-1"></i>Receiver Email:
+                            </label>
+                            <div class="form-info" id="displayEmail"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-music-note me-1"></i>Song Name:
+                            </label>
+                            <div class="form-info" id="displayConfessSongName"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-mic me-1"></i>Singer Name:
+                        </label>
+                        <div class="form-info" id="displaySingerName"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confessStatus" class="form-label">
+                            <i class="bi bi-clipboard-check me-1"></i>Status: <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" name="status" id="confessStatus" required onchange="toggleNoteRequired(this)">
+                            <option value="">Select Status</option>
+                            <option value="APPROVED">APPROVED</option>
+                            <option value="REJECTED">REJECTED</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confessNote" class="form-label">
+                            <i class="bi bi-sticky me-1"></i>Note/Reason:
+                            <span class="text-danger" id="noteRequiredIndicator" style="display: none;">*</span>
+                            <small class="text-muted">(Required if rejecting)</small>
+                        </label>
+                        <textarea class="form-control" name="note" id="confessNote" rows="3"
+                                  placeholder="Add a note or reason for this update..."></textarea>
+                        <div class="invalid-feedback" id="noteError">
+                            Please provide a reason when rejecting a request.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Update Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SONG UPDATE MODAL (for song requests - Admin only) -->
+<div class="modal fade" id="songUpdateModal" tabindex="-1" aria-labelledby="songUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-strong rounded-4 shadow-lg">
+            <form th:action="@{/app/music/request/update}" method="post" id="songUpdateForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="songUpdateModalLabel">
+                        <i class="bi bi-music-note-list me-2"></i>Update Song Request
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Hidden fields to preserve all DTO data -->
+                    <input type="hidden" name="requestor" id="songRequestor">
+                    <input type="hidden" name="movieName" id="songMovieName">
+                    <input type="hidden" name="singerName" id="songSingerName">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-person me-1"></i>Requestor:
+                        </label>
+                        <div class="form-info" id="displayRequestor"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-music-note me-1"></i>Song Name:
+                        </label>
+                        <input type="text" class="form-control" name="songName" id="songName" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-film me-1"></i>Movie Name:
+                        </label>
+                        <div class="form-info" id="displayMovieName"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-mic me-1"></i>Singer Name:
+                        </label>
+                        <div class="form-info" id="displaySongSingerName"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="songStatus" class="form-label">
+                            <i class="bi bi-clipboard-check me-1"></i>Status:
+                        </label>
+                        <select class="form-select" name="status" id="songStatus" required>
+                            <option value="">Select Status</option>
+                            <option value="DONE">DONE</option>
+                            <option value="REJECTED">REJECTED</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="songNote" class="form-label">
+                            <i class="bi bi-sticky me-1"></i>Note:
+                        </label>
+                        <textarea class="form-control" name="note" id="songNote" rows="3"
+                                  placeholder="Add a note about the song update..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Update Song
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS Bundle -->
+<script data-cfasync="false" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script th:src="@{/js/script_validation.js}"></script>
+
+</body>
+</html>

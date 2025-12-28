@@ -1,9 +1,8 @@
 package com.music.musicwebapplication.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.music.musicwebapplication.dto.ConfessContainerRequest;
+import com.music.musicwebapplication.dto.ConfessDto;
 import com.music.musicwebapplication.dto.RequestSongDto;
-import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.repo.UserRepo;
 import com.music.musicwebapplication.service.ConfessService;
@@ -11,6 +10,7 @@ import com.music.musicwebapplication.service.SongControllerService;
 import com.music.musicwebapplication.enums.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,13 +32,11 @@ public class ConfessController {
 
     private final ConfessService service;
     private final UserRepo repo;
-    private final ObjectMapper objectMapper;
 
     private final SongControllerService songService;
-    public ConfessController(ConfessService service, UserRepo repo, ObjectMapper objectMapper, SongControllerService songService) {
+    public ConfessController(ConfessService service, UserRepo repo, SongControllerService songService) {
         this.service = service;
         this.repo = repo;
-        this.objectMapper = objectMapper;
         this.songService = songService;
     }
 
@@ -47,7 +45,7 @@ public class ConfessController {
 //    url : /app/music/connect/request/inProgress
     @GetMapping("/request/inProgress/{user}")
     public String getAllInProgressRequest(@PathVariable(value = "user")String currentUser, Model model){
-        Optional<List<Confess>> availableRequest;
+        Optional<List<ConfessDto>> availableRequest;
         Optional<List<RequestSongDto>> requestedSongs;
 
         if(currentUser.equals("admin")){
@@ -62,19 +60,18 @@ public class ConfessController {
             model.addAttribute("noData","No Pending request");
             model.addAttribute("noRequestData","No Pending request");
         }else{
-            List<ConfessContainerRequest> confessDto = availableRequest.get().stream().map(entity -> objectMapper.convertValue(entity, ConfessContainerRequest.class))
-                    .collect(Collectors.toList());
-            model.addAttribute("inProgressRequests",confessDto);
+
+            model.addAttribute("inProgressRequests",availableRequest.get());
             model.addAttribute("pendingOrCompleted",requestedSongs.get());
         }
 
-        return "adminValidation";
+        return "validation";
     }
 
     //update db with data.
 
     @PostMapping("/sendRequest")
-    public ModelAndView userRequestData(@Valid @ModelAttribute("requestData") ConfessContainerRequest requestData, Errors error, RedirectAttributes attribute, Authentication auth){
+    public ModelAndView userRequestData(@Valid @ModelAttribute("requestData") ConfessDto requestData, Errors error, RedirectAttributes attribute, Authentication auth){
         //validation
        if(error.hasErrors()){
            log.error("Room validation failed due to error : {}", error);
@@ -104,22 +101,21 @@ public class ConfessController {
 
 //   TODO :  admin dashBoard error object need to be configured
 
-//    url : /app/music/connect/changeStatus/{roomId}/{s2}
-    @PostMapping("/changeStatus/{roomId}/{s2}")
-    public ModelAndView updateRequestStatus(@PathVariable String roomId, @PathVariable String s2 , RedirectAttributes model){
-        log.info("initiating the status update service process ,Request : {},{}",s2,roomId);
-        Status newStatus = s2.equals("APPROVED") ? Status.APPROVED : Status.REJECTED;
-        Map<String,String> response  = service.updateStatus(Status.IN_PROGRESS,newStatus,roomId);
+//    url : /app/music/connect/admin/update/request
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PostMapping("/admin/update/request")
+    public ModelAndView updateRequestStatus(ConfessDto request, RedirectAttributes redirectAttributes){
+        log.info("Requested Data : {}",request);
+
+        Map<String,String> response  = service.updateStatus(request);
         if(response.containsKey("error")){
-            model.addFlashAttribute("errorUpdate","update failed");
+            redirectAttributes.addFlashAttribute("errorUpdate","update failed");
 
         }else{
-            model.addFlashAttribute("successUpdate",response.get("saved"));
+            redirectAttributes.addFlashAttribute("successUpdate",response.get("saved"));
         }
 
-        log.info("Finished the updating process : {},{}",s2,roomId);
-//        FIXME: redirect to the same page.
-
+        log.info("Finished the updating process : {}",request.getStatus());
          return new ModelAndView("redirect:/app/music/connect/request/inProgress/admin");
     }
 

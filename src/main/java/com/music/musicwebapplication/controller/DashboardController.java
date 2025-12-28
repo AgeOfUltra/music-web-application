@@ -1,7 +1,7 @@
 package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.CreateRoom;
-import com.music.musicwebapplication.dto.ConfessContainerRequest;
+import com.music.musicwebapplication.dto.ConfessDto;
 import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.dto.RoomJoin;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class DashboardController {
         }
 
         if(!model.containsAttribute("requestData")){
-            model.addAttribute("requestData",new ConfessContainerRequest());
+            model.addAttribute("requestData",new ConfessDto());
         }
 
         if(!model.containsAttribute("requestSong")){

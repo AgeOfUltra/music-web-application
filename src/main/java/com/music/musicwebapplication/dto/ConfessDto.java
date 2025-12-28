@@ -5,15 +5,13 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class ConfessContainerRequest {
+public class ConfessDto {
 
     private String initiatedBy;
 
@@ -43,7 +41,15 @@ public class ConfessContainerRequest {
     @Size(min= 20,message = "Provide at-least 20 letters to express")
     private String message;
 
+
+//    for back-end response
     private Status status;
-//to handle while repose return not for the request
+
+
     private String roomHash;
+
+    // if status is rejected admin should provide reason
+    private String note;
+
+
 }

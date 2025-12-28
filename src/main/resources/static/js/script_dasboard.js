@@ -77,7 +77,7 @@ class SongAutocomplete {
             const response = await fetch('/app/music/audio/getAllCachedSongs');
             if (response.ok) {
                 this.cachedSongs = await response.json();
-                // console.log('Cached songs loaded:', this.cachedSongs.length);
+                console.log('Cached songs loaded:', this.cachedSongs.length);
             } else {
                 console.error('Failed to fetch cached songs');
                 this.cachedSongs = [];
@@ -219,6 +219,39 @@ function toggleOtherInput() {
     }
 }
 
+// Function to clear confess form fields
+function clearConfessForm() {
+    const confessForm = document.getElementById('sendConfessForm');
+    if (confessForm) {
+        // Clear text inputs
+        const senderOriginalName = document.getElementById('senderOriginalName');
+        const confessRoomName = document.getElementById('confessRoomName');
+        const receiverAlias = document.getElementById('receiverAlias');
+        const confessType = document.getElementById('confessType');
+        const otherConfessType = document.getElementById('otherConfessType');
+        const receiverEmail = document.getElementById('receiverEmail');
+        const songName = document.getElementById('songName');
+        const singerName = document.getElementById('singerName');
+        const confessMessage = document.getElementById('confessMessage');
+
+        if (senderOriginalName) senderOriginalName.value = '';
+        if (confessRoomName) confessRoomName.value = '';
+        if (receiverAlias) receiverAlias.value = '';
+        if (confessType) confessType.value = '';
+        if (otherConfessType) otherConfessType.value = '';
+        if (receiverEmail) receiverEmail.value = '';
+        if (songName) songName.value = '';
+        if (singerName) singerName.value = '';
+        if (confessMessage) confessMessage.value = '';
+
+        // Hide the other confess type div if it was shown
+        const otherDiv = document.getElementById('otherConfessTypeDiv');
+        if (otherDiv) {
+            otherDiv.style.display = 'none';
+        }
+    }
+}
+
 // Handle error and success messages on page load
 window.addEventListener('DOMContentLoaded', function() {
     // Initialize song autocomplete
@@ -227,6 +260,7 @@ window.addEventListener('DOMContentLoaded', function() {
     let hasErrors = false;
     let hasConfessErrors = false;
     let hasRequestSongErrors = false;
+    let hasConfessSuccess = false;
 
     // Get Bootstrap modal instances
     const createModal = new bootstrap.Modal(document.getElementById('createModal'));
@@ -312,6 +346,9 @@ window.addEventListener('DOMContentLoaded', function() {
         if (emailStatus) {
             if (emailStatus.toLowerCase().includes('success')) {
                 notifier.success(emailStatus);
+                hasConfessSuccess = true;
+                // Clear the confess form on success
+                clearConfessForm();
             } else {
                 notifier.error(emailStatus);
                 hasConfessErrors = true;
@@ -319,8 +356,8 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Open the appropriate modal if there are errors
-    if (hasConfessErrors) {
+    // Open the appropriate modal if there are errors (but not on success)
+    if (hasConfessErrors && !hasConfessSuccess) {
         confessModal.show();
     }
 
@@ -352,7 +389,5 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function dashboardLogout() {
-
-        window.location.href = '/app/music/public/logout';
-
-   }
+    window.location.href = '/app/music/public/logout';
+}

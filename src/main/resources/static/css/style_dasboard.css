@@ -1,6 +1,7 @@
 :root {
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --card-bg: rgb(132, 148, 237);
+    --card-bg: rgb(21, 138, 211); /*looks nice card constant*/
+    /*--card-bg: rgb(140, 178, 239);*/
     --glass-bg: rgba(255, 255, 255, 0.1);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -8,8 +9,8 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #764ba2 25%, #f093fb 50%);
+    font-family: "Alan Sans", sans-serif;
+    background: linear-gradient(135deg, #023a6e 0%, #023d61 100%);
     background-size: 400% 400%;
     min-height: 100vh;
 }

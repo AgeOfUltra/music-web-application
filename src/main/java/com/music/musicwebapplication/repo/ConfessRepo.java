@@ -17,9 +17,9 @@ public interface ConfessRepo extends JpaRepository<Confess,Long> {
     Optional<Confess> findByRoomHash(@Param("roomHash")String roomHash);
 
     @Query("SELECT c from Confess c where c.status = :status")
-    Optional<List<Confess>> findByStatus(@Param("status") Status status);
+    List<Confess> findByStatus(@Param("status") Status status);
 
     @Query("SELECT c from Confess c where c.initiatedBy = :initiatedBy")
-    Optional<List<Confess>> findByInitiatedBy(@Param("initiatedBy") String initiatedBy);
+    List<Confess> findByInitiatedBy(@Param("initiatedBy") String initiatedBy);
 
 }

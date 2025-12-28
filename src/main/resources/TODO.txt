@@ -1,10 +1,22 @@
-1) room hash generate -> necessary changes done
+New Goal:
 
-2) chat room logout need to be back-end
+1) update Confess entity with new change is notes // Done
 
-4) copy and share. done
+2) backend logic for new status update for the admin for confess one // Done
 
-3) new issues found: UI tab view layout change done
+3) on tab close session not getting cleaned up
 
-4) sync for late other participants
+4) need to schedule the emails for the rejected reason.
+
+5) Code clean Up.
+
+6) song retry logic
+
+UI change
+7) Need to change the logo and Color for other and header
+
+8) Testing of Token expiry.
+
+
+
 

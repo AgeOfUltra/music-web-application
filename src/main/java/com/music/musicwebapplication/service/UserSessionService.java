@@ -42,8 +42,6 @@ public class UserSessionService {
         session.setUsername(username);
         session.setRoomName(null);
         session.setIntentionalLogout(false);
-//        session.setCreatedAt(LocalDateTime.now()); // Track creation time
-//        session.setLastAccessedAt(LocalDateTime.now());
 
         repo.save(session);
 
@@ -62,7 +60,6 @@ public class UserSessionService {
         if (sessionOpt.isPresent()) {
             UserSession session = sessionOpt.get();
             session.setRoomName(roomName);
-//            session.setLastAccessedAt(LocalDateTime.now());
             repo.save(session);
 
             log.info("✅ Updated roomName for {} to: {}", username, roomName);
@@ -71,22 +68,13 @@ public class UserSessionService {
         }
     }
 
-//    @Transactional
-//    public void clearRoomForUser(String username) {
-//        repo.updateRoomName(username, null);
-//        updateLastAccessedTime(username);
-//    }
 
-    /**
-     * Sets the intentional logout flag for a user
-     */
     @Transactional
     public void setIntentionalLogout(String username, boolean intentional) {
         Optional<UserSession> sessionOpt = repo.findByUsername(username);
         if (sessionOpt.isPresent()) {
             UserSession session = sessionOpt.get();
             session.setIntentionalLogout(intentional);
-//            session.setLastAccessedAt(LocalDateTime.now());
             repo.save(session);
             log.info("🔖 Set intentionalLogout={} for user {}", intentional, username);
         } else {
@@ -162,7 +150,7 @@ public class UserSessionService {
             String redisKey = "session:" + username;
             // Refresh TTL on user activity
             Boolean exists = redisTemplate.hasKey(redisKey);
-            if (Boolean.TRUE.equals(exists)) {
+            if (exists) {
                 redisTemplate.expire(redisKey, sessionTtlHours, TimeUnit.HOURS);
                 log.debug("🔄 Refreshed Redis TTL for session: {}", username);
             } else {
@@ -262,8 +250,8 @@ public class UserSessionService {
 
     // ==================== EXISTING METHODS ====================
 
-    public Optional<UserSession> getUserSession(String username, String roomName) {
-        return Optional.ofNullable(repo.findByUsernameAndRoomName(username, roomName));
+    public Optional<List<UserSession>> getUserSessionByEmptyRoom() {
+        return repo.getUserSessionByRoomNameEmpty();
     }
 
     public Optional<String> getRoomName(String username) {
