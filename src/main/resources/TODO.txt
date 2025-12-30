@@ -5,6 +5,7 @@ New Goal:
 2) backend logic for new status update for the admin for confess one // Done
 
 3) on tab close session not getting cleaned up
+8) Testing of Token expiry.               -> implementation logic : based on session expiry , we need to clear the total cleanUps.
 
 4) need to schedule the emails for the rejected reason.
 
@@ -14,9 +15,4 @@ New Goal:
 
 UI change
 7) Need to change the logo and Color for other and header
-
-8) Testing of Token expiry.
-
-
-
 

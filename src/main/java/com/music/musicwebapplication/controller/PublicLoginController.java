@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -47,8 +49,9 @@ public class PublicLoginController {
     private final UserSessionService sessionService;
     private final JwtTokenUtil jwtUtil;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final PublicLoginService loginService;
 
-    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService, PublicLoginService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate) {
+    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService, PublicLoginService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate, PublicLoginService loginService1) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenUtil = jwtTokenUtil;
         this.roomService = roomService;
@@ -56,12 +59,15 @@ public class PublicLoginController {
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
         this.simpMessagingTemplate = simpMessagingTemplate;
+        this.loginService = loginService1;
     }
 
     // Return login page
     @GetMapping("/login")
     public String loginPage(@RequestParam(required=false) String error,
-                            @RequestParam(required=false) String logout, Model model) {
+                            @RequestParam(required=false) String logout,
+                            @RequestParam(required=false) String expired,
+                                Model model) {
         if ("alreadyLoggedIn".equals(error)) {
             model.addAttribute("loginError", "User already logged in");
         }
@@ -70,6 +76,9 @@ public class PublicLoginController {
         }
         if(logout!=null && logout.equals("true")){
             model.addAttribute("loginError", "User logged out successfully");
+        }
+        if ("true".equals(expired)) {
+            model.addAttribute("loginError", "Session expired. Please login again.");
         }
 
         if (!model.containsAttribute("loginUser")) {
@@ -86,6 +95,13 @@ public class PublicLoginController {
         return "signup";
     }
 
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(
+                String.class,
+                new StringTrimmerEditor(true) // trims + converts "" to null
+        );
+    }
     // Handle login and return JWT token
     @PostMapping("/authenticate")
     public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, RedirectAttributes redirectAttributes) {
@@ -108,13 +124,13 @@ public class PublicLoginController {
                     .httpOnly(true)
                     .secure(false)           // true in production (HTTPS)
                     .path("/")
-                    .maxAge(60 * 60)         // 1 hour
+                    .maxAge(60 * 3)         // 1 hour
                     .sameSite("Lax")      // or "Lax" depending on your flows
                     .build();
 
             responseServlet.addHeader("Set-Cookie", cookie.toString());
 
-            log.info("Login Successfully ! logg in user data : {}", loginUser);
+            log.info("Login Successfully ! log in user data : {}", loginUser);
             return new ModelAndView("redirect:/app/music/dashboard");
         } else {
             errorMessage = (String) responseBody.get("error");
@@ -154,7 +170,7 @@ public class PublicLoginController {
 
             boolean isSaved = sessionService.saveSession(token, username);
             if (!isSaved) {
-                response.put("error", "User already logged in");
+                response.put("error", "User account locked! Try again after 30 Minutes.");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
@@ -198,14 +214,9 @@ public class PublicLoginController {
         return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
     }
 
-    // ==================== ✅ FIXED: LOGOUT METHOD ====================
-    // ==================== ✅ VERIFIED LOGOUT METHOD ====================
-// This handles BOTH scenarios:
-// 1. User in room → Exit room + delete session
-// 2. User NOT in room → Just delete session
 
     @GetMapping("/logout")
-    public String logout(HttpServletRequest request, HttpServletResponse response) {
+    public String logoutHttp(HttpServletRequest request, HttpServletResponse response) {
         try {
             // Get JWT from cookie
             Cookie[] cookies = request.getCookies();
@@ -222,83 +233,56 @@ public class PublicLoginController {
 
             if (jwtToken != null) {
                 String username = jwtUtil.getUserNameFromToken(jwtToken);
+                log.info("🔓 Processing logout for user: {}", username);
 
-                log.info("🚪 LOGOUT: User {} logging out", username);
+                try {
+                    // Get current session
+                    UserSession session = sessionService.getUserSession(username);
 
-                // Get current session
-                UserSession session = sessionService.getUserSession(username);
+                    if (session != null) {
+                        // Perform logout cleanup
+                        boolean logoutSuccess = loginService.logout(session);
 
-                if (session != null && session.getRoomName() != null) {
-                    // ==================== SCENARIO 1: USER IN ROOM ====================
-                    String roomName = session.getRoomName();
-                    log.info("🏠 User {} is in room {}, exiting with full logout...", username, roomName);
-
-                    try {
-                        // ✅ Exit room with fullLogout=true (deletes session)
-                        boolean removed = roomService.exitFromRoom(roomName, username, true);
-
-                        if (removed) {
-                            log.info("✅ User {} exited room {} (session deleted)", username, roomName);
-
-                            // Broadcast to remaining participants
-                            try {
-                                Room updatedRoom = roomService.getRoomDetails(roomName);
-
-                                simpMessagingTemplate.convertAndSend(
-                                        "/topic/chat/" + roomName + "/participants",
-                                        updatedRoom.getParticipant()
-                                );
-
-                                log.info("✅ Broadcasted participant update for room {}", roomName);
-
-                            } catch (RoomNotFoundException e) {
-                                // Room deleted (last organizer) - expected
-                                log.info("ℹ️ Room {} deleted (last organizer left)", roomName);
-                            }
+                        if (!logoutSuccess) {
+                            log.warn("⚠️ Logout cleanup partially failed for user: {}", username);
+                            // Continue anyway to clear cookie and security context
                         }
-
-                    } catch (Exception e) {
-                        log.error("❌ Error exiting room during logout: {}", e.getMessage());
-
-                        // ⚠️ CRITICAL: Ensure session is deleted even if room exit fails
-                        try {
-                            sessionService.deleteUserSession(username);
-                            log.info("✅ Session deleted as fallback after room exit error");
-                        } catch (Exception ex) {
-                            log.error("❌ Error deleting session: {}", ex.getMessage());
-                        }
+                    } else {
+                        log.warn("⚠️ No active session found for user: {}", username);
                     }
 
-                } else {
-                    // ==================== SCENARIO 2: USER NOT IN ROOM ====================
-                    log.info("📋 User {} not in any room, deleting session only", username);
-
-                    try {
-                        sessionService.deleteUserSession(username);
-                        log.info("✅ Session deleted successfully");
-                    } catch (Exception e) {
-                        log.error("❌ Error deleting session: {}", e.getMessage());
-                    }
+                } catch (Exception e) {
+                    log.error("❌ Error during logout cleanup for user {}: {}", username, e.getMessage(), e);
+                    // Continue to clear cookie and security context even if cleanup fails
                 }
-
-                log.info("✅ User {} logout complete", username);
-
             } else {
                 log.warn("⚠️ No JWT token found during logout");
             }
 
-            // ✅ Clear JWT cookie
+            // ✅ Always clear JWT cookie (even if logout cleanup failed)
             Cookie deleteCookie = new Cookie("jwt", null);
             deleteCookie.setMaxAge(0);
             deleteCookie.setPath("/");
             deleteCookie.setHttpOnly(true);
             response.addCookie(deleteCookie);
+            log.info("✅ JWT cookie cleared");
 
             // Clear security context
             SecurityContextHolder.clearContext();
+            log.info("✅ Security context cleared");
 
         } catch (Exception e) {
-            log.error("❌ Unexpected error during logout: {}", e.getMessage(), e);
+            log.error("❌ Unexpected error during HTTP logout: {}", e.getMessage(), e);
+            // Still try to clear cookie as fallback
+            try {
+                Cookie deleteCookie = new Cookie("jwt", null);
+                deleteCookie.setMaxAge(0);
+                deleteCookie.setPath("/");
+                deleteCookie.setHttpOnly(true);
+                response.addCookie(deleteCookie);
+            } catch (Exception cookieEx) {
+                log.error("❌ Failed to clear cookie during error recovery: {}", cookieEx.getMessage());
+            }
         }
 
         return "redirect:/app/music/public/login?logout=true";

@@ -37,4 +37,6 @@ public class UserSession {
     @Column(nullable = false)
     private LocalDateTime lastAccessedAt;
 
+    @Column(columnDefinition = "boolean default false")
+    private boolean sessionExpired;
 }

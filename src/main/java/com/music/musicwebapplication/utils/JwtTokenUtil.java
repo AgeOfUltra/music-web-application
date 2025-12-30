@@ -13,7 +13,7 @@ import java.util.Date;
 @Slf4j
 public class JwtTokenUtil {
 
-    private static final long EXPIRY_DATE = 1000 * 60 * 60*2; // 2 hours
+    private static final long EXPIRY_DATE = 1000 * 60 *3; // 2 hours
 
     @Value("${jwt.security.secret-key:your-secret-key-here-min-256-bits-long}")
     private String secretString;
@@ -37,12 +37,7 @@ public class JwtTokenUtil {
     }
 
     public String getUserNameFromToken(String token) {
-        try {
-            return extractClaims(token).getSubject();
-        } catch (Exception e) {
-            log.error("Error extracting username from token: {}", e.getMessage());
-            return null;
-        }
+        return extractClaims(token).getSubject();
     }
 
     private Claims extractClaims(String token) {
@@ -63,30 +58,19 @@ public class JwtTokenUtil {
 
     public boolean validateToken(String username, String userNameFromDB, String token) {
         try {
-            // Check if usernames match
             if (!username.equals(userNameFromDB)) {
-                log.warn("Username mismatch: {} != {}", username, userNameFromDB);
                 return false;
             }
 
-            // Check if token is not expired
-            Date expiration = extractClaims(token).getExpiration();
-            if (expiration.before(new Date())) {
-                log.warn("Token has expired");
-                throw new ExpiredJwtException(null, null, "Token has expired"); // ← THROW HERE
-            }
-
-
-//            log.info("Token validation successful for user: {}", username);
+            extractClaims(token); // this already checks expiry
             return true;
+
         } catch (JwtException e) {
             log.error("Token validation failed: {}", e.getMessage());
             return false;
-        } catch (Exception e) {
-            log.error("Unexpected error during token validation: {}", e.getMessage());
-            return false;
         }
     }
+
 
     public boolean isTokenExpired(String token) {
         try {

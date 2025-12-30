@@ -44,13 +44,13 @@ public class GlobalExceptionHandler {
         return new ModelAndView("error");
     }
 
-    @ExceptionHandler(ExpiredJwtException.class)
-    public ModelAndView handleTokenExpired(ConfessRoomException ex, Model model){
-        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.toString(),
-                ex.getMessage()
-        );
-        model.addAttribute("errorObject",error);
-        return new ModelAndView("error");
-    }
+//    @ExceptionHandler(ExpiredJwtException.class)
+//    public ModelAndView handleTokenExpired(ConfessRoomException ex, Model model){
+//        ErrorResponseUtil error = new ErrorResponseUtil(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.toString(),
+//                ex.getMessage()
+//        );
+//        model.addAttribute("errorObject",error);
+//        return new ModelAndView("error");
+//    }
 
 }

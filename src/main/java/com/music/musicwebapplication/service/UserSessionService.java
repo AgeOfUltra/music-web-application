@@ -42,7 +42,7 @@ public class UserSessionService {
         session.setUsername(username);
         session.setRoomName(null);
         session.setIntentionalLogout(false);
-
+        session.setSessionExpired(false);
         repo.save(session);
 
         // ✅ Set Redis TTL for session expiration
@@ -254,6 +254,10 @@ public class UserSessionService {
         return repo.getUserSessionByRoomNameEmpty();
     }
 
+    public UserSession getUserSessionForToken(String token) {
+        return repo.findUserSessionByToken(token);
+    }
+
     public Optional<String> getRoomName(String username) {
         return repo.findByUsername(username).map(UserSession::getRoomName);
     }
@@ -302,5 +306,14 @@ public class UserSessionService {
         }
 
         return user.orElse(null);
+    }
+
+    public void updateUsesSessionExpiry(String token){
+        UserSession currentSession = getUserSessionForToken(token);
+        currentSession.setSessionExpired(true);
+        repo.save(currentSession);
+    }
+    public List<UserSession> getInactiveUsers(){
+        return repo.getUserSessionBySessionExpired();
     }
 }

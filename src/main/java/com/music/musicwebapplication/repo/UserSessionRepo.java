@@ -28,4 +28,9 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
 
     @Query("Select s from UserSession s where s.roomName is null")
     Optional<List<UserSession>> getUserSessionByRoomNameEmpty();
+
+    UserSession findUserSessionByToken(String token);
+
+    @Query("SELECT s FROM UserSession s where s.sessionExpired IS true")
+    List<UserSession> getUserSessionBySessionExpired();
 }

@@ -737,7 +737,7 @@ window.addEventListener('online', () => {
         }
 
         // Refresh participants
-        setTimeout(() => refreshParticipants(), 2000);
+        setTimeout(() => refreshParticipants(), 5000);
 
         wasOffline = false;
     }
