@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +34,7 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
 
     @Query("SELECT s FROM UserSession s where s.sessionExpired IS true")
     List<UserSession> getUserSessionBySessionExpired();
+
+    @Query("SELECT s FROM UserSession s WHERE s.absoluteExpiry < :now AND s.sessionExpired = false")
+    List<UserSession> findByAbsoluteExpiryBeforeAndSessionExpiredFalse(@Param("now") LocalDateTime now);
 }

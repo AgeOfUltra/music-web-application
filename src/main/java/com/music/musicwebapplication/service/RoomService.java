@@ -95,7 +95,7 @@ public class RoomService {
             // Add a small lock to prevent concurrent database operations
             synchronized (exitKey.intern()) {
 
-                Optional<Room> roomOpt = repo.findRoomByRoomName(roomName);
+                Optional<Room> roomOpt = repo.findRoomByRoomName(roomName); // check with roomHash
                 if (roomOpt.isEmpty()) {
                     log.warn("⚠️ Room {} not found - already deleted", roomName);
 

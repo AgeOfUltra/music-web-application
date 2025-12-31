@@ -50,18 +50,48 @@ public class UnUsedSessionCleanUp {
         log.info("Cleaning process completed!");
     }
 
-//    public void cleanUpExpiredSession(ModelAndView view){
-//        log.info("Process started for cleaning inactive accounts");
-//
-//        Optional<List<UserSession>> inactiveSession = Optional.of(sessionService.getInactiveUsers());
-//        if(inactiveSession.isEmpty()){
-//            log.info("No inactive sessions");
-//            return;
-//        }
-//
-//        inactiveSession.get().forEach(loginService::logout);
-//
-//    }
+    @Scheduled(fixedDelay = 300000) // Every 5 minutes
+    public void cleanUpExpiredSession() {
+        log.info("🧹 Starting scheduled cleanup of expired sessions");
+
+        try {
+            // Find sessions where absoluteExpiry has passed
+            List<UserSession> expiredSessions = sessionService.getExpiredSessions();
+
+            if (expiredSessions.isEmpty()) {
+                log.info("ℹ️ No expired sessions to clean");
+                return;
+            }
+
+            log.info("🗑️ Found {} expired sessions to clean", expiredSessions.size());
+
+            for (UserSession session : expiredSessions) {
+                try {
+                    // Mark as expired BEFORE cleanup (prevents race conditions)
+                    session.setSessionExpired(true);
+                    sessionService.updateSession(session);
+
+                    boolean success = loginService.logout(session);
+
+                    if (success) {
+                        log.info("✅ Cleaned expired session for user: {}", session.getUsername());
+                    } else {
+                        log.warn("⚠️ Partial cleanup for user: {}", session.getUsername());
+                    }
+
+                } catch (Exception e) {
+                    log.error("❌ Error cleaning session for user {}: {}",
+                            session.getUsername(), e.getMessage());
+                    // Continue with next session (don't let one failure stop cleanup)
+                }
+            }
+
+            log.info("✅ Scheduled cleanup completed");
+
+        } catch (Exception e) {
+            log.error("❌ Scheduler error: {}", e.getMessage(), e);
+        }
+    }
 
 
 }

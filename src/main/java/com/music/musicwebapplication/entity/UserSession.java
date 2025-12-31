@@ -37,6 +37,9 @@ public class UserSession {
     @Column(nullable = false)
     private LocalDateTime lastAccessedAt;
 
+    @Column(name = "absolute_expiry")
+    private LocalDateTime absoluteExpiry;
+
     @Column(columnDefinition = "boolean default false")
     private boolean sessionExpired;
 }

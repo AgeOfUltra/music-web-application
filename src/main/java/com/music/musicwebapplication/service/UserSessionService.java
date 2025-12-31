@@ -33,6 +33,8 @@ public class UserSessionService {
     }
 
     public boolean saveSession(String token, String username) {
+
+        LocalDateTime now = LocalDateTime.now();
         if (repo.existsByUsername(username)) {
             return false;
         }
@@ -42,6 +44,7 @@ public class UserSessionService {
         session.setUsername(username);
         session.setRoomName(null);
         session.setIntentionalLogout(false);
+        session.setAbsoluteExpiry(now.plusMinutes(3)); // for testing
         session.setSessionExpired(false);
         repo.save(session);
 
@@ -313,7 +316,15 @@ public class UserSessionService {
         currentSession.setSessionExpired(true);
         repo.save(currentSession);
     }
+    public void updateSession(UserSession session){
+        repo.save(session);
+    }
     public List<UserSession> getInactiveUsers(){
         return repo.getUserSessionBySessionExpired();
+    }
+
+    public List<UserSession> getExpiredSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        return repo.findByAbsoluteExpiryBeforeAndSessionExpiredFalse(now);
     }
 }

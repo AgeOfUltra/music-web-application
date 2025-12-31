@@ -13,8 +13,11 @@ import com.music.musicwebapplication.service.UserSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
@@ -45,124 +48,18 @@ public class ChatController {
     }
 
 
-//    @MessageMapping("/chat/{roomName}/removeUser")
-//    public void removeUser(@DestinationVariable String roomName,
-//                           @Payload Map<String, Object> chatMessage) {
-//
-//        String username = (String) chatMessage.get("sender");
-//
-//        log.info("🔌 WebSocket DISCONNECT → user={}, room={}", username, roomName);
-//
-//        try {
-//            // ✅ CHECK 1: Verify session still has this room
-//            UserSession session = sessionService.getUserSession(username);
-//            if (session == null) {
-//                log.info("ℹ️ No session found for {} - already cleaned up", username);
-//                return;
-//            }
-//
-//            if (!roomName.equals(session.getRoomName())) {
-//                log.info("ℹ️ User {} not in room {} anymore (currently in {})",
-//                        username, roomName, session.getRoomName());
-//                return;
-//            }
-//
-//            // ✅ CHECK 2: Verify room still exists
-//            Optional<Room> roomOpt = Optional.ofNullable(roomService.getRoomDetails(roomName));
-//            if (roomOpt.isEmpty()) {
-//                log.info("ℹ️ Room {} not found - already deleted by HTTP request", roomName);
-//
-//                // Only clear room reference if session still points to this room
-//                if (roomName.equals(session.getRoomName())) {
-//                    sessionService.updateRoomName(username, null);
-//                    log.info("✅ Cleared room reference for {} (room already deleted)", username);
-//                }
-//                return;
-//            }
-//
-//            Room room = roomOpt.get();
-//
-//            // ✅ CHECK 3: Verify user still in room
-//            boolean userExists = room.getParticipant().stream()
-//                    .anyMatch(p -> p.getUserName().equals(username));
-//
-//            if (!userExists) {
-//                log.info("ℹ️ User {} not in room {} - already removed by HTTP request", username, roomName);
-//
-//                // Only clear room reference if session still points to this room
-//                if (roomName.equals(session.getRoomName())) {
-//                    sessionService.updateRoomName(username, null);
-//                    log.info("✅ Cleared room reference for {} (user already removed)", username);
-//                }
-//                return;
-//            }
-//
-//            // ✅ CRITICAL: Check if this is intentional exit (back button was pressed)
-//            // If intentionalLogout flag is set, HTTP DELETE already handled it
-//            if (session.isIntentionalLogout()) {
-//                log.info("🔖 Intentional exit detected for {} - HTTP already handling, skipping WebSocket cleanup",
-//                        username);
-//                return;
-//            }
-//
-//            // ✅ At this point: unintentional disconnect (tab close, network issue)
-//            // Use fullLogout=false to keep session alive (will expire via TTL)
-//            log.info("🔌 Unintentional disconnect detected for {} - clearing room only", username);
-//
-//            boolean removed = roomService.exitFromRoom(roomName, username, false);
-//
-//            if (!removed) {
-//                log.info("ℹ️ User {} already removed by concurrent operation", username);
-//                return;
-//            }
-//
-//            log.info("✅ User {} removed from room {} via WebSocket (session kept)", username, roomName);
-//
-//            // ✅ Broadcast updates only if room still has participants
-//            boolean isLastOrganizer = room.getParticipant().size() == 1 &&
-//                    room.getParticipant().get(0).isOrganizer();
-//
-//            if (!isLastOrganizer) {
-//                // Send leave message
-//                chatMessage.put("type", "LEAVE");
-//                chatMessage.put("content", username + " left the room");
-//                chatMessage.put("timestamp", System.currentTimeMillis());
-//                messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
-//
-//                // Update participant list
-//                try {
-//                    Optional<Room> updatedRoom = Optional.ofNullable(roomService.getRoomDetails(roomName));
-//                    if (updatedRoom.isPresent()) {
-//                        List<Participant> participants = updatedRoom.get().getParticipant();
-//                        messagingTemplate.convertAndSend(
-//                                "/topic/chat/" + roomName + "/participants",
-//                                participants
-//                        );
-//                        log.info("✅ Broadcasted WebSocket exit notifications for {}", username);
-//                    }
-//                } catch (Exception e) {
-//                    log.warn("⚠️ Could not broadcast participant update: {}", e.getMessage());
-//                }
-//            } else {
-//                log.info("ℹ️ Last organizer left - room {} deleted", roomName);
-//            }
-//
-//        } catch (Exception e) {
-//            log.error("❌ Error in removeUser for room {} and user {}: {}",
-//                    roomName, username, e.getMessage());
-//
-//            // ✅ On error: Only clear room reference, don't delete session
-//            try {
-//                UserSession session = sessionService.getUserSession(username);
-//                if (session != null && roomName.equals(session.getRoomName())) {
-//                    sessionService.updateRoomName(username, null);
-//                    log.info("✅ Emergency room reference cleanup for {}", username);
-//                }
-//            } catch (Exception sessionEx) {
-//                log.error("❌ Failed emergency cleanup for {}: {}", username, sessionEx.getMessage());
-//            }
-//        }
-//    }
+    @GetMapping("/chat/session/validate")
+    public ResponseEntity<Map<String, Object>> validateSession(
+            @RequestHeader("Authorization") String authHeader) {
+
+        // If we reach here, JWT filter already validated the session
+        // (Otherwise it would have returned 401)
+
+        return ResponseEntity.ok(Map.of(
+                "status", "valid",
+                "timestamp", System.currentTimeMillis()
+        ));
+    }
 
     @MessageMapping("/chat/{roomName}/removeUser")
     public void removeUser(@DestinationVariable String roomName,

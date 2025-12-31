@@ -747,6 +747,50 @@ window.addEventListener('offline', () => {
     wasOffline = true;
     ToastNotification.warning('🌐 No internet connection', 0); // Persistent toast
 });
+// ======================== HANDLE EXPIRED SESSION ============================
+function handleSessionExpired(reason = 'Session expired') {
+    if (logoutInProgress) return;
+    logoutInProgress = true;
+
+    console.warn('⏱ Session expired:', reason);
+    ToastNotification.error('Session expired. Logging out...', 2000);
+
+    // Stop polling/heartbeat
+    if (participantRefreshInterval) {
+        clearInterval(participantRefreshInterval);
+        participantRefreshInterval = null;
+    }
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+
+    // ✅ CRITICAL: Exit room with beacon BEFORE redirect
+    if (currentRoomName && currentUsername) {
+        sendExitBeacon(true); // fullLogout = true
+    }
+
+    // Disconnect WebSocket
+    try {
+        if (stompClient && stompClient.connected) {
+            stompClient.disconnect(() => {
+                console.log('🔌 WebSocket disconnected due to session expiry');
+            });
+        }
+    } catch (e) {
+        console.error('Error disconnecting WebSocket', e);
+    }
+
+    // Clear client state
+    jwtToken = null;
+    currentUsername = null;
+    currentRoomName = null;
+
+    // ✅ Redirect after beacon has time to send (beacons are async but queued)
+    setTimeout(() => {
+        window.location.href = '/app/music/public/login?expired=true';
+    }, 500); // Reduced from 1500ms - beacons are fire-and-forget
+}
 
 
 // ==================== FETCH WITH TIMEOUT ====================
@@ -760,19 +804,32 @@ async function fetchWithTimeout(url, options = {}, timeout = 8000) {
             signal: controller.signal,
             headers: {
                 ...options.headers,
+                'X-Requested-With': 'XMLHttpRequest',
                 'Authorization': `Bearer ${jwtToken}`
             }
         });
+
         clearTimeout(timeoutId);
+
+        // 🔥 HARD AUTH CHECK
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired(`HTTP ${response.status}`);
+            throw new Error('Session expired');
+        }
+
         return response;
+
     } catch (error) {
         clearTimeout(timeoutId);
+
         if (error.name === 'AbortError') {
             throw new Error('Request timeout');
         }
+
         throw error;
     }
 }
+
 
 // ==================== PAGINATION FUNCTIONS ====================
 async function loadSongsForPage(pageNumber) {
@@ -1858,22 +1915,27 @@ async function loadPreviousPageAndPlay() {
 let heartbeatInterval = null;
 let lastHeartbeat = Date.now();
 
+// ==================== MODIFY: startHeartbeat() ====================
 function startHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-    heartbeatInterval = setInterval(() => {
+    heartbeatInterval = setInterval(async () => {
         if (stompClient && stompClient.connected) {
             try {
+                // ✅ Send WebSocket heartbeat
                 stompClient.send(
                     `/app/music/chat/${currentRoomName}/heartbeat`,
                     {},
                     JSON.stringify({ username: currentUsername, timestamp: Date.now() })
                 );
                 lastHeartbeat = Date.now();
+
+                // ✅ NEW: Periodic session validation via HTTP
+                await validateSessionViaHttp();
+
             } catch (error) {
                 console.error('❌ Heartbeat failed:', error);
 
-                // Check if connection is actually dead
                 if (Date.now() - lastHeartbeat > 15000) {
                     console.error('❌ Connection appears dead, reconnecting...');
                     ToastNotification.warning('Connection lost. Reconnecting...');
@@ -1884,7 +1946,28 @@ function startHeartbeat() {
                 }
             }
         }
-    }, 10000); // Every 5 seconds
+    }, 10000); // Every 10 seconds
+}
+
+// ✅ NEW: HTTP-based session validation
+async function validateSessionViaHttp() {
+    try {
+        const response = await fetch('/app/music/chat/session/validate', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${jwtToken}`,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            console.warn('🔒 Session expired during heartbeat check');
+            handleSessionExpired('Session validation failed');
+        }
+    } catch (error) {
+        // Network errors are OK - don't treat as session expiry
+        console.warn('⚠️ Session validation request failed (network issue):', error.message);
+    }
 }
 
 
@@ -1989,17 +2072,37 @@ function connectWebSocket(token) {
             startParticipantRefreshInterval();
         },
         (error) => {
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            clearTimeout(connectionTimeout);
             console.error('❌ WebSocket error:', error);
-            const retryDelay = Math.min(3000 * (Math.random() + 1), 10000);
+
+            // 🔥 STEP 5.4 — AUTH FAILURE DETECTION
+            const msg =
+                error?.headers?.message ||
+                error?.body ||
+                error?.toString?.() ||
+                '';
+
+            if (
+                msg.includes('401') ||
+                msg.includes('403') ||
+                msg.toLowerCase().includes('unauthorized') ||
+                msg.toLowerCase().includes('forbidden')
+            ) {
+                handleSessionExpired('WebSocket authentication failed');
+                return; // ⛔ STOP reconnect attempts
+            }
+
+            // ⏳ Non-auth error → retry
             ToastNotification.error('Connection error. Reconnecting...');
+
+            const retryDelay = Math.min(3000 * (Math.random() + 1), 10000);
+
             setTimeout(() => {
-                if (stompClient && !stompClient.connected) {
+                if (!logoutInProgress && stompClient && !stompClient.connected) {
                     connectWebSocket(token);
                 }
             }, retryDelay);
         }
+
     );
 }
 
@@ -2039,11 +2142,10 @@ function startParticipantRefreshInterval() {
 
 async function refreshParticipants() {
     try {
-        const response = await fetch(`/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`, {
-            headers: {
-                'Authorization': `Bearer ${jwtToken}`
-            }
-        });
+        const response = await fetchWithTimeout(
+            `/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`
+        );
+
 
         if (response.ok) {
             const room = await response.json();
@@ -2057,7 +2159,6 @@ async function refreshParticipants() {
 }
 
 // ==================== PARTICIPANTS DISPLAY ====================
-// ==================== ENHANCED: UPDATE PARTICIPANTS DISPLAY ====================
 function updateParticipantsDisplay(participants) {
     const participantsList = document.getElementById('participantsList');
     const participantCount = document.getElementById('participantCount');
@@ -2290,7 +2391,6 @@ function sendMessage() {
 }
 
 // ==================== UPDATE YOUR displayMessage() FUNCTION ====================
-// REPLACE your existing displayMessage() function with this:
 
 function displayMessage(message) {
     const chatMessages = document.getElementById('chatMessages');
@@ -2348,7 +2448,6 @@ function displayMessage(message) {
 }
 
 // ==================== ADD ESCAPE KEY HANDLER ====================
-// Add this at the very end of your file (after the Alt+Arrow handlers):
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && replyingToMessage) {
