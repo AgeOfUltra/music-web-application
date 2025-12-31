@@ -51,8 +51,7 @@ public class AppSecurity {
                                 "/app/music/audio/public/streamSong/**",
                                 "app/music/nodes/**",
                                 "/favicon.ico",
-                                "/app_logo_3_1.png",
-                                "/app_logo_wn.png",
+                                "/images/**",
                                 "/css/**",
                                 "/js/**"
                         ).permitAll()

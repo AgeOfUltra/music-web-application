@@ -110,10 +110,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         log.info(" request : {}",path);
 
-        return path.startsWith("/app/music/public/")
+        return path.contains("/public/")
                 || path.contains("/css/")
                 || path.contains("/js/")
                 || path.contains("/images/")
+                || path.contains("/h2-console")
                 || path.contains("/favicon");
     }
 

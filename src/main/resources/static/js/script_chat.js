@@ -839,7 +839,7 @@ async function loadSongsForPage(pageNumber) {
     showLoadingState();
 
     try {
-        const response = await fetchWithTimeout(
+        const response = await fetch(
             `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`
         );
 
