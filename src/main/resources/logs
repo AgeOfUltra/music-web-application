@@ -1,0 +1,664 @@
+
+2026-01-02T08:11:14.174+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.PublicLoginController   : <200 OK OK,{message=Login successful, token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdGFyayIsImlhdCI6MTc2NzMyMTY3MywiZXhwIjoxNzY3MzIxODUzfQ.p_aSAWFhToQBL_VDZuG8hAIYr8HNnc1UPea9_OKIH80, username=stark},[]>
+2026-01-02T08:11:14.186+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.PublicLoginController   : Login Successfully ! log in user data : LoginUser(username=stark, password=Jarvis@123)
+2026-01-02T08:11:14.198+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:11:14.201+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:11:14.273+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:11:14.369+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_dasboard.css is ignored true
+2026-01-02T08:11:14.370+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_dasboard.css is ignored true
+2026-01-02T08:11:14.370+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_wn.png is ignored true
+2026-01-02T08:11:14.370+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_wn.png is ignored true
+2026-01-02T08:11:14.423+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_dasboard.js is ignored true
+2026-01-02T08:11:14.423+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_dasboard.js is ignored true
+2026-01-02T08:11:14.437+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:11:14.438+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:11:14.451+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:11:14.693+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:14.693+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:27.158+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:11:27.159+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:11:27.171+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:11:27.220+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.RoomController          : Room created by stark
+2026-01-02T08:11:27.223+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.ConfessService             : room has generated ostpkt
+2026-01-02T08:11:27.225+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.ConfessService             : passcode generated P2vyk
+2026-01-02T08:11:27.261+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.RoomController          : what is inside the response : ostpkt
+2026-01-02T08:11:27.261+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.RoomController          : CreateRoom(roomName=tempo, maxCount=2, createdBy=stark) room is created successfully !
+2026-01-02T08:11:27.270+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.UserSessionService         : ✅ Updated roomName for stark to: tempo
+2026-01-02T08:11:27.311+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:11:27.311+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:11:27.321+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:11:27.395+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_chat.css is ignored true
+2026-01-02T08:11:27.395+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_chat.js is ignored true
+2026-01-02T08:11:27.396+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_chat.css is ignored true
+2026-01-02T08:11:27.396+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_chat.js is ignored true
+2026-01-02T08:11:27.785+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:11:27.786+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:11:27.794+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:11:27.807+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:11:27.807+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:11:27.808+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:27.809+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:27.832+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:11:27.847+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/788/vjojztvi/websocket is ignored false
+2026-01-02T08:11:27.848+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/788/vjojztvi/websocket is ignored false
+2026-01-02T08:11:27.857+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/788/vjojztvi/websocket is ignored false
+2026-01-02T08:11:27.951+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.config.ChatConfiguration           : ✅ WebSocket CONNECT authenticated as stark
+2026-01-02T08:11:27.959+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:11:27.961+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:11:27.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/playback/state
+2026-01-02T08:11:27.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/typing
+2026-01-02T08:11:27.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/skip
+2026-01-02T08:11:27.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:11:27.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/favorites
+2026-01-02T08:11:28.991+05:30  INFO 20196 --- [music-web-application] [boundChannel-15] c.m.m.controller.ChatController          : 🔄 Sync Request → room=tempo, user=stark, timestamp=1767321688971
+2026-01-02T08:11:29.016+05:30  WARN 20196 --- [music-web-application] [boundChannel-15] c.m.m.service.PlaybackStateService       : ⚠️ No playback state found for room: tempo
+2026-01-02T08:11:29.016+05:30  INFO 20196 --- [music-web-application] [boundChannel-15] c.m.m.controller.ChatController          : ℹ️ No valid playback state found
+2026-01-02T08:11:29.016+05:30  INFO 20196 --- [music-web-application] [boundChannel-15] c.m.m.controller.ChatController          : 📤 Sending sync response → valid=false, isPlaying=false, song=null
+2026-01-02T08:11:32.978+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:32.978+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:32.985+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:35.446+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=A For Apple
+2026-01-02T08:11:35.447+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:11:35.452+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=A For Apple.mp3, songName=A For Apple, hero=Bellamkonda Sreenivas, heroine=Rakul, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767321695447, isPlaying=true, isPaused=false)
+2026-01-02T08:11:35.455+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:11:35.455+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:11:35.455+05:30  INFO 20196 --- [music-web-application] [boundChannel-16] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:11:35.463+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:11:35.463+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:11:35.465+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:11:35.465+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.service.SongCacheService           : Downloading song A For Apple.mp3 from S3
+2026-01-02T08:11:37.107+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.service.SongCacheService           :  Cached A For Apple.mp3 locally at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:11:37.161+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:37.161+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:11:37.171+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:11:37.172+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:11:37.174+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:11:37.175+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.service.SongCacheService           :  Song found in local cache: A For Apple.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:11:37.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:37.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:37.981+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:42.978+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:42.979+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:42.994+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:47.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:47.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:47.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:52.969+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:52.969+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:52.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:57.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:57.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:11:57.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:02.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:02.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:02.983+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:07.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:07.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:07.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:12.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:12.978+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:12.983+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:17.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:17.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:17.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:22.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:22.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:22.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:27.972+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:27.972+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:27.975+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:32.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:32.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:32.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:37.967+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:37.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:37.973+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:42.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:42.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:42.973+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:46.294+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:12:46.298+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:12:46.309+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:12:47.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:47.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:47.970+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:52.964+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:52.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:52.969+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:56.071+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=Banthi Poola Janaki
+2026-01-02T08:12:56.072+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:12:56.072+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Banthi Poola Janaki.mp3, songName=Banthi Poola Janaki, hero=Ntr, heroine=kajal, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767321776072, isPlaying=true, isPaused=false)
+2026-01-02T08:12:56.072+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:12:56.072+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:12:56.072+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:12:56.087+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:12:56.087+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:12:56.087+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:12:56.087+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.service.SongCacheService           : Downloading song Banthi Poola Janaki.mp3 from S3
+2026-01-02T08:12:57.567+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.service.SongCacheService           :  Cached Banthi Poola Janaki.mp3 locally at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:12:57.593+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:12:57.594+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:12:57.596+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:12:57.597+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.service.SongCacheService           :  Song found in local cache: Banthi Poola Janaki.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:12:57.961+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:57.961+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:57.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:12:59.104+05:30  INFO 20196 --- [music-web-application] [boundChannel-21] c.m.m.service.PlaybackStateService       : 💾 Saved 1 favorites for tempo
+2026-01-02T08:13:00.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:13:00.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:13:00.147+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:13:01.705+05:30  INFO 20196 --- [music-web-application] [boundChannel-14] c.m.m.service.PlaybackStateService       : 💾 Saved 2 favorites for tempo
+2026-01-02T08:13:02.964+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:02.964+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:02.973+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:03.676+05:30  INFO 20196 --- [music-web-application] [MessageBroker-5] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:13:03.684+05:30  INFO 20196 --- [music-web-application] [MessageBroker-5] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!
+2026-01-02T08:13:05.153+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=Banthi Poola Janaki
+2026-01-02T08:13:05.153+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:13:05.154+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Banthi Poola Janaki.mp3, songName=Banthi Poola Janaki, hero=Ntr, heroine=kajal, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767321785153, isPlaying=true, isPaused=false)
+2026-01-02T08:13:05.155+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:13:05.155+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:13:05.156+05:30  INFO 20196 --- [music-web-application] [boundChannel-19] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:13:05.168+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:13:05.169+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:13:05.170+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:13:05.170+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.SongCacheService           :  Song found in local cache: Banthi Poola Janaki.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:13:05.204+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:13:05.204+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:13:05.204+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:13:05.204+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.service.SongCacheService           :  Song found in local cache: Banthi Poola Janaki.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:13:07.980+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:07.980+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:08.014+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:12.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:12.966+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:12.978+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:17.974+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:17.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:17.982+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:22.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:22.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:22.977+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:27.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:27.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:27.981+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:32.964+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:32.964+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:32.968+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:37.966+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:37.966+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:37.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:42.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:42.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:42.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:47.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:47.972+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:47.978+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:52.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:52.962+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:52.969+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:57.976+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:57.976+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:13:57.984+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:02.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:02.965+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:02.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:03.193+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=Chaiyya Chaiyya
+2026-01-02T08:14:03.193+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:14:03.195+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Chaiyya Chaiyya.mp3, songName=Chaiyya Chaiyya, hero=SRK, heroine=, singer=null, movie=null, language=Hindi, organizer=stark, timestamp=0, serverTime=1767321843193, isPlaying=true, isPaused=false)
+2026-01-02T08:14:03.196+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:14:03.196+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:14:03.197+05:30  INFO 20196 --- [music-web-application] [boundChannel-20] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:14:03.210+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Chaiyya%20Chaiyya.mp3 is ignored true
+2026-01-02T08:14:03.210+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Chaiyya%20Chaiyya.mp3 is ignored true
+2026-01-02T08:14:03.212+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.controller.PublicSongController    : Requested song name / file name Chaiyya Chaiyya.mp3
+2026-01-02T08:14:03.213+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.service.SongCacheService           : Downloading song Chaiyya Chaiyya.mp3 from S3
+2026-01-02T08:14:06.239+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.service.SongCacheService           :  Cached Chaiyya Chaiyya.mp3 locally at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Chaiyya Chaiyya.mp3
+2026-01-02T08:14:06.267+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Chaiyya%20Chaiyya.mp3 is ignored true
+2026-01-02T08:14:06.267+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Chaiyya%20Chaiyya.mp3 is ignored true
+2026-01-02T08:14:06.268+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.controller.PublicSongController    : Requested song name / file name Chaiyya Chaiyya.mp3
+2026-01-02T08:14:06.269+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.service.SongCacheService           :  Song found in local cache: Chaiyya Chaiyya.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Chaiyya Chaiyya.mp3
+2026-01-02T08:14:07.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:07.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:07.974+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:11.373+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:14:11.373+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:14:11.378+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:14:11.382+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.service.SongControllerService      : 🔍 Database query for prefix: heart
+2026-01-02T08:14:12.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:12.976+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:12.983+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:14.010+05:30  INFO 20196 --- [music-web-application] [boundChannel-27] c.m.m.service.PlaybackStateService       : 💾 Saved 3 favorites for tempo
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=Banthi Poola Janaki
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Banthi Poola Janaki.mp3, songName=Banthi Poola Janaki, hero=Ntr, heroine=kajal, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767321857590, isPlaying=true, isPaused=false)
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:14:17.590+05:30  INFO 20196 --- [music-web-application] [boundChannel-24] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:14:17.610+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:14:17.610+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:14:17.610+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:14:17.610+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.SongCacheService           :  Song found in local cache: Banthi Poola Janaki.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:14:17.641+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:14:17.644+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Banthi%20Poola%20Janaki.mp3 is ignored true
+2026-01-02T08:14:17.644+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.PublicSongController    : Requested song name / file name Banthi Poola Janaki.mp3
+2026-01-02T08:14:17.645+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.SongCacheService           :  Song found in local cache: Banthi Poola Janaki.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Banthi Poola Janaki.mp3
+2026-01-02T08:14:17.963+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:14:17.967+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.config.ChatConfiguration           : User stark disconnected
+2026-01-02T08:14:17.968+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.config.ChatConfiguration           : User stark disconnected
+2026-01-02T08:14:17.971+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/exitRoom/beacon is ignored false
+2026-01-02T08:14:17.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:14:17.975+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:14:18.482+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:14:18.482+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:14:18.573+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:14:18.574+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:15:03.669+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:15:03.671+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!
+2026-01-02T08:15:03.803+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : 🧹 Starting scheduled cleanup of expired sessions
+2026-01-02T08:15:03.805+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : 🗑️ Found 1 expired sessions to clean
+2026-01-02T08:15:03.819+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PublicLoginService         : 🚪 LOGOUT: User stark logging out
+2026-01-02T08:15:03.819+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PublicLoginService         : 🏠 User stark is in room tempo, exiting with full logout...
+2026-01-02T08:15:03.828+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PlaybackStateService       : 🧹 Cleared all favorites for tempo
+2026-01-02T08:15:03.829+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PlaybackStateService       : 🗑️ Playback state deleted for: tempo
+2026-01-02T08:15:03.833+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.UserSessionService         : 🗑️ Deleted session for user stark
+2026-01-02T08:15:03.833+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.RoomService                : Room tempo deleted. Session DELETED for stark
+2026-01-02T08:15:03.843+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PublicLoginService         : ✅ User stark exited room tempo (session deleted)
+2026-01-02T08:15:03.847+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PublicLoginService         : ℹ️ Room tempo deleted (last organizer left)
+2026-01-02T08:15:03.847+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.service.PublicLoginService         : ✅ User stark logout complete (fully successful)
+2026-01-02T08:15:03.847+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : ✅ Cleaned expired session for user: stark
+2026-01-02T08:15:03.847+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : ✅ Scheduled cleanup completed
+2026-01-02T08:17:03.669+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:17:03.671+05:30  INFO 20196 --- [music-web-application] [MessageBroker-3] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!
+2026-01-02T08:19:03.671+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:19:03.673+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!
+2026-01-02T08:19:09.095+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/authenticate is ignored true
+2026-01-02T08:19:09.095+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/authenticate is ignored true
+2026-01-02T08:19:09.205+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.UserSessionService         : 💾 Session saved for stark with 24h TTL
+2026-01-02T08:19:09.205+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.PublicLoginController   : <200 OK OK,{message=Login successful, token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdGFyayIsImlhdCI6MTc2NzMyMjE0OSwiZXhwIjoxNzY3MzIyMzI5fQ.WpS74-NUHAnDHvT6Lq13lH7q4lBdjCq2-wsVEgmNcAI, username=stark},[]>
+2026-01-02T08:19:09.205+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.PublicLoginController   : Login Successfully ! log in user data : LoginUser(username=stark, password=Jarvis@123)
+2026-01-02T08:19:09.214+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:09.214+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:09.220+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:09.284+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:09.284+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:09.290+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:09.315+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:09.316+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:20.009+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:19:20.009+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_login.css is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_3_1.png is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_login.css is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_3_1.png is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_login.js is ignored true
+2026-01-02T08:19:20.106+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_login.js is ignored true
+2026-01-02T08:19:20.827+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:20.828+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:23.237+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/authenticate is ignored true
+2026-01-02T08:19:23.237+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/authenticate is ignored true
+2026-01-02T08:19:23.360+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.UserSessionService         : 💾 Session saved for Srikanth with 24h TTL
+2026-01-02T08:19:23.361+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.PublicLoginController   : <200 OK OK,{message=Login successful, token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJTcmlrYW50aCIsImlhdCI6MTc2NzMyMjE2MywiZXhwIjoxNzY3MzIyMzQzfQ.Uii4-tKSVT11bq9myovh-cQPdTzIFE2TnGAI_OWivss, username=Srikanth},[]>
+2026-01-02T08:19:23.361+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.PublicLoginController   : Login Successfully ! log in user data : LoginUser(username=Srikanth, password=Jarvis@123)
+2026-01-02T08:19:23.377+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:23.378+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:23.397+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/dashboard is ignored false
+2026-01-02T08:19:23.523+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_wn.png is ignored true
+2026-01-02T08:19:23.523+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_dasboard.css is ignored true
+2026-01-02T08:19:23.525+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_dasboard.css is ignored true
+2026-01-02T08:19:23.525+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /images/app_logo_wn.png is ignored true
+2026-01-02T08:19:23.527+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_dasboard.js is ignored true
+2026-01-02T08:19:23.530+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_dasboard.js is ignored true
+2026-01-02T08:19:23.573+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:23.573+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:23.599+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/getAllCachedSongs is ignored false
+2026-01-02T08:19:23.860+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:23.860+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:35.904+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:19:35.904+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:19:35.915+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/create is ignored false
+2026-01-02T08:19:35.921+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.RoomController          : Room created by stark
+2026-01-02T08:19:35.931+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.ConfessService             : room has generated ssmk2k
+2026-01-02T08:19:35.931+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.ConfessService             : passcode generated wkeNp
+2026-01-02T08:19:35.953+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.RoomController          : what is inside the response : ssmk2k
+2026-01-02T08:19:35.953+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.controller.RoomController          : CreateRoom(roomName=tempo, maxCount=2, createdBy=stark) room is created successfully !
+2026-01-02T08:19:35.953+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.service.UserSessionService         : ✅ Updated roomName for stark to: tempo
+2026-01-02T08:19:35.965+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:35.965+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:35.965+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:36.050+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:36.050+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:36.064+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:36.064+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:36.066+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:36.066+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:36.069+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:36.077+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:36.089+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/085/t34xd4wd/websocket is ignored false
+2026-01-02T08:19:36.089+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/085/t34xd4wd/websocket is ignored false
+2026-01-02T08:19:36.092+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/085/t34xd4wd/websocket is ignored false
+2026-01-02T08:19:36.115+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.config.ChatConfiguration           : ✅ WebSocket CONNECT authenticated as stark
+2026-01-02T08:19:36.120+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:19:36.120+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:19:36.120+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/playback/state
+2026-01-02T08:19:36.120+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/typing
+2026-01-02T08:19:36.124+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/skip
+2026-01-02T08:19:36.124+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo
+2026-01-02T08:19:36.124+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User stark subscribed to room: tempo/favorites
+2026-01-02T08:19:37.126+05:30  INFO 20196 --- [music-web-application] [boundChannel-42] c.m.m.controller.ChatController          : 🔄 Sync Request → room=tempo, user=stark, timestamp=1767322177126
+2026-01-02T08:19:37.126+05:30  WARN 20196 --- [music-web-application] [boundChannel-42] c.m.m.service.PlaybackStateService       : ⚠️ No playback state found for room: tempo
+2026-01-02T08:19:37.126+05:30  INFO 20196 --- [music-web-application] [boundChannel-42] c.m.m.controller.ChatController          : ℹ️ No valid playback state found
+2026-01-02T08:19:37.126+05:30  INFO 20196 --- [music-web-application] [boundChannel-42] c.m.m.controller.ChatController          : 📤 Sending sync response → valid=false, isPlaying=false, song=null
+2026-01-02T08:19:41.350+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:41.350+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:41.359+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:46.350+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:46.350+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:46.357+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:51.347+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:51.347+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:51.356+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:55.811+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/join is ignored false
+2026-01-02T08:19:55.811+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/join is ignored false
+2026-01-02T08:19:55.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/join is ignored false
+2026-01-02T08:19:55.832+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.controller.RoomController          : room name while joining the room by passcode tempo
+2026-01-02T08:19:55.848+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.controller.RoomController          : Successfully logged-in! RoomJoin(roomName=tempo, roomCode=ssmk2k, passCode=wkeNp, participantName=Srikanth)
+2026-01-02T08:19:55.849+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.service.UserSessionService         : ✅ Updated roomName for Srikanth to: tempo
+2026-01-02T08:19:55.849+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:55.849+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:55.865+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/chat is ignored false
+2026-01-02T08:19:55.923+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_chat.css is ignored true
+2026-01-02T08:19:55.923+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /css/style_chat.css is ignored true
+2026-01-02T08:19:55.925+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_chat.js is ignored true
+2026-01-02T08:19:55.925+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /js/script_chat.js is ignored true
+2026-01-02T08:19:56.350+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:56.353+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:56.363+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:19:56.753+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:56.753+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:56.760+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/fetchAllSongs is ignored false
+2026-01-02T08:19:56.772+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:56.773+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:56.773+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:19:56.773+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:56.785+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/info is ignored false
+2026-01-02T08:19:56.793+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/540/ftfd3uja/websocket is ignored false
+2026-01-02T08:19:56.793+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/540/ftfd3uja/websocket is ignored false
+2026-01-02T08:19:56.800+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/ws/540/ftfd3uja/websocket is ignored false
+2026-01-02T08:19:56.810+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.config.ChatConfiguration           : ✅ WebSocket CONNECT authenticated as Srikanth
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo/playback/state
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo/typing
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo/skip
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo
+2026-01-02T08:19:56.813+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.config.ChatConfiguration           : User Srikanth subscribed to room: tempo/favorites
+2026-01-02T08:19:57.820+05:30  INFO 20196 --- [music-web-application] [boundChannel-36] c.m.m.controller.ChatController          : 🔄 Sync Request → room=tempo, user=Srikanth, timestamp=1767322197818
+2026-01-02T08:19:57.829+05:30  WARN 20196 --- [music-web-application] [boundChannel-36] c.m.m.service.PlaybackStateService       : ⚠️ No playback state found for room: tempo
+2026-01-02T08:19:57.829+05:30  INFO 20196 --- [music-web-application] [boundChannel-36] c.m.m.controller.ChatController          : ℹ️ No valid playback state found
+2026-01-02T08:19:57.829+05:30  INFO 20196 --- [music-web-application] [boundChannel-36] c.m.m.controller.ChatController          : 📤 Sending sync response → valid=false, isPlaying=false, song=null
+2026-01-02T08:20:01.017+05:30  INFO 20196 --- [music-web-application] [boundChannel-33] c.m.m.service.PlaybackStateService       : 💾 Saved 1 favorites for tempo
+2026-01-02T08:20:01.134+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:01.134+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:01.136+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:02.354+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:02.354+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:02.365+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:03.648+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=A For Apple
+2026-01-02T08:20:03.648+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:20:03.650+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=A For Apple.mp3, songName=A For Apple, hero=Bellamkonda Sreenivas, heroine=Rakul, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767322203648, isPlaying=true, isPaused=false)
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:20:03.651+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.service.SongCacheService           :  Song found in local cache: A For Apple.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:20:03.695+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:03.697+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:03.699+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:20:03.700+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.service.SongCacheService           :  Song found in local cache: A For Apple.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:20:03.704+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:20:03.704+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:20:03.850+05:30  INFO 20196 --- [music-web-application] [MessageBroker-7] c.m.m.schedulers.UnUsedSessionCleanUp    : 🧹 Starting scheduled cleanup of expired sessions
+2026-01-02T08:20:03.851+05:30  INFO 20196 --- [music-web-application] [MessageBroker-7] c.m.m.schedulers.UnUsedSessionCleanUp    : ℹ️ No expired sessions to clean
+2026-01-02T08:20:05.548+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:05.550+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:05.551+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:20:05.551+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.service.SongCacheService           :  Song found in local cache: A For Apple.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:20:05.632+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:20:05.634+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:20:05.636+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:05.638+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/A%20For%20Apple.mp3 is ignored true
+2026-01-02T08:20:05.639+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.controller.PublicSongController    : Requested song name / file name A For Apple.mp3
+2026-01-02T08:20:05.639+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.service.SongCacheService           :  Song found in local cache: A For Apple.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\A For Apple.mp3
+2026-01-02T08:20:06.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:06.134+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:06.140+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:06.821+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:06.821+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:06.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.134+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.134+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.149+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.818+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:11.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.130+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.130+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.139+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:16.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.144+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.816+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:21.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.128+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.128+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.823+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.823+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:26.832+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.130+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.130+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.140+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:31.836+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:35.210+05:30  INFO 20196 --- [music-web-application] [boundChannel-41] c.m.m.service.PlaybackStateService       : 💾 Saved 2 favorites for tempo
+2026-01-02T08:20:36.128+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:36.128+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:36.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:36.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:36.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:36.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.139+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.831+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.831+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:41.838+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.126+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.126+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.134+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.830+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.830+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:46.839+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.125+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.126+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:51.835+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:20:56.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.128+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.827+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.827+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:01.832+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:03.668+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:21:03.671+05:30  INFO 20196 --- [music-web-application] [MessageBroker-2] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!
+2026-01-02T08:21:06.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:06.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:06.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:06.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:06.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:06.823+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:10.255+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:21:10.255+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:21:10.261+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/searchSong is ignored false
+2026-01-02T08:21:11.126+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:11.126+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:11.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:11.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:11.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:11.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:12.385+05:30  INFO 20196 --- [music-web-application] [boundChannel-36] c.m.m.service.PlaybackStateService       : 💾 Saved 3 favorites for tempo
+2026-01-02T08:21:16.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:16.127+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:16.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:16.831+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:16.831+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:16.836+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:18.059+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PLAY, song=Adara Adara
+2026-01-02T08:21:18.060+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.controller.ChatController          : ▶️ PLAY action → Starting song from beginning
+2026-01-02T08:21:18.061+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Adara Adara.mp3, songName=Adara Adara, hero=Mahesh Babu, heroine=, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=0, serverTime=1767322278060, isPlaying=true, isPaused=false)
+2026-01-02T08:21:18.062+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:21:18.062+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:21:18.062+05:30  INFO 20196 --- [music-web-application] [boundChannel-43] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:21:18.073+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:18.073+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:18.075+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.controller.PublicSongController    : Requested song name / file name Adara Adara.mp3
+2026-01-02T08:21:18.077+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.service.SongCacheService           : Downloading song Adara Adara.mp3 from S3
+2026-01-02T08:21:18.078+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:18.079+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:18.082+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.controller.PublicSongController    : Requested song name / file name Adara Adara.mp3
+2026-01-02T08:21:18.084+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.service.SongCacheService           : Downloading song Adara Adara.mp3 from S3
+2026-01-02T08:21:19.241+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.service.SongCacheService           :  Cached Adara Adara.mp3 locally at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Adara Adara.mp3
+2026-01-02T08:21:19.267+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:19.267+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:19.268+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.controller.PublicSongController    : Requested song name / file name Adara Adara.mp3
+2026-01-02T08:21:19.268+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.service.SongCacheService           :  Song found in local cache: Adara Adara.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Adara Adara.mp3
+2026-01-02T08:21:19.709+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.service.SongCacheService           :  Cached Adara Adara.mp3 locally at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Adara Adara.mp3
+2026-01-02T08:21:19.752+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:19.752+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/audio/public/streamSong/Adara%20Adara.mp3 is ignored true
+2026-01-02T08:21:19.755+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.controller.PublicSongController    : Requested song name / file name Adara Adara.mp3
+2026-01-02T08:21:19.756+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.service.SongCacheService           :  Song found in local cache: Adara Adara.mp3 at C:\Users\sarad\Desktop\project\music-web-application\song-cache\Adara Adara.mp3
+2026-01-02T08:21:21.193+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:21.193+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:21.246+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:21.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:21.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:21.839+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.129+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.129+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.818+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.818+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:26.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.140+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:31.831+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.138+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.138+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.141+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.818+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.818+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:36.829+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.137+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.822+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.823+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:41.827+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.129+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.129+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.133+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.817+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:46.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.140+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:51.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.132+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.138+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.825+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.825+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:56.828+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:21:57.839+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.controller.ChatController          : 🎵 Playback Event → action=RESUME, song=Adara Adara
+2026-01-02T08:21:57.839+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.controller.ChatController          : ▶️ RESUME action → timestamp=66005ms
+2026-01-02T08:21:57.840+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Adara Adara.mp3, songName=Adara Adara, hero=Mahesh Babu, heroine=, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=66005, serverTime=1767322317839, isPlaying=true, isPaused=false)
+2026-01-02T08:21:57.841+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:21:57.841+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:21:57.841+05:30  INFO 20196 --- [music-web-application] [boundChannel-40] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:22:01.136+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:01.137+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:01.144+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:01.822+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:01.822+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:01.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:05.303+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 🎵 Playback Event → action=PAUSE, song=null
+2026-01-02T08:22:05.303+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : ⏸️ PAUSE action → timestamp=73080ms
+2026-01-02T08:22:05.304+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=null, songName=null, hero=null, heroine=null, singer=null, movie=null, language=null, organizer=stark, timestamp=73080, serverTime=1767322325303, isPlaying=false, isPaused=true)
+2026-01-02T08:22:05.304+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:22:05.304+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=false
+2026-01-02T08:22:05.305+05:30  INFO 20196 --- [music-web-application] [boundChannel-34] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:22:05.854+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.controller.ChatController          : 🎵 Playback Event → action=RESUME, song=Adara Adara
+2026-01-02T08:22:05.854+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.controller.ChatController          : ▶️ RESUME action → timestamp=73088ms
+2026-01-02T08:22:05.855+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.service.PlaybackStateService       : 💾 Playback state saved for tempo: PlaybackState(songFileName=Adara Adara.mp3, songName=Adara Adara, hero=Mahesh Babu, heroine=, singer=null, movie=null, language=Telugu, organizer=stark, timestamp=73088, serverTime=1767322325854, isPlaying=true, isPaused=false)
+2026-01-02T08:22:05.855+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.service.PlaybackStateService       : ✅ Verified: Data exists in Redis for tempo
+2026-01-02T08:22:05.855+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.controller.ChatController          : 💾 Saved playback state → room=tempo, valid=true
+2026-01-02T08:22:05.856+05:30  INFO 20196 --- [music-web-application] [boundChannel-45] c.m.m.controller.ChatController          : 📡 Broadcast playback event → room=tempo
+2026-01-02T08:22:06.142+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:06.142+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:06.189+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:06.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:06.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:06.833+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:11.129+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-7] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:11.134+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.config.ChatConfiguration           : User stark disconnected
+2026-01-02T08:22:11.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.config.ChatConfiguration           : User stark disconnected
+2026-01-02T08:22:11.135+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-1] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/exitRoom/beacon is ignored false
+2026-01-02T08:22:11.138+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:11.139+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:11.653+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:11.654+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:11.760+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:22:11.760+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:22:11.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:11.819+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:11.824+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:16.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:16.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:16.826+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:21.820+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:21.821+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:21.833+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-2] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:26.823+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-4] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/getRoom is ignored false
+2026-01-02T08:22:26.834+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-6] c.m.m.config.ChatConfiguration           : User Srikanth disconnected
+2026-01-02T08:22:26.835+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-5] c.m.m.config.ChatConfiguration           : User Srikanth disconnected
+2026-01-02T08:22:26.836+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-8] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/room/exitRoom/beacon is ignored false
+2026-01-02T08:22:26.839+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:26.839+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-3] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:27.351+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:27.351+05:30  INFO 20196 --- [music-web-application] [nio-8080-exec-9] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /app/music/public/login is ignored true
+2026-01-02T08:22:27.413+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:22:27.414+05:30  INFO 20196 --- [music-web-application] [io-8080-exec-10] c.m.m.u.filter.JwtAuthenticationFilter   : requested path /favicon.ico is ignored true
+2026-01-02T08:23:03.669+05:30  INFO 20196 --- [music-web-application] [MessageBroker-6] c.m.m.schedulers.UnUsedSessionCleanUp    : Session cleaning process started
+2026-01-02T08:23:03.672+05:30  INFO 20196 --- [music-web-application] [MessageBroker-6] c.m.m.schedulers.UnUsedSessionCleanUp    : Cleaning process completed!

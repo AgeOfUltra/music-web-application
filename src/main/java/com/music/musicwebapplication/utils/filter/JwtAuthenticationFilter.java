@@ -22,6 +22,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 @Slf4j
@@ -74,7 +76,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserSession session = sessionService.getUserSessionForToken(token);
 
             if(session == null || session.isSessionExpired()){
-                log.warn("⏱ Session expired for {}", username);
+                log.warn("⏱ Session expired while in room  {}", username);
                 forceLogout(session, response);
                 handleUnauthenticated(request, response);
                 return;
@@ -108,14 +110,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
-        log.info(" request : {}",path);
+        List<String> ignore= Arrays.asList("public","css","js","images","h2-console","favicon");
 
-        return path.contains("/public/")
-                || path.contains("/css/")
-                || path.contains("/js/")
-                || path.contains("/images/")
-                || path.contains("/h2-console")
-                || path.contains("/favicon");
+        boolean isIgnored =  ignore.stream().anyMatch(path::contains);
+        log.info("requested path {} is ignored {}",path,isIgnored || path.equals("/"));
+
+        return path.equals("/")
+                || isIgnored;
     }
 
     private void handleUnauthenticated(

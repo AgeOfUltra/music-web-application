@@ -840,7 +840,11 @@ async function loadSongsForPage(pageNumber) {
 
     try {
         const response = await fetch(
-            `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`
+            `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`, {
+                headers: {
+                    'Authorization': `Bearer ${jwtToken}`
+                }
+            }
         );
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1930,8 +1934,8 @@ function startHeartbeat() {
                 );
                 lastHeartbeat = Date.now();
 
-                // ✅ NEW: Periodic session validation via HTTP
-                await validateSessionViaHttp();
+                // // ✅ NEW: Periodic session validation via HTTP
+                // await validateSessionViaHttp();
 
             } catch (error) {
                 console.error('❌ Heartbeat failed:', error);
