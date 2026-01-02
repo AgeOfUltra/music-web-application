@@ -44,13 +44,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
-        String username = null;
         String token = null;
 
         if (request.getCookies() != null) {
-            for (var c : request.getCookies()) {
+            for (Cookie c : request.getCookies()) {
                 if ("jwt".equals(c.getName())) {
                     token = c.getValue();
                     break;
@@ -58,54 +60,70 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        // 1️⃣ No token → unauthenticated
         if (token == null) {
             handleUnauthenticated(request, response);
             return;
         }
 
+        // 2️⃣ Skip public/static paths
         if (shouldNotFilter(request)) {
-
             filterChain.doFilter(request, response);
             return;
         }
 
-
         try {
-            username = jwtTokenUtil.getUserNameFromToken(token); // may throw ExpiredJwtException
+            // 3️⃣ Extract username (throws ExpiredJwtException if expired)
+            String username = jwtTokenUtil.getUserNameFromToken(token);
 
-            UserSession session = sessionService.getUserSessionForToken(token);
+            // 4️⃣ Validate session (NOT room)
+//            UserSession session = sessionService.getUserSessionForToken(token);
+//
+//            if (session == null || session.isSessionExpired()) {
+//                log.warn("⏱ Session expired for user {}", username);
+//
+//                // Only session cleanup here
+//                sessionService.deleteUserSession(username);
+//                clearJwtCookie(response);
+//
+//                handleUnauthenticated(request, response);
+//                return;
+//            }
 
-            if(session == null || session.isSessionExpired()){
-                log.warn("⏱ Session expired while in room  {}", username);
-                forceLogout(session, response);
-                handleUnauthenticated(request, response);
-                return;
-            }
-            if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 5️⃣ Authenticate request
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UserDetails userDetails = service.loadUserByUsername(username);
 
                 if (jwtTokenUtil.validateToken(username, userDetails.getUsername(), token)) {
-                    UsernamePasswordAuthenticationToken authenticationToken =
+
+                    UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities()
                             );
-                    authenticationToken.setDetails(new WebAuthenticationDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                    authentication.setDetails(new WebAuthenticationDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
 
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
+
+            // 4️⃣ Validate session (NOT room)
+            UserSession session = sessionService.getUserSessionForToken(token);
+            forceLogout(session,response);
+            // 6️⃣ Hard expiry
+            log.warn("⏱ JWT expired");
+
+            clearJwtCookie(response);
             handleUnauthenticated(request, response);
         }
-
-
     }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -158,7 +176,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         log.info("✅ JWT cookie cleared for expired session");
     }
-
+    private void clearJwtCookie(HttpServletResponse response) {
+        Cookie cookie = new Cookie("jwt", null);
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        response.addCookie(cookie);
+    }
 
 
 }

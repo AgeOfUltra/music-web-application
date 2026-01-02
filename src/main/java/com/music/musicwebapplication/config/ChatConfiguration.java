@@ -1,8 +1,10 @@
 package com.music.musicwebapplication.config;
 
+import com.music.musicwebapplication.dto.UserDisconnectedEvent;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -32,6 +34,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserDetailsService userDetailsService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -114,13 +117,25 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
 
                 if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
                     try {
-                        Object username = accessor.getSessionAttributes() != null ?
-                                accessor.getSessionAttributes().get("username") : null;
-                        log.info("User {} disconnected", username);
+                        if (accessor.getSessionAttributes() != null) {
+
+                            String username = (String) accessor.getSessionAttributes().get("username");
+                            String roomName = (String) accessor.getSessionAttributes().get("roomId");
+                            String sessionId = accessor.getSessionId();
+
+                            log.info("📴 WebSocket DISCONNECT → user={}, room={}", username, roomName);
+
+                            if (username != null) {
+                                eventPublisher.publishEvent(
+                                        new UserDisconnectedEvent(username, roomName, sessionId)
+                                );
+                            }
+                        }
                     } catch (Exception e) {
-                        log.error("Error processing DISCONNECT: {}", e.getMessage());
+                        log.error("❌ Error processing DISCONNECT event", e);
                     }
                 }
+
 
                 return message;
             }
