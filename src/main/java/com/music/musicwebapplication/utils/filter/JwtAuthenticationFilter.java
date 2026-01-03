@@ -45,14 +45,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
+        String username = null;
         String token = null;
 
         if (request.getCookies() != null) {
-            for (Cookie c : request.getCookies()) {
+            for (var c : request.getCookies()) {
                 if ("jwt".equals(c.getName())) {
                     token = c.getValue();
                     break;
@@ -60,68 +59,80 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // 1️⃣ No token → unauthenticated
-        if (token == null) {
-            handleUnauthenticated(request, response);
-            return;
-        }
 
-        // 2️⃣ Skip public/static paths
         if (shouldNotFilter(request)) {
+
             filterChain.doFilter(request, response);
             return;
         }
 
+
         try {
-            // 3️⃣ Extract username (throws ExpiredJwtException if expired)
-            String username = jwtTokenUtil.getUserNameFromToken(token);
+            if (token != null) {
+                username = jwtTokenUtil.getUserNameFromToken(token); // may throw ExpiredJwtException
+            }
 
-            // 4️⃣ Validate session (NOT room)
-//            UserSession session = sessionService.getUserSessionForToken(token);
-//
-//            if (session == null || session.isSessionExpired()) {
-//                log.warn("⏱ Session expired for user {}", username);
-//
-//                // Only session cleanup here
-//                sessionService.deleteUserSession(username);
-//                clearJwtCookie(response);
-//
-//                handleUnauthenticated(request, response);
-//                return;
-//            }
-
-            // 5️⃣ Authenticate request
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (username != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UserDetails userDetails = service.loadUserByUsername(username);
 
                 if (jwtTokenUtil.validateToken(username, userDetails.getUsername(), token)) {
-
-                    UsernamePasswordAuthenticationToken authentication =
+                    UsernamePasswordAuthenticationToken authenticationToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities()
                             );
-
-                    authentication.setDetails(new WebAuthenticationDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    authenticationToken.setDetails(new WebAuthenticationDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
 
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
+            logger.warn("JWT expired, redirecting to login");
 
-            // 4️⃣ Validate session (NOT room)
-            UserSession session = sessionService.getUserSessionForToken(token);
-            forceLogout(session,response);
-            // 6️⃣ Hard expiry
-            log.warn("⏱ JWT expired");
+            SecurityContextHolder.clearContext();
 
-            clearJwtCookie(response);
-            handleUnauthenticated(request, response);
+            log.info("Is session is still passing! {}",token);
+            try{
+                sessionService.updateUsesSessionExpiry(token);
+            }catch (Exception a){
+                log.error("Error Occurred while updating session entity! {}",a.getMessage());
+            }
+            try {
+                // Get current session
+                UserSession session = sessionService.getUserSessionForToken(token);
+
+                if (session != null) {
+                    // Perform logout cleanup
+                    boolean logoutSuccess = loginService.logout(session);
+
+                    if (!logoutSuccess) {
+                        log.warn("⚠️ Logout cleanup partially failed for user: {}", username);
+                        // Continue anyway to clear cookie and security context
+                    }
+                } else {
+                    log.warn("⚠️ No active session found for user: {}", username);
+                }
+
+            } catch (Exception a) {
+                log.error("❌ Error during logout cleanup for user {}: {}", username, e.getMessage(), a);
+                // Continue to clear cookie and security context even if cleanup fails
+            }
+
+            Cookie cookie = new Cookie("jwt", null);
+            cookie.setMaxAge(0);
+            cookie.setPath("/");
+            response.addCookie(cookie);
+
+            response.sendRedirect("/app/music/public/login?expired=true");
+            return;
         }
+
+
     }
 
     @Override
@@ -137,52 +148,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || isIgnored;
     }
 
-    private void handleUnauthenticated(
-            HttpServletRequest request,
-            HttpServletResponse response) throws IOException {
 
-        SecurityContextHolder.clearContext();
-
-        if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
-            // ✅ AJAX requests - send JSON response for frontend to handle
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Session expired\",\"redirect\":\"/app/music/public/login?expired=true\"}");
-        } else {
-            // Regular page requests - redirect directly
-            response.sendRedirect("/app/music/public/login?expired=true");
-        }
-    }
-    private void forceLogout(UserSession session, HttpServletResponse response) {
-        try {
-            if (session != null) {
-                boolean logoutSuccess = loginService.logout(session);
-
-                if (!logoutSuccess) {
-                    log.warn("⚠️ Logout cleanup partially failed for user: {}", session.getUsername());
-                }
-            }
-        } catch (Exception e) {
-            log.error("❌ Logout cleanup failed: {}", e.getMessage(), e);
-        }
-
-        // ✅ Always clear cookie regardless of logout success
-        // (User should be forced to re-login even if backend cleanup failed)
-        Cookie cookie = new Cookie("jwt", null);
-        cookie.setMaxAge(0);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true); // ✅ Security: match the original cookie settings
-        response.addCookie(cookie);
-
-        log.info("✅ JWT cookie cleared for expired session");
-    }
-    private void clearJwtCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("jwt", null);
-        cookie.setMaxAge(0);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        response.addCookie(cookie);
-    }
 
 
 }

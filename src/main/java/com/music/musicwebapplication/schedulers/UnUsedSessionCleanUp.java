@@ -26,7 +26,7 @@ public class UnUsedSessionCleanUp {
         this.loginService = loginService;
     }
 
-    @Scheduled(initialDelay = 60*3*1000, fixedRate = 60*2*1000)
+//    @Scheduled(initialDelay = 60*3*1000, fixedRate = 60*2*1000)
     public void cleanUpUnUsedSession(){
 
         log.info("Session cleaning process started");
@@ -50,7 +50,7 @@ public class UnUsedSessionCleanUp {
         log.info("Cleaning process completed!");
     }
 
-    @Scheduled(fixedDelay = 300000) // Every 5 minutes
+//    @Scheduled(fixedDelay = 300000) // Every 5 minutes
     public void cleanUpExpiredSession() {
         log.info("🧹 Starting scheduled cleanup of expired sessions");
 

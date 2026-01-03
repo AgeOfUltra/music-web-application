@@ -124,7 +124,7 @@ public class PublicLoginController {
                     .httpOnly(true)
                     .secure(false)           // true in production (HTTPS)
                     .path("/")
-                    .maxAge(60 * 3)         // 1 hour
+                    .maxAge(60 * 5)         // 1 hour
                     .sameSite("Lax")      // or "Lax" depending on your flows
                     .build();
 
