@@ -31,7 +31,8 @@ let currentFavoriteIndex = 0;
 let currentPlaylist = [];
 let currentPlaylistIndex = 0;
 let playlistMode = null;
-
+let syncRequestPending = false;
+let pendingSyncRequests = 0; // Track concurrent requests
 // ==================== TYPING INDICATOR ====================
 let typing = false;
 let typingTimeout;
@@ -41,18 +42,58 @@ let isSyncing = false;
 let syncTimeout = null;
 let hasReceivedInitialSync = false;
 
-let playbackDebounceTimer = null;
 let lastPlaybackAction = null;
 let lastPlaybackTimestamp = 0;
 
 let replyingToMessage = null;
 let logoutInProgress = false;
+
+let playDebounceTimer = null;
+let pauseDebounceTimer = null;
+let resumeDebounceTimer = null;
 // ================== Constants ===============================
 const DEBOUNCE_DELAY = 300;
-const METADATA_TIMEOUT = 60000;
+const METADATA_TIMEOUT = 15000;
 const DUPLICATE_EVENT_THRESHOLD = 500;
 
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_RESET_TIME = 60000; // Reset counter after 1 minute of success
+let lastSuccessfulConnection = null;
+
+
+let sessionExpired = false;
 // ==================== GLOBAL ERROR HANDLER ====================
+const toastRateLimiter = {
+    lastToast: {},
+    rateLimits: {
+        'favorites-update': 2000,
+        'playback-change': 1000,
+        'participant-change': 3000,
+        'default': 2000
+    },
+
+    canShow(key, customCooldown = null) {
+        const now = Date.now();
+        const cooldown = customCooldown || this.rateLimits[key] || this.rateLimits['default'];
+
+        if (this.lastToast[key] && (now - this.lastToast[key]) < cooldown) {
+            return false;
+        }
+
+        this.lastToast[key] = now;
+        return true;
+    },
+
+    reset(key) {
+        if (key) {
+            delete this.lastToast[key];
+        } else {
+            this.lastToast = {};
+        }
+    }
+};
+
 window.addEventListener('error', (event) => {
     console.error('❌ Global error:', event.error);
     if (typeof ToastNotification !== 'undefined') {
@@ -83,9 +124,7 @@ function toggleFavorite(song, heartIcon) {
     } else {
         // Add to favorites
         const favoriteItem = {
-            ...song,
-            requestedBy: currentUsername,
-            requestedAt: Date.now()
+            ...song, requestedBy: currentUsername, requestedAt: Date.now()
         };
         const updatedFavorites = [...roomFavorites, favoriteItem];
         broadcastFavorites(updatedFavorites, 'ADD', favoriteItem, currentUsername);
@@ -97,15 +136,10 @@ function sendTypingEvent(isTyping) {
     if (!stompClient || !stompClient.connected) return;
 
     const typingMsg = {
-        sender: currentUsername,
-        typing: isTyping
+        sender: currentUsername, typing: isTyping
     };
 
-    stompClient.send(
-        `/app/music/chat/${currentRoomName}/typing`,
-        {},
-        JSON.stringify(typingMsg)
-    );
+    stompClient.send(`/app/music/chat/${currentRoomName}/typing`, {}, JSON.stringify(typingMsg));
 }
 
 document.getElementById("messageInput").addEventListener("input", () => {
@@ -131,19 +165,11 @@ function broadcastFavorites(favorites, action, song, username) {
     // console.log('📤 Broadcasting favorites:', action, song?.songName);
 
     const message = {
-        action: action,
-        favorites: favorites,
-        song: song,
-        username: username,
-        timestamp: Date.now()
+        action: action, favorites: favorites, song: song, username: username, timestamp: Date.now()
     };
 
     try {
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/favorites`,
-            {},
-            JSON.stringify(message)
-        );
+        stompClient.send(`/app/music/chat/${currentRoomName}/favorites`, {}, JSON.stringify(message));
 
         // console.log('✅ Favorites broadcast successful');
 
@@ -159,22 +185,22 @@ function broadcastFavorites(favorites, action, song, username) {
 }
 
 function handleFavoritesUpdate(message) {
-    // console.log('📥 Received favorites update:', message.action);
-
     roomFavorites = message.favorites || [];
-
-    // console.log('📋 Current favorites:', roomFavorites.map(f => f.songName));
-
     updateFavoritesDisplay();
     updateAllHeartIcons();
 
     if (message.username !== currentUsername) {
-        if (message.action === 'ADD' && message.song) {
-            ToastNotification.info(`${message.username} added "${message.song.songName}" to favorites`, 3000);
-        } else if (message.action === 'REMOVE' && message.song) {
-            ToastNotification.info(`${message.username} removed "${message.song.songName}" from favorites`, 3000);
-        } else if (message.action === 'CLEAR') {
-            ToastNotification.warning(`${message.username} cleared all favorites`, 3000);
+        // ✅ FIX: Rate limit favorite notifications
+        const toastKey = `favorites-${message.action}`;
+
+        if (toastRateLimiter.canShow(toastKey)) {
+            if (message.action === 'ADD' && message.song) {
+                ToastNotification.info(`${message.username} added "${message.song.songName}" to favorites`, 3000);
+            } else if (message.action === 'REMOVE' && message.song) {
+                ToastNotification.info(`${message.username} removed "${message.song.songName}" from favorites`, 3000);
+            } else if (message.action === 'CLEAR') {
+                ToastNotification.warning(`${message.username} cleared all favorites`, 3000);
+            }
         }
     }
 }
@@ -270,9 +296,17 @@ function removeFavorite(fileName) {
     const favorite = roomFavorites.find(f => f.fileName === fileName);
     if (!favorite) return;
 
+    // ⭐ NEW: Permission check
+    const canRemove = isOrganizer || favorite.requestedBy === currentUsername;
+
+    if (!canRemove) {
+        ToastNotification.warning('You can only remove songs you added to favorites');
+        return;
+    }
+
     const updatedFavorites = roomFavorites.filter(f => f.fileName !== fileName);
     broadcastFavorites(updatedFavorites, 'REMOVE', favorite, currentUsername);
-    ToastNotification.info(`Removed "${favorite.songName}" from favorites`);
+    ToastNotification.success(`Removed "${favorite.songName}" from favorites`);
 }
 
 function playFavoritesPlaylist() {
@@ -292,15 +326,10 @@ function playFavoritesPlaylist() {
     currentPlaylist = [...roomFavorites];
     currentPlaylistIndex = 0;
 
-    ToastNotification.success(`Starting room favorites (${roomFavorites.length} songs)`);
-    playSong(roomFavorites[currentFavoriteIndex]);
+    ToastNotification.success(`▶️ Starting favorites playlist (${roomFavorites.length} songs)`);
+    playSong(roomFavorites[0]);
 }
 
-function stopFavoritesPlaylist() {
-    isPlayingFavorites = false;
-    currentFavoriteIndex = 0;
-    ToastNotification.info('Stopped favorites playlist');
-}
 
 function openFavoritesDrawer() {
     document.getElementById('favoritesDrawer').classList.add('open');
@@ -312,7 +341,7 @@ function closeFavoritesDrawer() {
 
 function clearAllFavorites() {
     if (!isOrganizer) {
-        ToastNotification.warning('Only the organizer clear playlist');
+        ToastNotification.warning('Only the organizer can clear the playlist');
         return;
     }
     if (roomFavorites.length === 0) return;
@@ -338,21 +367,18 @@ const onOrganizerPause = (e) => {
     if (!isOrganizer) return;
 
     if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src) {
-        // ⭐ Clear previous debounce timer
-        if (playbackDebounceTimer) {
-            clearTimeout(playbackDebounceTimer);
+        // ✅ FIX: Use dedicated pause timer
+        if (pauseDebounceTimer) {
+            clearTimeout(pauseDebounceTimer);
         }
 
         const currentTime = Math.floor(audioPlayer.currentTime * 1000);
 
-        // ⭐ Prevent duplicate PAUSE events
         if (lastPlaybackAction === 'PAUSE' && Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
-            // console.log('⏭️ Skipping duplicate PAUSE event');
             return;
         }
 
-        // ⭐ Debounce: only send after 300ms of stability
-        playbackDebounceTimer = setTimeout(() => {
+        pauseDebounceTimer = setTimeout(() => {
             lastPlaybackAction = 'PAUSE';
             lastPlaybackTimestamp = currentTime;
 
@@ -362,14 +388,9 @@ const onOrganizerPause = (e) => {
                 controller: currentUsername
             };
 
-            stompClient.send(
-                `/app/music/chat/${currentRoomName}/playback`,
-                {},
-                JSON.stringify(playbackMessage)
-            );
-
-            // console.log('📤 Sent PAUSE event at', currentTime, 'ms');
-        }, DEBOUNCE_DELAY); // ⭐ 300ms debounce
+            stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
+            pauseDebounceTimer = null; // ✅ Clear after sending
+        }, DEBOUNCE_DELAY);
     }
 };
 
@@ -379,23 +400,24 @@ const onOrganizerPlay = (e) => {
     if (!isOrganizer) return;
 
     if (!ignoreLocalEvents && e.isTrusted && stompClient?.connected && audioPlayer.src && currentSongData) {
-        // ⭐ Clear previous debounce timer
-        if (playbackDebounceTimer) {
-            clearTimeout(playbackDebounceTimer);
-        }
-
         const currentTime = Math.floor(audioPlayer.currentTime * 1000);
         const action = currentTime > 1000 ? 'RESUME' : 'PLAY';
 
-        // ⭐ Prevent duplicate RESUME events
+        // ✅ FIX: Use appropriate timer based on action
+        const timerToUse = action === 'PLAY' ? 'playDebounceTimer' : 'resumeDebounceTimer';
+
+        if (action === 'PLAY' && playDebounceTimer) {
+            clearTimeout(playDebounceTimer);
+        } else if (action === 'RESUME' && resumeDebounceTimer) {
+            clearTimeout(resumeDebounceTimer);
+        }
+
         if (action === 'RESUME' && lastPlaybackAction === 'RESUME' &&
             Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
-            // console.log('⏭️ Skipping duplicate RESUME event');
             return;
         }
 
-        // ⭐ Debounce: only send after 300ms of stability
-        playbackDebounceTimer = setTimeout(() => {
+        const timer = setTimeout(() => {
             lastPlaybackAction = action;
             lastPlaybackTimestamp = currentTime;
 
@@ -410,14 +432,16 @@ const onOrganizerPlay = (e) => {
                 language: currentSongData.language
             };
 
-            stompClient.send(
-                `/app/music/chat/${currentRoomName}/playback`,
-                {},
-                JSON.stringify(playbackMessage)
-            );
+            stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
 
-            // console.log('📤 Sent', action, 'event at', currentTime, 'ms');
-        }, DEBOUNCE_DELAY); // ⭐ 300ms debounce
+            // ✅ Clear the timer
+            if (action === 'PLAY') playDebounceTimer = null;
+            else resumeDebounceTimer = null;
+        }, DEBOUNCE_DELAY);
+
+        // ✅ Store the timer
+        if (action === 'PLAY') playDebounceTimer = timer;
+        else resumeDebounceTimer = timer;
     }
 };
 
@@ -430,7 +454,8 @@ const onParticipantPlay = (e) => {
         e.preventDefault();
         try {
             audioPlayer.pause();
-        } catch (_) {}
+        } catch (_) {
+        }
         ToastNotification.warning('Only the organizer can control playback');
     }
 };
@@ -440,7 +465,8 @@ const onParticipantPause = (e) => {
     if (isOrganizer) return;
     if (!ignoreLocalEvents && e.isTrusted) {
         e.preventDefault();
-        audioPlayer.play().catch(() => {}); // Silent for participants
+        audioPlayer.play().catch(() => {
+        }); // Silent for participants
     }
 };
 
@@ -472,143 +498,86 @@ function onSongEnded() {
     const current = currentSongData?.songFileName;
     if (!current) return;
 
-    // console.log('🎵 Song ended:', currentSongData?.songName);
-    // console.log('📊 Current state:', {
-    //     mode: playlistMode,
-    //     playlistIndex: currentPlaylistIndex,
-    //     favoriteIndex: currentFavoriteIndex,
-    //     page: currentPage,
-    //     totalPages: totalPages,
-    //     songsOnPage: allSongsOnPage.length
-    // });
+    console.log('🎵 Song ended:', currentSongData?.songName);
+    console.log('📊 Current mode:', playlistMode);
 
     let nextSong = null;
     let nextIndex = -1;
 
-    // ==================== PRIORITY 1: FAVORITES ====================
-    // If song is in favorites, continue with favorites playlist
-    const favIndex = roomFavorites.findIndex(s => s.fileName === current);
-    if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
-        nextIndex = favIndex + 1;
-        nextSong = roomFavorites[nextIndex];
-        currentFavoriteIndex = nextIndex;
-        currentPlaylistIndex = nextIndex;
-        playlistMode = 'favorites';
-        // console.log('✅ Next from favorites:', nextSong.songName, 'at index', nextIndex);
+    // ==================== MODE 1: FAVORITES (ISOLATED) ====================
+    if (playlistMode === 'favorites') {
+        const favIndex = roomFavorites.findIndex(s => s.fileName === current);
+
+        if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
+            // Continue in favorites
+            nextIndex = favIndex + 1;
+            nextSong = roomFavorites[nextIndex];
+            currentFavoriteIndex = nextIndex;
+            currentPlaylistIndex = nextIndex;
+            console.log('✅ Next from favorites:', nextSong.songName);
+        } else {
+            // End of favorites - STOP
+            console.log('🏁 End of favorites playlist');
+            ToastNotification.info('🎵 End of favorites playlist');
+            playlistMode = null;
+            return;
+        }
     }
 
-        // ==================== PRIORITY 2: SEARCH RESULTS ====================
-    // If in search mode, continue with search results
-    else if (playlistMode === 'search' && searchSongsList.length > 0) {
+    // ==================== MODE 2: SEARCH RESULTS (ISOLATED) ====================
+    else if (playlistMode === 'search') {
         const searchIndex = searchSongsList.findIndex(s => s.fileName === current);
 
         if (searchIndex !== -1 && searchIndex < searchSongsList.length - 1) {
-            // Play next in search results
+            // Continue in search results
             nextIndex = searchIndex + 1;
             nextSong = searchSongsList[nextIndex];
-            currentPlaylist = [...searchSongsList];
             currentPlaylistIndex = nextIndex;
-            // console.log('✅ Next from search results:', nextSong.songName, 'at index', nextIndex);
-        } else if (searchIndex !== -1) {
-            // End of search results - check fallback options
-            // console.log('📋 End of search results, checking fallbacks...');
-
-            // Fallback to favorites if current song is in favorites
-            if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
-                playlistMode = 'favorites';
-                currentPlaylistIndex = favIndex;
-                currentFavoriteIndex = favIndex;
-                // console.log('🔄 Switching to favorites mode');
-                // Recursively call to continue with favorites
-                setTimeout(() => onSongEnded(), 100);
-                return;
-            }
-
-            // Fallback to main playlist
-            if (allSongsOnPage.length > 0) {
-                playlistMode = 'all';
-                currentPlaylistIndex = 0;
-                nextSong = allSongsOnPage[0];
-                // console.log('🔄 Fallback to main playlist:', nextSong.songName);
-            } else {
-                // console.log('🏁 End of search results, no fallback available');
-                ToastNotification.info('🎵 End of search results');
-                return;
-            }
+            console.log('✅ Next from search:', nextSong.songName);
+        } else {
+            // End of search results - STOP
+            console.log('🏁 End of search results');
+            ToastNotification.info('🎵 End of search results');
+            playlistMode = null;
+            return;
         }
     }
 
-    // ==================== PRIORITY 3: MAIN PLAYLIST (ALL SONGS) ====================
-    else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+    // ==================== MODE 3: GLOBAL PLAYLIST (WITH PAGINATION) ====================
+    else if (playlistMode === 'all') {
         const pageIndex = allSongsOnPage.findIndex(s => s.fileName === current);
 
-        // console.log('📄 Looking for song on page:', {
-        //     foundIndex: pageIndex,
-        //     totalOnPage: allSongsOnPage.length,
-        //     currentPage: currentPage + 1,
-        //     totalPages: totalPages
-        // });
-
-        if (pageIndex !== -1) {
-            // Song found on current page
-            if (pageIndex < allSongsOnPage.length - 1) {
-                // There's a next song on the same page
-                nextIndex = pageIndex + 1;
-                nextSong = allSongsOnPage[nextIndex];
-                currentPlaylistIndex = nextIndex;
-                // console.log('✅ Next song on same page:', nextSong.songName, 'at index', nextIndex);
-            }
-            else {
-                // Last song on current page
-                // console.log('📄 At last song of page', currentPage + 1);
-
-                if (currentPage < totalPages - 1) {
-                    // More pages available - load next page
-                    // console.log('📀 Loading next page...');
-                    loadNextPageAndPlay();
-                    return;
-                } else {
-                    // No more pages
-                    // console.log('🏁 Reached end of all pages');
-                    ToastNotification.info('🎵 Playlist ended');
-                    playlistMode = null;
-                    currentPlaylistIndex = 0;
-                    return;
-                }
-            }
-        }
-        else {
-            // Song not found on current page (edge case)
-            console.warn('⚠️ Current song not found on page, checking next page...');
-
-            if (currentPage < totalPages - 1) {
-                loadNextPageAndPlay();
-                return;
-            } else {
-                // console.log('🏁 No more pages available');
-                ToastNotification.info('🎵 Playlist ended');
-                playlistMode = null;
-                currentPlaylistIndex = 0;
-                return;
-            }
+        if (pageIndex !== -1 && pageIndex < allSongsOnPage.length - 1) {
+            // Next song on same page
+            nextIndex = pageIndex + 1;
+            nextSong = allSongsOnPage[nextIndex];
+            currentPlaylistIndex = nextIndex;
+            console.log('✅ Next song on same page:', nextSong.songName);
+        } else if (currentPage < totalPages - 1) {
+            // Load next page
+            console.log('📀 Loading next page...');
+            loadNextPageAndPlay();
+            return;
+        } else {
+            // End of all pages
+            console.log('🏁 End of global playlist');
+            ToastNotification.info('🎵 End of playlist');
+            playlistMode = null;
+            return;
         }
     }
 
-    // ==================== NO ACTIVE PLAYLIST MODE ====================
+    // ==================== NO MODE - SHOULDN'T HAPPEN ====================
     else {
-        // console.log('⚠️ No active playlist mode');
+        console.log('⚠️ No active playlist mode');
         ToastNotification.info('🎵 Playback ended');
         return;
     }
 
     // ==================== PLAY NEXT SONG ====================
     if (nextSong) {
-        // console.log('▶️ Playing next song:', nextSong.songName);
-        // ToastNotification.info(`▶️ Auto-playing: ${nextSong.songName}`);
+        console.log('▶️ Auto-playing next:', nextSong.songName);
         setTimeout(() => playSong(nextSong), 700);
-    } else {
-        // console.log('❌ No next song determined');
-        ToastNotification.info('🎵 Playlist ended');
     }
 }
 
@@ -618,11 +587,20 @@ function onRoleChange() {
     updateAudioControls();
     updatePlaybackButtons();
 
-    // ⭐ ADD THIS: Clear any pending debounced events
-    if (playbackDebounceTimer) {
-        clearTimeout(playbackDebounceTimer);
-        playbackDebounceTimer = null;
+    // ✅ FIX: Clear ALL debounce timers
+    if (playDebounceTimer) {
+        clearTimeout(playDebounceTimer);
+        playDebounceTimer = null;
     }
+    if (pauseDebounceTimer) {
+        clearTimeout(pauseDebounceTimer);
+        pauseDebounceTimer = null;
+    }
+    if (resumeDebounceTimer) {
+        clearTimeout(resumeDebounceTimer);
+        resumeDebounceTimer = null;
+    }
+
     lastPlaybackAction = null;
     lastPlaybackTimestamp = 0;
 
@@ -632,26 +610,7 @@ function onRoleChange() {
     }
 }
 
-function resetAudioOnOrganizerLeave() {
-    const audioPlayer = document.getElementById('audioPlayer');
-    if (!audioPlayer) return;
 
-    try {
-        audioPlayer.pause();
-    } catch (e) {}
-
-    audioPlayer.src = "";
-    audioPlayer.removeAttribute("src");
-
-    document.getElementById('currentSongTitle').textContent = "No song playing";
-    document.getElementById('currentSongDetails').textContent = "Select a song to play";
-
-    currentSongData = null;
-    ignoreLocalEvents = false;
-
-    isPlayingFavorites = false;
-    currentFavoriteIndex = 0;
-}
 function resetAudioPlayer() {
     const audioPlayer = document.getElementById('audioPlayer');
     if (!audioPlayer) return;
@@ -692,7 +651,7 @@ function resetAudioPlayer() {
 window.onload = function () {
     if (isReload()) {
         // console.log('🔄 Reload detected on page load - redirecting to dashboard');
-        window.location.href = '/app/music/dashboard';
+        window.location.href = '/app/music/public/logout';
         return;
     }
 
@@ -724,6 +683,7 @@ function initializePage() {
     loadSongsForPage(0);
     initializeToastNotifications();
 }
+
 // ==================== NETWORK STATUS MONITORING ====================
 let wasOffline = false;
 
@@ -747,28 +707,23 @@ window.addEventListener('offline', () => {
     wasOffline = true;
     ToastNotification.warning('🌐 No internet connection', 0); // Persistent toast
 });
+
 // ======================== HANDLE EXPIRED SESSION ============================
 function handleSessionExpired(reason = 'Session expired') {
     if (logoutInProgress) return;
     logoutInProgress = true;
 
+    sessionExpired = true;
+
     console.warn('⏱ Session expired:', reason);
     ToastNotification.error('Session expired. Logging out...', 2000);
 
-    // Stop polling/heartbeat
-    if (participantRefreshInterval) {
-        clearInterval(participantRefreshInterval);
-        participantRefreshInterval = null;
-    }
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-        heartbeatInterval = null;
-    }
+    cleanupIntervals();
 
     // ✅ CRITICAL: Exit room with beacon BEFORE redirect
-    if (currentRoomName && currentUsername) {
-        sendExitBeacon(true); // fullLogout = true
-    }
+    // if (currentRoomName && currentUsername) {
+    //     sendExitBeacon(true); // fullLogout = true
+    // }
 
     // Disconnect WebSocket
     try {
@@ -785,6 +740,8 @@ function handleSessionExpired(reason = 'Session expired') {
     jwtToken = null;
     currentUsername = null;
     currentRoomName = null;
+    // ✅ Mark clean exit to prevent beacon
+    sessionStorage.setItem('cleanExit', 'true');
 
     // ✅ Redirect after beacon has time to send (beacons are async but queued)
     setTimeout(() => {
@@ -800,12 +757,8 @@ async function fetchWithTimeout(url, options = {}, timeout = 8000) {
 
     try {
         const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-            headers: {
-                ...options.headers,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Authorization': `Bearer ${jwtToken}`
+            ...options, signal: controller.signal, headers: {
+                ...options.headers, 'X-Requested-With': 'XMLHttpRequest', 'Authorization': `Bearer ${jwtToken}`
             }
         });
 
@@ -839,13 +792,11 @@ async function loadSongsForPage(pageNumber) {
     showLoadingState();
 
     try {
-        const response = await fetch(
-            `/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`, {
-                headers: {
-                    'Authorization': `Bearer ${jwtToken}`
-                }
+        const response = await fetch(`/app/music/audio/fetchAllSongs?page=${pageNumber}&size=10`, {
+            headers: {
+                'Authorization': `Bearer ${jwtToken}`
             }
-        );
+        });
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -860,11 +811,7 @@ async function loadSongsForPage(pageNumber) {
 
     } catch (error) {
         console.error('Error loading songs:', error);
-        ToastNotification.error(
-            error.message === 'Request timeout'
-                ? 'Request timed out. Please try again.'
-                : 'Failed to load songs'
-        );
+        ToastNotification.error(error.message === 'Request timeout' ? 'Request timed out. Please try again.' : 'Failed to load songs');
         showEmptyState();
     } finally {
         isLoadingSongs = false;
@@ -892,8 +839,7 @@ function updatePaginationUI() {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    if (!currentPageElement || !totalPagesElement || !currentPageNum ||
-        !totalPagesNum || !prevBtn || !nextBtn) {
+    if (!currentPageElement || !totalPagesElement || !currentPageNum || !totalPagesNum || !prevBtn || !nextBtn) {
         console.warn('⚠️ Pagination elements not found');
         return;
     }
@@ -928,6 +874,8 @@ function showEmptyState() {
 }
 
 // ==================== TOAST NOTIFICATION SYSTEM ====================
+// ✅ Toast Rate Limiter
+
 const ToastNotification = {
     show: function (message, type = 'info', duration = 3000) {
         const toastContainer = document.getElementById('toastContainer');
@@ -958,17 +906,10 @@ const ToastNotification = {
             position: relative;
         `;
 
-        if (type === 'success') toastDiv.style.backgroundColor = '#4caf50';
-        else if (type === 'error') toastDiv.style.backgroundColor = '#f44336';
-        else if (type === 'info') toastDiv.style.backgroundColor = '#2196F3';
-        else if (type === 'warning') toastDiv.style.backgroundColor = '#ff9800';
-        else toastDiv.style.backgroundColor = '#323232';
+        if (type === 'success') toastDiv.style.backgroundColor = '#4caf50'; else if (type === 'error') toastDiv.style.backgroundColor = '#f44336'; else if (type === 'info') toastDiv.style.backgroundColor = '#2196F3'; else if (type === 'warning') toastDiv.style.backgroundColor = '#ff9800'; else toastDiv.style.backgroundColor = '#323232';
 
         const icons = {
-            success: '✓',
-            error: '✕',
-            info: 'ℹ',
-            warning: '⚠'
+            success: '✓', error: '✕', info: 'ℹ', warning: '⚠'
         };
 
         toastDiv.innerHTML = `
@@ -1170,7 +1111,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
     const isOwnAction = playbackMsg.controller === currentUsername;
 
     // ⭐ Show appropriate toast
-    if (!isOwnAction) {
+    if (!isOwnAction && toastRateLimiter.canShow('playback-info')) {
         ToastNotification.info(`🎵 ${playbackMsg.controller} is playing: ${playbackMsg.songName}`, 2000);
     }
 
@@ -1302,13 +1243,32 @@ function handleResumeCommand(audioPlayer, playbackMsg) {
 }
 
 // ==================== FIXED: HANDLE PLAYBACK SYNC RESPONSE ====================
-function handlePlaybackSyncState(syncMsg) {
-    // console.log('🔄 [SYNC] Received playback state:', syncMsg);
+// ✅ Clock synchronization helpers
+let serverTimeOffset = 0; // Difference between server and client time
+let syncSamples = [];
+const MAX_SYNC_SAMPLES = 5;
 
-    // Mark that we've received initial sync
+function updateServerTimeOffset(serverTime) {
+    const clientTime = Date.now();
+    const offset = serverTime - clientTime;
+
+    syncSamples.push(offset);
+    if (syncSamples.length > MAX_SYNC_SAMPLES) {
+        syncSamples.shift();
+    }
+
+    // Use median to reduce impact of outliers
+    const sortedSamples = [...syncSamples].sort((a, b) => a - b);
+    serverTimeOffset = sortedSamples[Math.floor(sortedSamples.length / 2)];
+}
+
+function getAdjustedServerTime() {
+    return Date.now() + serverTimeOffset;
+}
+function handlePlaybackSyncState(syncMsg) {
+    syncRequestPending = false;
     hasReceivedInitialSync = true;
 
-    // Clear any pending sync timeout
     if (syncTimeout) {
         clearTimeout(syncTimeout);
         syncTimeout = null;
@@ -1321,39 +1281,30 @@ function handlePlaybackSyncState(syncMsg) {
         return;
     }
 
-    // ⭐ CRITICAL FIX: Check if there's valid playback state
     if (!syncMsg.valid || !syncMsg.songFileName) {
-        // ✅ FORCE RESET: Clear any cached/playing audio
         if (audioPlayer.src || !audioPlayer.paused) {
-            // console.log('⚠️ [SYNC] No valid state but audio present - forcing reset');
             resetAudioPlayer();
             ToastNotification.info('No active playback in room');
         }
-        // console.log('ℹ️ [SYNC] No active playback to sync');
         isSyncing = false;
         return;
     }
 
-    // If organizer, don't sync (they control playback)
     if (isOrganizer) {
-        // console.log('⏭️ [SYNC] Skipping sync - user is organizer');
-
-        // ⭐ NEW: If organizer and no local playback, but server has state, reset server state
         if (!currentSongData && syncMsg.valid) {
-            // console.log('⚠️ [SYNC] New organizer has no playback but server does - this is stale state');
-            // Optionally: Send a message to clear server-side state
-            // For now, just ignore and let the organizer control from scratch
+            // Organizer has no playback but server does - stale state
         }
-
         isSyncing = false;
         return;
     }
 
-    // ⭐ NEW: Additional validation - check if sync message is stale
+    // ✅ FIX: Better sync calculation
     const serverTime = syncMsg.serverTime || Date.now();
+    updateServerTimeOffset(serverTime);
+
     const messageAge = Date.now() - serverTime;
 
-    if (messageAge > 30000) { // Message older than 30 seconds
+    if (messageAge > 30000) {
         console.warn('⚠️ [SYNC] Received stale sync message (age:', messageAge, 'ms) - ignoring');
         resetAudioPlayer();
         isSyncing = false;
@@ -1369,24 +1320,21 @@ function handlePlaybackSyncState(syncMsg) {
     //     messageAge: messageAge
     // });
 
-    // Calculate adjusted timestamp accounting for network delay
-    const clientTime = Date.now();
-    const networkDelay = clientTime - serverTime;
-
     // console.log('🌐 [SYNC] Network delay:', networkDelay, 'ms');
 
     let adjustedTimestamp = syncMsg.timestamp || 0;
 
-    // Only adjust if currently playing (not paused)
     if (syncMsg.isPlaying && !syncMsg.isPaused) {
-        adjustedTimestamp += networkDelay;
-        // console.log('⏱️ [SYNC] Adjusted timestamp for network delay:', {
-        //     original: syncMsg.timestamp,
-        //     networkDelay: networkDelay,
-        //     adjusted: adjustedTimestamp
-        // });
-    } else {
-        // console.log('⏸️ [SYNC] Song is paused - no timestamp adjustment');
+        // Account for time since server generated the message
+        const timeSinceMessage = Date.now() - serverTime;
+        adjustedTimestamp += timeSinceMessage;
+
+        console.log('⏱️ [SYNC] Adjusted timestamp:', {
+            original: syncMsg.timestamp,
+            messageAge: timeSinceMessage,
+            adjusted: adjustedTimestamp,
+            serverOffset: serverTimeOffset
+        });
     }
 
     // Set ignore flag to prevent event triggers
@@ -1406,13 +1354,7 @@ function handlePlaybackSyncState(syncMsg) {
     // console.log('📝 [SYNC] Updated current song data:', currentSongData);
 
     // Update UI
-    updateCurrentSongDisplay(
-        syncMsg.songName,
-        syncMsg.hero,
-        syncMsg.language,
-        syncMsg.movie,
-        syncMsg.singer
-    );
+    updateCurrentSongDisplay(syncMsg.songName, syncMsg.hero, syncMsg.language, syncMsg.movie, syncMsg.singer);
 
     // Build audio source URL
     const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}?t=${Date.now()}`;
@@ -1496,40 +1438,46 @@ function requestPlaybackSync() {
         return;
     }
 
-    if (isSyncing) {
-        // console.log('⏭️ [SYNC] Already syncing - skipping duplicate request');
+    // ✅ FIX: Prevent concurrent sync requests
+    if (syncRequestPending) {
+        console.log('⏭️ [SYNC] Sync request already pending, queuing...');
+        pendingSyncRequests++;
         return;
     }
 
-    // console.log('🔄 [SYNC] Requesting playback state...');
+    syncRequestPending = true;
     isSyncing = true;
 
     const syncRequest = {
         username: currentUsername,
         timestamp: Date.now(),
-        roomName: currentRoomName  // Include room name for clarity
+        roomName: currentRoomName
     };
 
     try {
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/playback/sync`,
-            {},
-            JSON.stringify(syncRequest)
-        );
-
-        // console.log('📤 [SYNC] Sync request sent:', syncRequest);
+        stompClient.send(`/app/music/chat/${currentRoomName}/playback/sync`, {}, JSON.stringify(syncRequest));
 
         // Set timeout in case no response
         syncTimeout = setTimeout(() => {
             if (isSyncing && !hasReceivedInitialSync) {
-                // console.log('⏱️ [SYNC] No sync response received - assuming no active playback');
+                console.log('⏱️ [SYNC] No sync response received - assuming no active playback');
                 isSyncing = false;
             }
-        }, 5000);  // Increased to 5 seconds
+
+            // ✅ FIX: Clear pending flag and process queue
+            syncRequestPending = false;
+
+            // Process queued request if any
+            if (pendingSyncRequests > 0) {
+                pendingSyncRequests = 0; // Reset counter
+                setTimeout(() => requestPlaybackSync(), 500); // Retry after delay
+            }
+        }, 5000);
 
     } catch (error) {
         console.error('❌ [SYNC] Error requesting sync:', error);
         isSyncing = false;
+        syncRequestPending = false;
     }
 }
 
@@ -1590,11 +1538,7 @@ function playSong(song) {
 
     try {
         const messageJson = JSON.stringify(playbackMessage);
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/playback`,
-            {},
-            messageJson
-        );
+        stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, messageJson);
 
         // console.log('📤 Sent PLAY command for:', song.songName);
 
@@ -1625,9 +1569,9 @@ function playNextSong() {
     let nextSong = null;
     let nextIndex = 0;
 
-    // Priority 1: Favorites playlist
-    if (playlistMode === 'favorites' && roomFavorites.length > 0) {
-        const currentIndex = isPlayingFavorites ? currentFavoriteIndex : currentPlaylistIndex;
+    // ==================== FAVORITES MODE (ISOLATED) ====================
+    if (playlistMode === 'favorites') {
+        const currentIndex = currentPlaylistIndex;
 
         if (currentIndex >= roomFavorites.length - 1) {
             ToastNotification.info('🎵 End of favorites playlist');
@@ -1636,52 +1580,26 @@ function playNextSong() {
 
         nextIndex = currentIndex + 1;
         nextSong = roomFavorites[nextIndex];
-
-        if (isPlayingFavorites) {
-            currentFavoriteIndex = nextIndex;
-        }
+        currentFavoriteIndex = nextIndex;
         currentPlaylistIndex = nextIndex;
     }
 
-    // Priority 2: Search results with fallback
-    else if (playlistMode === 'search' && searchSongsList.length > 0) {
+    // ==================== SEARCH MODE (ISOLATED) ====================
+    else if (playlistMode === 'search') {
         if (currentPlaylistIndex >= searchSongsList.length - 1) {
-            // End of search - try fallback
-            const currentSong = searchSongsList[currentPlaylistIndex];
-
-            // Check if song is in favorites
-            const favIndex = roomFavorites.findIndex(s => s.fileName === currentSong.fileName);
-            if (favIndex !== -1 && favIndex < roomFavorites.length - 1) {
-                // Switch to favorites
-                playlistMode = 'favorites';
-                currentPlaylistIndex = favIndex;
-                currentFavoriteIndex = favIndex;
-                ToastNotification.info('🔄 Continuing from favorites');
-                playNextSong(); // Recursive with new mode
-                return;
-            }
-
-            // Fallback to main playlist (current page)
-            if (allSongsOnPage.length > 0) {
-                playlistMode = 'all';
-                currentPlaylistIndex = 0;
-                nextSong = allSongsOnPage[0];
-                ToastNotification.info('🔄 Continuing from main playlist');
-            } else {
-                ToastNotification.info('🎵 End of search results');
-                return;
-            }
-        } else {
-            nextIndex = currentPlaylistIndex + 1;
-            nextSong = searchSongsList[nextIndex];
-            currentPlaylistIndex = nextIndex;
+            ToastNotification.info('🎵 End of search results');
+            return;
         }
+
+        nextIndex = currentPlaylistIndex + 1;
+        nextSong = searchSongsList[nextIndex];
+        currentPlaylistIndex = nextIndex;
     }
 
-    // Priority 3: Main playlist with pagination
-    else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+    // ==================== GLOBAL MODE (WITH PAGINATION) ====================
+    else if (playlistMode === 'all') {
         if (currentPlaylistIndex >= allSongsOnPage.length - 1) {
-            // At end of page - check for next page
+            // Check for next page
             if (currentPage < totalPages - 1) {
                 loadNextPageAndPlay();
                 return;
@@ -1694,15 +1612,12 @@ function playNextSong() {
         nextIndex = currentPlaylistIndex + 1;
         nextSong = allSongsOnPage[nextIndex];
         currentPlaylistIndex = nextIndex;
-    }
-
-    else {
-        ToastNotification.warning('No playlist available to skip');
+    } else {
+        ToastNotification.warning('No active playlist');
         return;
     }
 
     if (nextSong) {
-        // ToastNotification.info(`⏭️ Next: ${nextSong.songName}`);
         broadcastSkipCommand('NEXT', nextSong, nextIndex);
     }
 }
@@ -1716,28 +1631,23 @@ function playPreviousSong() {
     let prevSong = null;
     let prevIndex = 0;
 
-    // Priority 1: Favorites
-    if (playlistMode === 'favorites' && roomFavorites.length > 0) {
-        const currentIndex = isPlayingFavorites ? currentFavoriteIndex : currentPlaylistIndex;
-
-        if (currentIndex === 0) {
-            ToastNotification.info('🎵 Currently playing first song');
+    // ==================== FAVORITES MODE (ISOLATED) ====================
+    if (playlistMode === 'favorites') {
+        if (currentPlaylistIndex === 0) {
+            ToastNotification.info('🎵 Already at first song in favorites');
             return;
         }
 
-        prevIndex = currentIndex - 1;
+        prevIndex = currentPlaylistIndex - 1;
         prevSong = roomFavorites[prevIndex];
-
-        if (isPlayingFavorites) {
-            currentFavoriteIndex = prevIndex;
-        }
+        currentFavoriteIndex = prevIndex;
         currentPlaylistIndex = prevIndex;
     }
 
-    // Priority 2: Search results
-    else if (playlistMode === 'search' && searchSongsList.length > 0) {
+    // ==================== SEARCH MODE (ISOLATED) ====================
+    else if (playlistMode === 'search') {
         if (currentPlaylistIndex === 0) {
-            ToastNotification.info('🎵 Currently at first song');
+            ToastNotification.info('🎵 Already at first song in search results');
             return;
         }
 
@@ -1746,15 +1656,15 @@ function playPreviousSong() {
         currentPlaylistIndex = prevIndex;
     }
 
-    // Priority 3: Main playlist with pagination
-    else if (playlistMode === 'all' && allSongsOnPage.length > 0) {
+    // ==================== GLOBAL MODE (WITH PAGINATION) ====================
+    else if (playlistMode === 'all') {
         if (currentPlaylistIndex === 0) {
-            // At start of page - check for previous page
+            // Check for previous page
             if (currentPage > 0) {
                 loadPreviousPageAndPlay();
                 return;
             } else {
-                ToastNotification.info('🎵 Currently at first song');
+                ToastNotification.info('🎵 Already at first song');
                 return;
             }
         }
@@ -1762,15 +1672,12 @@ function playPreviousSong() {
         prevIndex = currentPlaylistIndex - 1;
         prevSong = allSongsOnPage[prevIndex];
         currentPlaylistIndex = prevIndex;
-    }
-
-    else {
-        ToastNotification.warning('No playlist available to skip');
+    } else {
+        ToastNotification.warning('No active playlist');
         return;
     }
 
     if (prevSong) {
-        // ToastNotification.info(`⏮️ Previous: ${prevSong.songName}`);
         broadcastSkipCommand('PREVIOUS', prevSong, prevIndex);
     }
 }
@@ -1782,19 +1689,11 @@ function broadcastSkipCommand(action, song = null, index = 0) {
     }
 
     const skipMessage = {
-        action: action,
-        song: song,
-        index: index,
-        controller: currentUsername,
-        timestamp: Date.now()
+        action: action, song: song, index: index, controller: currentUsername, timestamp: Date.now()
     };
 
     try {
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/skip`,
-            {},
-            JSON.stringify(skipMessage)
-        );
+        stompClient.send(`/app/music/chat/${currentRoomName}/skip`, {}, JSON.stringify(skipMessage));
 
         if (song) {
             playSong(song);
@@ -1854,6 +1753,7 @@ function updatePlaybackButtons() {
         nextBtn.title = 'Only organizer can skip songs';
     }
 }
+
 async function loadNextPageAndPlay() {
     if (currentPage >= totalPages - 1) {
         // console.log('🏁 Already on last page');
@@ -1927,11 +1827,10 @@ function startHeartbeat() {
         if (stompClient && stompClient.connected) {
             try {
                 // ✅ Send WebSocket heartbeat
-                stompClient.send(
-                    `/app/music/chat/${currentRoomName}/heartbeat`,
-                    {},
-                    JSON.stringify({ username: currentUsername, timestamp: Date.now() })
-                );
+                stompClient.send(`/app/music/chat/${currentRoomName}/heartbeat`, {}, JSON.stringify({
+                    username: currentUsername,
+                    timestamp: Date.now()
+                }));
                 lastHeartbeat = Date.now();
 
                 // // ✅ NEW: Periodic session validation via HTTP
@@ -1945,7 +1844,8 @@ function startHeartbeat() {
                     ToastNotification.warning('Connection lost. Reconnecting...');
                     try {
                         stompClient.disconnect();
-                    } catch (e) {}
+                    } catch (e) {
+                    }
                     setTimeout(() => connectWebSocket(jwtToken), 1000);
                 }
             }
@@ -1953,14 +1853,23 @@ function startHeartbeat() {
     }, 10000); // Every 10 seconds
 }
 
+function cleanupIntervals() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+    if (participantRefreshInterval) {
+        clearInterval(participantRefreshInterval);
+        participantRefreshInterval = null;
+    }
+}
+
 // ✅ NEW: HTTP-based session validation
 async function validateSessionViaHttp() {
     try {
         const response = await fetch('/app/music/chat/session/validate', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${jwtToken}`,
-                'X-Requested-With': 'XMLHttpRequest'
+            method: 'GET', headers: {
+                'Authorization': `Bearer ${jwtToken}`, 'X-Requested-With': 'XMLHttpRequest'
             }
         });
 
@@ -1977,6 +1886,16 @@ async function validateSessionViaHttp() {
 
 // ==================== WEBSOCKET CONNECTION ====================
 function connectWebSocket(token) {
+    // ✅ FIX: Check reconnection limit
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        ToastNotification.error('Connection failed after multiple attempts. Please refresh the page.', 0);
+        cleanupIntervals();
+        return;
+    }
+
+    reconnectAttempts++;
+    console.log(`🔄 Connection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
     const socket = new SockJS('/app/music/ws');
     stompClient = Stomp.over(socket);
 
@@ -1989,125 +1908,133 @@ function connectWebSocket(token) {
         if (stompClient) {
             try {
                 stompClient.disconnect();
-            } catch (e) {}
+            } catch (e) {
+            }
         }
         setTimeout(() => connectWebSocket(token), 2000);
     }, 10000); // 10 second timeout
 
-    stompClient.connect(
-        {'Authorization': `Bearer ${token}`},
-        (frame) => {
-            clearTimeout(connectionTimeout);
-            // console.log('✅ Connected to WebSocket');
-            ToastNotification.success('Connected to chat room');
-            startHeartbeat();
-            // Subscribe to all channels...
-            // (keep all existing subscriptions)
+    stompClient.connect({'Authorization': `Bearer ${token}`}, (frame) => {
+        clearTimeout(connectionTimeout);
+        // console.log('✅ Connected to WebSocket');
+        reconnectAttempts = 0;
+        lastSuccessfulConnection = Date.now();
 
-            // Chat messages
-            stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
-                const msg = JSON.parse(message.body);
-                if (msg.type === "LEAVE") {
-                    lastUserLeft = msg.sender;
+        ToastNotification.success('Connected to chat room');
+        startHeartbeat();
+        // Subscribe to all channels...
+        // (keep all existing subscriptions)
+
+        // Chat messages
+        stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
+            const msg = JSON.parse(message.body);
+            if (msg.type === "LEAVE") {
+                lastUserLeft = msg.sender;
+                // ✅ FIX: Rate limit leave notifications
+                if (toastRateLimiter.canShow('participant-leave')) {
                     ToastNotification.info(`${msg.sender} left the room`);
-                    return;
                 }
-                if (msg.type === "JOIN") {
-                    ToastNotification.success(`${msg.sender} joined the room`);
-                    return;
-                }
-                if (msg.type === "CHAT") {
-                    displayMessage(msg);
-                }
-            });
-
-            // Playback commands
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
-                const playbackMsg = JSON.parse(message.body);
-                handlePlaybackCommand(playbackMsg);
-            });
-
-            // ⭐ CRITICAL: Subscribe to playback sync state responses
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/playback/state`, (message) => {
-                // console.log('📨 [SYNC] Received sync state message');
-                const syncMsg = JSON.parse(message.body);
-                handlePlaybackSyncState(syncMsg);
-            });
-
-            // Typing, Skip, Participants, Favorites (keep existing subscriptions)
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
-                const typingData = JSON.parse(message.body);
-                handleTypingIndicator(typingData);
-            });
-
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/skip`, (message) => {
-                const skipMsg = JSON.parse(message.body);
-                handleSkipCommand(skipMsg);
-            });
-
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
-                const participants = JSON.parse(message.body);
-                updateParticipantsDisplay(participants);
-            });
-
-            stompClient.subscribe(`/topic/chat/${currentRoomName}/favorites`, (message) => {
-                const favoritesMsg = JSON.parse(message.body);
-                handleFavoritesUpdate(favoritesMsg);
-            });
-
-            // Send JOIN message
-            stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'JOIN',
-                content: `${currentUsername} joined the room`
-            }));
-
-            // Request current favorites state
-            requestFavoritesSync();
-
-            // ⭐ CRITICAL: Request playback sync for late joiners
-            // Give server time to process JOIN, then sync
-            // console.log('⏳ [SYNC] Scheduling playback sync in 1 second...');
-            setTimeout(() => {
-                // console.log('🚀 [SYNC] Initiating playback sync...');
-                requestPlaybackSync();
-            }, 1000);  // Increased delay to ensure JOIN is processed
-
-            startParticipantRefreshInterval();
-        },
-        (error) => {
-            console.error('❌ WebSocket error:', error);
-
-            // 🔥 STEP 5.4 — AUTH FAILURE DETECTION
-            const msg =
-                error?.headers?.message ||
-                error?.body ||
-                error?.toString?.() ||
-                '';
-
-            if (
-                msg.includes('401') ||
-                msg.includes('403') ||
-                msg.toLowerCase().includes('unauthorized') ||
-                msg.toLowerCase().includes('forbidden')
-            ) {
-                handleSessionExpired('WebSocket authentication failed');
-                return; // ⛔ STOP reconnect attempts
+                return;
             }
 
-            // ⏳ Non-auth error → retry
-            ToastNotification.error('Connection error. Reconnecting...');
+            if (msg.type === "JOIN") {
+                // ✅ FIX: Rate limit join notifications
+                if (toastRateLimiter.canShow('participant-join')) {
+                    ToastNotification.success(`${msg.sender} joined the room`);
+                }
+                return;
+            }
+            if (msg.type === "CHAT") {
+                displayMessage(msg);
+            }
+        });
 
-            const retryDelay = Math.min(3000 * (Math.random() + 1), 10000);
+        // Playback commands
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/playback`, (message) => {
+            const playbackMsg = JSON.parse(message.body);
+            handlePlaybackCommand(playbackMsg);
+        });
+
+        // ⭐ CRITICAL: Subscribe to playback sync state responses
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/playback/state`, (message) => {
+            // console.log('📨 [SYNC] Received sync state message');
+            const syncMsg = JSON.parse(message.body);
+            handlePlaybackSyncState(syncMsg);
+        });
+
+        // Typing, Skip, Participants, Favorites (keep existing subscriptions)
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/typing`, (message) => {
+            const typingData = JSON.parse(message.body);
+            handleTypingIndicator(typingData);
+        });
+
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/skip`, (message) => {
+            const skipMsg = JSON.parse(message.body);
+            handleSkipCommand(skipMsg);
+        });
+
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/participants`, (message) => {
+            const participants = JSON.parse(message.body);
+            updateParticipantsDisplay(participants);
+        });
+
+        stompClient.subscribe(`/topic/chat/${currentRoomName}/favorites`, (message) => {
+            const favoritesMsg = JSON.parse(message.body);
+            handleFavoritesUpdate(favoritesMsg);
+        });
+
+        // Send JOIN message
+        stompClient.send(`/app/music/chat/${currentRoomName}/addUser`, {}, JSON.stringify({
+            sender: currentUsername, type: 'JOIN', content: `${currentUsername} joined the room`
+        }));
+
+        // Request current favorites state
+        requestFavoritesSync();
+
+        // ⭐ CRITICAL: Request playback sync for late joiners
+        // Give server time to process JOIN, then sync
+        // console.log('⏳ [SYNC] Scheduling playback sync in 1 second...');
+        setTimeout(() => {
+            // console.log('🚀 [SYNC] Initiating playback sync...');
+            requestPlaybackSync();
+        }, 1000);  // Increased delay to ensure JOIN is processed
+
+        startParticipantRefreshInterval();
+    }, (error) => {
+        console.error('❌ WebSocket error:', error);
+
+        // ✅ FIX: Clean up intervals on error
+        cleanupIntervals();
+
+        const msg = error?.headers?.message || error?.body || error?.toString?.() || '';
+
+        if (msg.includes('401') || msg.includes('403') ||
+            msg.toLowerCase().includes('unauthorized') ||
+            msg.toLowerCase().includes('forbidden')) {
+            handleSessionExpired('WebSocket authentication failed');
+            return;
+        }
+
+        if (lastSuccessfulConnection &&
+            (Date.now() - lastSuccessfulConnection) > RECONNECT_RESET_TIME) {
+            reconnectAttempts = 0;
+            console.log('🔄 Resetting reconnect counter (last success > 1 min ago)');
+        }
+
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            ToastNotification.error(`Connection error. Reconnecting... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+
+            const retryDelay = Math.min(3000 * Math.pow(2, reconnectAttempts - 1), 10000);
 
             setTimeout(() => {
-                if (!logoutInProgress && stompClient && !stompClient.connected) {
+                if (!logoutInProgress && (!stompClient || !stompClient.connected)) {
                     connectWebSocket(token);
                 }
             }, retryDelay);
+        } else {
+            ToastNotification.error('Unable to connect. Please refresh the page.', 0);
         }
-
-    );
+    });
 }
 
 function handleTypingIndicator(data) {
@@ -2126,11 +2053,7 @@ function handleTypingIndicator(data) {
 
 function requestFavoritesSync() {
     if (stompClient && stompClient.connected) {
-        stompClient.send(
-            `/app/music/chat/${currentRoomName}/favorites/sync`,
-            {},
-            JSON.stringify({username: currentUsername})
-        );
+        stompClient.send(`/app/music/chat/${currentRoomName}/favorites/sync`, {}, JSON.stringify({username: currentUsername}));
     }
 }
 
@@ -2146,9 +2069,7 @@ function startParticipantRefreshInterval() {
 
 async function refreshParticipants() {
     try {
-        const response = await fetchWithTimeout(
-            `/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`
-        );
+        const response = await fetchWithTimeout(`/app/music/room/getRoom?roomName=${encodeURIComponent(currentRoomName)}`);
 
 
         if (response.ok) {
@@ -2203,7 +2124,7 @@ function updateParticipantsDisplay(participants) {
             userColor = currentUserColor;
             darkerColor = currentUserDarkerColor;
         } else {
-            userColor = getUserColor(p.userName);
+            userColor = getColorForUser(p.userName);
             darkerColor = getDarkerShade(userColor);
         }
 
@@ -2220,8 +2141,7 @@ function updateParticipantsDisplay(participants) {
             isOrganizer = p.organizer;
 
             if (wasOrganizer !== isOrganizer) {
-                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT',
-                    'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
+                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT', 'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
                 onRoleChange();
 
                 if (isOrganizer) {
@@ -2259,6 +2179,7 @@ function getColorForUser(username) {
     }
     return userColors[username];
 }
+
 function updatePermissionNotice() {
     const notice = document.getElementById('permissionNotice');
     if (!isOrganizer) {
@@ -2303,9 +2224,7 @@ function updateAudioControls() {
 // ==================== CHAT MESSAGING ====================
 function setReplyToMessage(messageId, sender, content) {
     replyingToMessage = {
-        id: messageId,
-        sender: sender,
-        content: content
+        id: messageId, sender: sender, content: content
     };
     showReplyPreview();
 }
@@ -2346,7 +2265,7 @@ function cancelReply() {
 function scrollToMessage(messageId) {
     const targetMessage = document.querySelector(`[data-message-id="${messageId}"]`);
     if (targetMessage) {
-        targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetMessage.scrollIntoView({behavior: 'smooth', block: 'center'});
         targetMessage.classList.add('message-highlight');
         setTimeout(() => targetMessage.classList.remove('message-highlight'), 2000);
     } else {
@@ -2373,15 +2292,9 @@ function sendMessage() {
     }
 
     const chatMessage = {
-        sender: currentUsername,
-        content: content,
-        type: 'CHAT',
-        replyTo: replyingToMessage ? {
-            id: replyingToMessage.id,
-            sender: replyingToMessage.sender,
-            content: replyingToMessage.content
-        } : null,
-        timestamp: Date.now()
+        sender: currentUsername, content: content, type: 'CHAT', replyTo: replyingToMessage ? {
+            id: replyingToMessage.id, sender: replyingToMessage.sender, content: replyingToMessage.content
+        } : null, timestamp: Date.now()
     };
 
     try {
@@ -2411,8 +2324,7 @@ function displayMessage(message) {
     messageDiv.dataset.messageId = messageId;
 
     const time = new Date(message.timestamp || Date.now()).toLocaleTimeString('en-US', {  // ✅ UPDATE THIS
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: '2-digit', minute: '2-digit'
     });
 
 
@@ -2530,6 +2442,41 @@ function handleFavoriteToggle(heartButton) {
     // console.log('💖 Toggling favorite for:', song.songName);
     toggleFavorite(song, heartButton);
 }
+/**
+ * Determines the best playlist mode for a song
+ * Priority: 1. Favorites, 2. Search (if available), 3. Global
+ */
+function determinePlaylistMode(song) {
+    // Check favorites first (highest priority)
+    const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
+    if (favIndex !== -1) {
+        return {
+            mode: 'favorites',
+            playlist: roomFavorites,
+            index: favIndex
+        };
+    }
+
+    // Check if currently in search mode with results
+    if (searchSongsList.length > 0) {
+        const searchIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
+        if (searchIndex !== -1) {
+            return {
+                mode: 'search',
+                playlist: searchSongsList,
+                index: searchIndex
+            };
+        }
+    }
+
+    // Default to global playlist
+    const globalIndex = allSongsOnPage.findIndex(s => s.fileName === song.fileName);
+    return {
+        mode: 'all',
+        playlist: allSongsOnPage,
+        index: globalIndex
+    };
+}
 function handleSongClick(element) {
     if (!isOrganizer) {
         ToastNotification.warning('Only the organizer can play songs');
@@ -2546,35 +2493,21 @@ function handleSongClick(element) {
         language: element.dataset.language
     };
 
-    // console.log('🎵 Playing song:', song.songName);
+    // ✅ FIX: Use deterministic playlist selection
+    const playlistInfo = determinePlaylistMode(song);
 
-    // Stop favorites playlist if active
-    if (isPlayingFavorites) {
-        isPlayingFavorites = false;
-    }
+    isPlayingFavorites = (playlistInfo.mode === 'favorites');
+    playlistMode = playlistInfo.mode;
+    currentPlaylist = [...playlistInfo.playlist];
+    currentPlaylistIndex = playlistInfo.index;
 
-    // Check if song is in favorites
-    const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
-    if (favIndex !== -1) {
-        // Song is in favorites - use favorites playlist
-        playlistMode = 'favorites';
-        currentPlaylist = [...roomFavorites];
-        currentPlaylistIndex = favIndex;
-        currentFavoriteIndex = favIndex;
-        // console.log('📋 Using favorites playlist, index:', favIndex);
+    if (playlistInfo.mode === 'favorites') {
+        currentFavoriteIndex = playlistInfo.index;
+        ToastNotification.info(`▶️ Playing from favorites (${playlistInfo.index + 1}/${roomFavorites.length})`);
+    } else if (playlistInfo.mode === 'search') {
+        ToastNotification.info(`▶️ Playing from search results (${playlistInfo.index + 1}/${searchSongsList.length})`);
     } else {
-        // Song is in main list - use all songs playlist
-        playlistMode = 'all';
-        currentPlaylist = [...allSongsOnPage];
-        currentPlaylistIndex = allSongsOnPage.findIndex(s => s.fileName === song.fileName);
-
-        if (currentPlaylistIndex === -1) {
-            // Song not found in current page list (shouldn't happen, but handle it)
-            currentPlaylist.push(song);
-            currentPlaylistIndex = currentPlaylist.length - 1;
-            // console.warn('⚠️ Song not in page list, added manually');
-        }
-        // console.log('📋 Using main playlist, index:', currentPlaylistIndex);
+        ToastNotification.info(`▶️ Playing from global playlist (Page ${currentPage + 1})`);
     }
 
     playSong(song);
@@ -2672,46 +2605,25 @@ function handleSearchSongClick(element) {
         language: element.dataset.language
     };
 
-    // console.log('🎵 Playing search result:', song.songName);
+    // ⭐ ALWAYS use search mode when clicking from search results
+    isPlayingFavorites = false;
+    playlistMode = 'search';
+    currentPlaylist = [...searchSongsList];
+    currentPlaylistIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
 
-    // Stop favorites playlist if active
-    if (isPlayingFavorites) {
-        isPlayingFavorites = false;
+    if (currentPlaylistIndex === -1) {
+        currentPlaylist.push(song);
+        currentPlaylistIndex = currentPlaylist.length - 1;
     }
 
-    // Check if song is in favorites
-    const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
-    if (favIndex !== -1) {
-        // Song is in favorites - use favorites playlist
-        playlistMode = 'favorites';
-        currentPlaylist = [...roomFavorites];
-        currentPlaylistIndex = favIndex;
-        currentFavoriteIndex = favIndex;
-        // console.log('📋 Using favorites playlist, index:', favIndex);
-    } else {
-        // Use search results as playlist
-        playlistMode = 'search';
-        currentPlaylist = [...searchSongsList];
-        currentPlaylistIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
-
-        if (currentPlaylistIndex === -1) {
-            // Song not found (shouldn't happen)
-            currentPlaylist.push(song);
-            currentPlaylistIndex = currentPlaylist.length - 1;
-            // console.warn('⚠️ Song not in search list, added manually');
-        }
-        // console.log('📋 Using search playlist, index:', currentPlaylistIndex);
-    }
-
+    ToastNotification.info(`▶️ Playing from search results (${currentPlaylistIndex + 1}/${searchSongsList.length})`);
     playSong(song);
     closeSearchDrawer();
 }
 
 
 // ==================== UTILITY FUNCTIONS ====================
-function getUserColor(username) {
-    return getColorForUser(username);  // Reuse the same logic
-}
+
 
 function getDarkerShade(color) {
     const colorMap = {
@@ -2771,13 +2683,11 @@ function sendExitBeacon(fullLogout) {
     const beaconUrl = `/app/music/room/exitRoom/beacon?token=${encodeURIComponent(jwtToken)}`;
 
     const exitData = JSON.stringify({
-        roomName: currentRoomName,
-        username: currentUsername,
-        fullLogout: fullLogout
+        roomName: currentRoomName, username: currentUsername, fullLogout: fullLogout
     });
 
     try {
-        const blob = new Blob([exitData], { type: 'application/json' });
+        const blob = new Blob([exitData], {type: 'application/json'});
         const success = navigator.sendBeacon(beaconUrl, blob);
 
         // console.log(success ? '✅ Exit beacon sent' : '❌ Beacon send failed');
@@ -2799,6 +2709,10 @@ window.addEventListener('beforeunload', (event) => {
         return;
     }
 
+    if (sessionExpired) {
+        console.log('⏭️ Session expired - skipping beacon');
+        return;
+    }
     // Detect reload vs close
     const nav = performance.getEntriesByType("navigation")[0];
     const isReloading = nav && nav.type === "reload";
@@ -2833,44 +2747,10 @@ window.addEventListener('beforeunload', (event) => {
     }
 });
 
-// ✅ NEW FUNCTION: Synchronous exit for page reload
-function sendExitBeaconSync() {
-    if (!jwtToken || !currentRoomName || !currentUsername) {
-        console.warn('⚠️ Missing credentials for sync exit');
-        return;
-    }
-
-    try {
-        // ✅ Use XMLHttpRequest for synchronous request during unload
-        const xhr = new XMLHttpRequest();
-        const url = `/app/music/room/exitRoom?token=${encodeURIComponent(jwtToken)}&fullLogout=false`;
-
-        // ✅ CRITICAL: synchronous=false but we wait for response
-        xhr.open('DELETE', url, false); // Synchronous
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Authorization', `Bearer ${jwtToken}`);
-
-        xhr.send(JSON.stringify({
-            roomName: currentRoomName,
-            username: currentUsername
-        }));
-
-        if (xhr.status === 200) {
-            // console.log('✅ Synchronous exit successful (reload)');
-        } else {
-            console.error('❌ Synchronous exit failed:', xhr.status);
-        }
-    } catch (error) {
-        console.error('❌ Synchronous exit error:', error);
-
-        // ✅ Fallback to beacon if sync fails
-        sendExitBeacon();
-    }
-}
-
 
 // ==================== UNLOAD: FINAL CLEANUP ====================
 window.addEventListener('unload', function () {
+    if (sessionExpired) return;
     if (!isClosing) {
         // console.log('🚪 Unload without beforeunload - sending beacon');
         sendExitBeacon(false);
@@ -2880,6 +2760,7 @@ window.addEventListener('unload', function () {
 
 // ==================== PAGEHIDE: MOBILE/BFCache SUPPORT ====================
 window.addEventListener('pagehide', function (event) {
+    if (sessionExpired) return;
     if (event.persisted === false && !isClosing) {
         // console.log('📱 Pagehide detected - sending beacon');
         sendExitBeacon(false);
@@ -2892,9 +2773,7 @@ function safeDisconnectWebSocket() {
         try {
             // Send LEAVE message for real-time notification
             stompClient.send(`/app/music/chat/${currentRoomName}/removeUser`, {}, JSON.stringify({
-                sender: currentUsername,
-                type: 'LEAVE',
-                content: `${currentUsername} left the room`
+                sender: currentUsername, type: 'LEAVE', content: `${currentUsername} left the room`
             }));
 
             stompClient.disconnect();
@@ -2949,14 +2828,10 @@ async function handleBack() {
 
         // ✅ DELETE request: Exit room but keep session alive
         const response = await fetch('/app/music/room/exitRoom?fullLogout=false', {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${jwtToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                roomName: currentRoomName,
-                username: currentUsername
+            method: 'DELETE', headers: {
+                'Authorization': `Bearer ${jwtToken}`, 'Content-Type': 'application/json'
+            }, body: JSON.stringify({
+                roomName: currentRoomName, username: currentUsername
             })
         });
 
@@ -3006,14 +2881,10 @@ async function logout() {
         // ✅ Method 1: Try async DELETE first (better UX)
         try {
             const response = await fetch('/app/music/room/exitRoom?fullLogout=true', {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${jwtToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    roomName: currentRoomName,
-                    username: currentUsername
+                method: 'DELETE', headers: {
+                    'Authorization': `Bearer ${jwtToken}`, 'Content-Type': 'application/json'
+                }, body: JSON.stringify({
+                    roomName: currentRoomName, username: currentUsername
                 })
             });
 
@@ -3033,7 +2904,6 @@ async function logout() {
         window.location.href = '/app/music/public/logout';
     }
 }
-
 
 
 document.addEventListener('keydown', (e) => {

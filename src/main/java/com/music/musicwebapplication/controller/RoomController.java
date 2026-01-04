@@ -67,6 +67,7 @@ public class RoomController {
         model.addAttribute("username", authentication.getName());
         model.addAttribute("roomName", currentRoom.getRoomName());
         model.addAttribute("roomCode", roomName);
+        model.addAttribute("expireAt",sessionService.getUserSession(authentication.getName()).getAbsoluteExpiry());
         model.addAttribute("passCode", currentRoom.getPassCode());
         model.addAttribute("roomCount", currentParticipantCount(currentRoom.getRoomName()));
         model.addAttribute("totalCount", rService.getRoomDetails(currentRoom.getRoomName()).getMaxCount());

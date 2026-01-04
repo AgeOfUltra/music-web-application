@@ -223,7 +223,10 @@ function toggleOtherInput() {
 function clearConfessForm() {
     const confessForm = document.getElementById('sendConfessForm');
     if (confessForm) {
-        // Clear text inputs
+        // Reset the form first (this clears all Thymeleaf-bound fields)
+        confessForm.reset();
+
+        // Then manually clear each field to ensure they're empty
         const senderOriginalName = document.getElementById('senderOriginalName');
         const confessRoomName = document.getElementById('confessRoomName');
         const receiverAlias = document.getElementById('receiverAlias');
@@ -244,11 +247,33 @@ function clearConfessForm() {
         if (singerName) singerName.value = '';
         if (confessMessage) confessMessage.value = '';
 
-        // Hide the other confess type div if it was shown
+        // Hide the other confess type div
         const otherDiv = document.getElementById('otherConfessTypeDiv');
         if (otherDiv) {
             otherDiv.style.display = 'none';
         }
+
+        console.log('✅ Confess form cleared successfully');
+    }
+}
+
+// Function to clear request song form fields
+function clearRequestSongForm() {
+    const requestSongForm = document.getElementById('requestSongForm');
+    if (requestSongForm) {
+        // Reset the form first
+        requestSongForm.reset();
+
+        // Then manually clear each field
+        const requestSongNameField = document.getElementById('requestSongName');
+        const requestMovieNameField = document.getElementById('requestMovieName');
+        const requestSingerNameField = document.getElementById('requestSingerName');
+
+        if (requestSongNameField) requestSongNameField.value = '';
+        if (requestMovieNameField) requestMovieNameField.value = '';
+        if (requestSingerNameField) requestSingerNameField.value = '';
+
+        console.log('✅ Request song form cleared successfully');
     }
 }
 
@@ -261,6 +286,7 @@ window.addEventListener('DOMContentLoaded', function() {
     let hasConfessErrors = false;
     let hasRequestSongErrors = false;
     let hasConfessSuccess = false;
+    let hasRequestSongSuccess = false;
 
     // Get Bootstrap modal instances
     const createModal = new bootstrap.Modal(document.getElementById('createModal'));
@@ -307,13 +333,22 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle request song error flash attribute
+    // Handle request song error/success flash attribute - FIXED
     const requestSongErrorContainer = document.getElementById('requestSongError');
     if (requestSongErrorContainer) {
         const requestSongError = requestSongErrorContainer.textContent.trim();
         if (requestSongError) {
-            notifier.error(requestSongError);
-            hasRequestSongErrors = true;
+            // Check if it's a success message
+            if (requestSongError.toLowerCase().includes('success') ||
+                requestSongError.toLowerCase().includes('submitted') ||
+                requestSongError.toLowerCase().includes('received')) {
+                notifier.success(requestSongError);  // ✅ GREEN notification
+                hasRequestSongSuccess = true;
+                clearRequestSongForm();  // Clear form on success
+            } else {
+                notifier.error(requestSongError);  // ❌ RED notification
+                hasRequestSongErrors = true;
+            }
         }
     }
 
@@ -339,18 +374,20 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Handle email status from Send Confess form
+    // Handle email status from Send Confess form - FIXED
     const emailStatusElement = document.getElementById('emailStatus');
     if (emailStatusElement) {
         const emailStatus = emailStatusElement.textContent.trim();
         if (emailStatus) {
-            if (emailStatus.toLowerCase().includes('success')) {
-                notifier.success(emailStatus);
+            // Check if it's a success message
+            if (emailStatus.toLowerCase().includes('success') ||
+                emailStatus.toLowerCase().includes('sent') ||
+                emailStatus.toLowerCase().includes('submitted')) {
+                notifier.success(emailStatus);  // ✅ GREEN notification
                 hasConfessSuccess = true;
-                // Clear the confess form on success
-                clearConfessForm();
+                clearConfessForm();  // Clear form on success
             } else {
-                notifier.error(emailStatus);
+                notifier.error(emailStatus);  // ❌ RED notification
                 hasConfessErrors = true;
             }
         }
@@ -361,11 +398,11 @@ window.addEventListener('DOMContentLoaded', function() {
         confessModal.show();
     }
 
-    if (hasRequestSongErrors) {
+    if (hasRequestSongErrors && !hasRequestSongSuccess) {
         requestSongModal.show();
     }
 
-    // Clear fields ONLY if there are actual errors
+    // Clear fields ONLY if there are actual errors for Create/Join Room
     if (hasErrors) {
         const roomNameField = document.getElementById('roomName');
         const maxCountField = document.getElementById('maxCount');
@@ -376,16 +413,11 @@ window.addEventListener('DOMContentLoaded', function() {
         if (joinRoomNameField) joinRoomNameField.value = '';
     }
 
-    // Clear request song fields if there are errors
-    if (hasRequestSongErrors) {
-        const requestSongNameField = document.getElementById('requestSongName');
-        const requestMovieNameField = document.getElementById('requestMovieName');
-        const requestSingerNameField = document.getElementById('requestSingerName');
-
-        if (requestSongNameField) requestSongNameField.value = '';
-        if (requestMovieNameField) requestMovieNameField.value = '';
-        if (requestSingerNameField) requestSingerNameField.value = '';
-    }
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 
 function dashboardLogout() {
