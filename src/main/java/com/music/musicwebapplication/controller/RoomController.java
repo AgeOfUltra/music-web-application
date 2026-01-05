@@ -464,4 +464,10 @@ public class RoomController {
                     ));
         }
     }
+
+    @PostMapping("/room/update/session/flag")
+    public ResponseEntity<String> updateFlagForUser(@RequestParam("token") String token,@RequestParam("flag") boolean flag){
+        String result  = sessionService.updateRequestFlagStatus(token,flag);
+        return  ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 }

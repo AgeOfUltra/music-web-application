@@ -1,10 +1,15 @@
 package com.music.musicwebapplication.config;
 
 import com.music.musicwebapplication.service.CustomUserDetailService;
+import com.music.musicwebapplication.service.PublicLoginService;
+import com.music.musicwebapplication.service.UserSessionService;
+import com.music.musicwebapplication.utils.JwtTokenUtil;
 import com.music.musicwebapplication.utils.filter.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -14,6 +19,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,17 +30,38 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class AppSecurity {
 
-
-    private final JwtAuthenticationFilter filter;
+    private final UserSessionService sessionService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final UserDetailsService userDetailsService;
 
     @Autowired
-    public AppSecurity(JwtAuthenticationFilter filter) {
-        this.filter = filter;
+    public AppSecurity(UserSessionService sessionService,
+                       JwtTokenUtil jwtTokenUtil,
+                       @Lazy UserDetailsService userDetailsService) {
+        this.sessionService = sessionService;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.userDetailsService = userDetailsService;
+    }
+
+    // ✅ CREATE FILTER AS BEAN
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtTokenUtil, userDetailsService, sessionService);
+    }
+
+    // ✅ PREVENT DOUBLE REGISTRATION
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
+            JwtAuthenticationFilter filter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);  // ✅ Disable auto-registration by Spring Boot
+        return registration;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -62,11 +89,11 @@ public class AppSecurity {
                         headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                 )
 
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+                // ✅ USE INJECTED FILTER (called only once)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -84,6 +111,4 @@ public class AppSecurity {
         authenticationProvider.setPasswordEncoder(encoder);
         return new ProviderManager(authenticationProvider);
     }
-
-
 }

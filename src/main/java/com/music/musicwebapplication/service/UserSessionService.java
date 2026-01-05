@@ -43,7 +43,7 @@ public class UserSessionService {
         session.setToken(token);
         session.setUsername(username);
         session.setRoomName(null);
-        session.setIntentionalLogout(false);
+//        session.setIntentionalLogout(true); //default value
         session.setAbsoluteExpiry(now.plusMinutes(5)); // for testing
         session.setSessionExpired(false);
         repo.save(session);
@@ -110,7 +110,7 @@ public class UserSessionService {
         Optional<UserSession> sessionOpt = repo.findByUsername(username);
         if (sessionOpt.isPresent()) {
             UserSession session = sessionOpt.get();
-            session.setIntentionalLogout(false);
+            session.setIntentionalLogout(true);
             repo.save(session);
             log.debug("🔄 Reset intentionalLogout flag for {}", username);
         }
@@ -279,6 +279,19 @@ public class UserSessionService {
 
         log.info("🗑️ Deleted session for user {}", username);
     }
+    @Transactional
+    public void deleteUserSessionByToken(String token) {
+
+        UserSession session = repo.findUserSessionByToken(token);
+        // Remove from Redis
+        removeRedisSession(session.getUsername());
+
+        // Remove from database
+        repo.deleteByUsername(session.getUsername());
+
+        log.info("🗑️ Deleted session for user {} via session expiry", session.getUsername());
+    }
+
 
     @PreDestroy
     private void clearUserSessions() {
@@ -326,5 +339,19 @@ public class UserSessionService {
     public List<UserSession> getExpiredSessions() {
         LocalDateTime now = LocalDateTime.now();
         return repo.findByAbsoluteExpiryBeforeAndSessionExpiredFalse(now);
+    }
+
+    public String updateRequestFlagStatus(String token, boolean newFlag){
+        UserSession session = repo.findUserSessionByToken(token);
+        log.info("Current flag : {} and new flag {}",session.isIntentionalLogout(),newFlag);
+        if(session.isIntentionalLogout() == newFlag){
+            log.info("Current flag is same as new flag! no update required!");
+            return "EXIST";
+        }
+        session.setIntentionalLogout(newFlag);
+        repo.save(session);
+
+        log.info("Intentional flag is saved to {}",session.isIntentionalLogout());
+        return "SUCCESS";
     }
 }

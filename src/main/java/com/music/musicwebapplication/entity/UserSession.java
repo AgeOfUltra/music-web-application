@@ -26,7 +26,7 @@ public class UserSession {
 
     // ✅ Intent flag for back button vs tab close distinction
     @Column(nullable = false)
-    private boolean intentionalLogout = false;
+    private boolean intentionalLogout = true;
 
     // ✅ Timestamp tracking for cleanup
     @CreatedDate

@@ -57,13 +57,13 @@ public class PublicLoginService {
         log.info("🚪 LOGOUT: User {} logging out", username);
 
         try {
-            if (roomName != null) {
+            if (roomName != null ) {
                 // ==================== SCENARIO 1: USER IN ROOM ====================
-                log.info("🏠 User {} is in room {}, exiting with full logout...", username, roomName);
+                log.info("🏠 User {} is in room {}, exiting with {} logout...", username, roomName, session.isIntentionalLogout() ?"FULL" : "PARTIAL");
 
                 try {
                     // ✅ Exit room with fullLogout=true (deletes session)
-                    boolean removed = roomService.exitFromRoom(roomName, username, true);
+                    boolean removed = roomService.exitFromRoom(roomName, username, session.isIntentionalLogout());
 
                     if (removed) {
                         log.info("✅ User {} exited room {} (session deleted)", username, roomName);
