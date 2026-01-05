@@ -1,10 +1,8 @@
 package com.music.musicwebapplication.config;
 
-import com.music.musicwebapplication.dto.UserDisconnectedEvent;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -24,7 +22,17 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-
+/**
+ * ✅ CRITICAL FIX: Removed DISCONNECT handling from ChatConfiguration
+ *
+ * DISCONNECT events are now handled by WebSocketDisconnectListener which listens
+ * to Spring's SessionDisconnectEvent. This ensures the event fires ONCE per session,
+ * not once per subscription.
+ *
+ * This configuration now only handles:
+ * - CONNECT: Authentication
+ * - SUBSCRIBE: Room tracking
+ */
 @Configuration
 @EnableWebSocketMessageBroker
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
@@ -34,7 +42,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserDetailsService userDetailsService;
-    private final ApplicationEventPublisher eventPublisher;
+    // ✅ REMOVED: ApplicationEventPublisher (no longer needed here)
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -60,6 +68,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                     return message;
                 }
 
+                // ✅ Handle CONNECT - Authentication
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     try {
                         String authToken = accessor.getFirstNativeHeader("Authorization");
@@ -98,6 +107,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                     }
                 }
 
+                // ✅ Handle SUBSCRIBE - Track room subscriptions
                 if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
                     try {
                         String destination = accessor.getDestination();
@@ -115,27 +125,9 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                     }
                 }
 
-                if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
-                    try {
-                        if (accessor.getSessionAttributes() != null) {
-
-                            String username = (String) accessor.getSessionAttributes().get("username");
-                            String roomName = (String) accessor.getSessionAttributes().get("roomId");
-                            String sessionId = accessor.getSessionId();
-
-                            log.info("📴 WebSocket DISCONNECT → user={}, room={}", username, roomName);
-
-                            if (username != null) {
-                                eventPublisher.publishEvent(
-                                        new UserDisconnectedEvent(username, roomName, sessionId)
-                                );
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.error("❌ Error processing DISCONNECT event", e);
-                    }
-                }
-
+                // ✅ CRITICAL FIX: DISCONNECT handling REMOVED
+                // Now handled by WebSocketDisconnectListener using SessionDisconnectEvent
+                // which fires ONCE per session instead of once per subscription
 
                 return message;
             }

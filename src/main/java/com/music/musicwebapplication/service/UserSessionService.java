@@ -44,7 +44,7 @@ public class UserSessionService {
         session.setUsername(username);
         session.setRoomName(null);
 //        session.setIntentionalLogout(true); //default value
-        session.setAbsoluteExpiry(now.plusMinutes(5)); // for testing
+        session.setAbsoluteExpiry(now.plusMinutes(2)); // for testing
         session.setSessionExpired(false);
         repo.save(session);
 

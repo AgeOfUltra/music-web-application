@@ -12,6 +12,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,6 +32,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService service;
     private final UserSessionService sessionService;
 
+    @Autowired
+    @Lazy private PublicLoginService loginService;
+
 
     public JwtAuthenticationFilter(JwtTokenUtil util,
                                    UserDetailsService service,
@@ -44,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String username = null;
+        String username;
         String token = null;
 
         if (request.getCookies() != null) {
@@ -56,15 +61,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        UserSession session = sessionService.getUserSessionForToken(token);
+
+        if (token == null) {
+            forceLogout(session,response);
+            handleUnauthenticated(request, response);
+            return;
+        }
+
         if (shouldNotFilter(request)) {
             filterChain.doFilter(request, response);
             return;
         }
 
+
+
         try {
-            if (token != null) {
-                username = jwtTokenUtil.getUserNameFromToken(token); // may throw ExpiredJwtException
-            }
+            username = jwtTokenUtil.getUserNameFromToken(token); // may throw ExpiredJwtException
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -86,23 +99,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-
-            SecurityContextHolder.clearContext();
-
-            try {
-                sessionService.deleteUserSessionByToken(token);
-            } catch (Exception ex) {
-                log.error("Session update failed", ex);
-            }
-
-            Cookie cookie = new Cookie("jwt", null);
-            cookie.setMaxAge(0);
-            cookie.setPath("/");
-            response.addCookie(cookie);
-
-            response.sendRedirect("/app/music/public/login?expired=true");
-            return;
+            forceLogout(session,response);
+            handleUnauthenticated(request, response);
         }
+    }
+
+    private void handleUnauthenticated(
+            HttpServletRequest request,
+            HttpServletResponse response) throws IOException {
+
+        SecurityContextHolder.clearContext();
+
+        if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+            // ✅ AJAX requests - send JSON response for frontend to handle
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Session expired\",\"redirect\":\"/app/music/public/login?expired=true\"}");
+        } else {
+            // Regular page requests - redirect directly
+            response.sendRedirect("/app/music/public/login?expired=true");
+        }
+    }
+
+    private void forceLogout(UserSession session, HttpServletResponse response) {
+        try {
+            if (session != null) {
+                // Perform logout cleanup
+                boolean logoutSuccess = loginService.logout(session);
+
+                if (!logoutSuccess) {
+                    log.warn("⚠️ Logout cleanup partially failed for user: {}", session.getUsername());
+                    // Continue anyway to clear cookie and security context
+                }
+            } else {
+                log.warn("⚠️ No active session found for user: {}",  session.getUsername());
+            }
+        } catch (Exception e) {
+            log.error("❌ Logout cleanup failed: {}", e.getMessage(), e);
+        }
+
+        // ✅ Always clear cookie regardless of logout success
+        // (User should be forced to re-login even if backend cleanup failed)
+        Cookie cookie = new Cookie("jwt", null);
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true); // ✅ Security: match the original cookie settings
+        response.addCookie(cookie);
+
+        log.info("✅ JWT cookie cleared for expired session");
     }
 
     @Override
@@ -119,4 +163,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return path.equals("/") || isIgnored;
     }
+
 }
