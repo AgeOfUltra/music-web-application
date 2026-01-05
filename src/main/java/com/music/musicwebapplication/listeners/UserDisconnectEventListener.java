@@ -7,6 +7,7 @@ import com.music.musicwebapplication.service.UserSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,11 +20,15 @@ public class UserDisconnectEventListener {
     private final UserSessionService sessionService;
     private final PublicLoginService loginService;
 
-    // ✅ CORRECT FIX: Track last cleanup time (not ongoing cleanups)
+    // ✅ Track last cleanup time to prevent duplicates
     private final ConcurrentHashMap<String, Long> lastCleanupTime = new ConcurrentHashMap<>();
     private static final long CLEANUP_COOLDOWN_MS = 5000; // 5 seconds cooldown
 
+    // ✅ CRITICAL FIX: Add delay before cleanup to allow flag update
+    private static final long CLEANUP_DELAY_MS = 500; // 500ms delay
+
     @EventListener
+    @Async // ✅ Run async to allow delay without blocking
     public void onUserDisconnected(UserDisconnectedEvent event) {
         String username = event.getUsername();
         String roomName = event.getRoomName();
@@ -45,6 +50,10 @@ public class UserDisconnectEventListener {
         lastCleanupTime.put(cleanupKey, now);
 
         try {
+            // ✅ CRITICAL FIX: Delay cleanup to allow flag update to complete
+            log.info("⏰ Delaying cleanup by {}ms to allow flag update", CLEANUP_DELAY_MS);
+            Thread.sleep(CLEANUP_DELAY_MS);
+
             UserSession session = sessionService.getUserSession(username);
 
             if (session == null) {
@@ -54,6 +63,8 @@ public class UserDisconnectEventListener {
 
             // ✅ Check the flag to decide action
             boolean shouldDeleteSession = session.isIntentionalLogout();
+
+            log.info("🔍 Session flag check: intentionalLogout={}", shouldDeleteSession);
 
             if (roomName != null) {
                 // Exit room based on flag
@@ -74,11 +85,13 @@ public class UserDisconnectEventListener {
 
             log.info("✅ Cleanup completed for disconnected user {}", username);
 
+        } catch (InterruptedException e) {
+            log.error("❌ Cleanup interrupted for user {}", username);
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("❌ Cleanup failed for disconnected user {}", username, e);
         } finally {
-            // ✅ Optional: Clean up old entries to prevent memory leak
-            // Remove entries older than 1 minute
+            // ✅ Clean up old entries to prevent memory leak
             lastCleanupTime.entrySet().removeIf(entry ->
                     (System.currentTimeMillis() - entry.getValue()) > 60000);
         }
