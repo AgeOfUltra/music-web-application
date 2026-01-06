@@ -2671,30 +2671,7 @@ function isReload() {
 let allowUnload = false;
 let isClosing = false;
 
-// function sendExitBeacon(fullLogout) {
-//     if (!jwtToken || !currentRoomName || !currentUsername) {
-//         console.warn('⚠️ Missing credentials for beacon');
-//         return false;
-//     }
-//
-//     // Beacon URL with POST endpoint
-//     const beaconUrl = `/app/music/room/exitRoom/beacon?token=${encodeURIComponent(jwtToken)}`;
-//
-//     const exitData = JSON.stringify({
-//         roomName: currentRoomName, username: currentUsername, fullLogout: fullLogout
-//     });
-//
-//     try {
-//         const blob = new Blob([exitData], {type: 'application/json'});
-//         const success = navigator.sendBeacon(beaconUrl, blob);
-//
-//         // console.log(success ? '✅ Exit beacon sent' : '❌ Beacon send failed');
-//         return success;
-//     } catch (error) {
-//         console.error('❌ Beacon error:', error);
-//         return false;
-//     }
-// }
+
 
 function sendFlagBeacon(fullLogout) {
     if (!jwtToken) {
