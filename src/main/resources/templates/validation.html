@@ -193,7 +193,7 @@
                         <td th:text="${songRequest.singerName}">Ed Sheeran</td>
                         <td>
                             <span class="badge"
-                                  th:classappend="${songRequest.status.toString() == 'DONE' ? 'bg-success' : (songRequest.status.toString() == 'REJECTED' ? 'bg-danger' : 'bg-warning')}"
+                                  th:classappend="${songRequest.status.toString() == 'UPLOADED' ? 'bg-success' : (songRequest.status.toString() == 'REJECTED' ? 'bg-danger' : 'bg-warning')}"
                                   th:text="${songRequest.status}">
                                 PENDING
                             </span>

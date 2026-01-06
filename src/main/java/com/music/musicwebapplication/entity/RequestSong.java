@@ -21,7 +21,7 @@ public class RequestSong {
     private String singerName;
 
     @Enumerated(EnumType.STRING)
-    private Status status; // SENT -> DONE || REJECTED
+    private Status status; // SENT -> UPLOADED || REJECTED -> DONE
 
     private String note;
 }
