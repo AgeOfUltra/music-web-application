@@ -26,7 +26,7 @@ public class UnUsedSessionCleanUp {
         this.loginService = loginService;
     }
 
-    @Scheduled(cron = "0 /30 * * * *")
+    @Scheduled(cron = "0 */30 * * * *")
     public void cleanUpExpiredSession() {
         log.info("🧹 Starting scheduled cleanup of expired sessions");
 

@@ -2711,30 +2711,32 @@ window.addEventListener('beforeunload', (event) => {
         return;
     }
 
-    const nav = performance.getEntriesByType("navigation")[0];
-    const isReloading = nav && nav.type === "reload";
-
-    if (isReloading) {
-        console.log('🔄 Page reload detected');
-
-        allowUnload = true;
-        isClosing = true;
-
-        // ✅ Set flag to false (exit room, keep session)
-        sendFlagBeacon(false);
-        disconnectWebSocketSilently();
-        return;
+    // ✅ ONLY show confirmation if NOT intentionally leaving
+    if (!allowUnload) {
+        // Show browser confirmation dialog
+        const confirmationMessage = 'Reloading or closing this tab will log you out. Are you sure you want to leave?';
+        event.preventDefault();
+        event.returnValue = confirmationMessage; // Standard for most browsers
+        return confirmationMessage; // For some older browsers
     }
 
-    if (!allowUnload) {
-        console.log('🚪 Tab/Browser close detected');
-
-        allowUnload = true;
+    // If allowUnload is true, proceed with cleanup
+    if (allowUnload) {
+        console.log('🚪 Confirmed exit - proceeding with cleanup');
         isClosing = true;
 
-        // ✅ Set flag to true (full logout)
-        sendFlagBeacon(true);
-        disconnectWebSocketSilently();
+        const nav = performance.getEntriesByType("navigation")[0];
+        const isReloading = nav && nav.type === "reload";
+
+        if (isReloading) {
+            console.log('🔄 Page reload confirmed');
+            sendFlagBeacon(false); // Exit room, keep session
+        } else {
+            console.log('🚪 Tab close confirmed');
+            sendFlagBeacon(true); // Full logout
+        }
+
+        safeDisconnectWebSocket();
     }
 });
 
@@ -2744,7 +2746,7 @@ window.addEventListener('unload', function () {
     if (sessionExpired) return;
 
     // Just ensure WebSocket is disconnected
-    disconnectWebSocketSilently();
+    safeDisconnectWebSocket();
 
     console.log('🔚 Unload - WebSocket disconnected');
 });
@@ -2756,7 +2758,7 @@ window.addEventListener('pagehide', function (event) {
     // For mobile/back-forward cache
     if (event.persisted === false && !isClosing) {
         console.log('📱 Pagehide - disconnecting WebSocket');
-        disconnectWebSocketSilently();
+        safeDisconnectWebSocket();
     }
 });
 
@@ -2768,32 +2770,28 @@ function safeDisconnectWebSocket() {
                 sender: currentUsername, type: 'LEAVE', content: `${currentUsername} left the room`
             }));
 
-            stompClient.disconnect();
-            // console.log('✅ WebSocket disconnected gracefully (LEAVE sent)');
+            // ✅ Add small delay before disconnect to ensure message is sent
+            setTimeout(() => {
+                try {
+                    stompClient.disconnect();
+                    console.log('✅ WebSocket disconnected gracefully (LEAVE sent)');
+                } catch (e) {
+                    console.error('❌ WebSocket disconnect error:', e);
+                }
+            }, 100);
+
         } catch (e) {
-            console.error('❌ WebSocket disconnect error:', e);
+            console.error('❌ Error sending LEAVE message:', e);
+            // Try to disconnect anyway
+            try {
+                stompClient.disconnect();
+            } catch (e2) {}
         }
     }
 
     if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
-    }
-}
-
-// ✅ NEW FUNCTION: Disconnect WebSocket without triggering backend cleanup
-function disconnectWebSocketSilently() {
-    if (stompClient && stompClient.connected) {
-        try {
-            stompClient.disconnect(() => {
-                // console.log('✅ WebSocket disconnected silently');
-            });
-        } catch (e) {
-            console.error('❌ WebSocket disconnect error:', e);
-        }
-    }
-
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
     }
 }
 
@@ -2825,7 +2823,7 @@ async function handleBack() {
         console.log('✅ Flag set to false (back button)');
 
         // ✅ STEP 2: Disconnect WebSocket (triggers backend cleanup)
-        disconnectWebSocketSilently();
+        safeDisconnectWebSocket();
 
         // Mark clean exit
         sessionStorage.setItem('cleanExit', 'true');
@@ -2833,7 +2831,7 @@ async function handleBack() {
     } catch (error) {
         console.error("❌ Error during back navigation:", error);
         // Still disconnect even if flag update fails
-        disconnectWebSocketSilently();
+        safeDisconnectWebSocket();
     } finally {
         // ✅ STEP 3: Navigate to dashboard
         window.location.href = '/app/music/dashboard';

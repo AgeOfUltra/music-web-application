@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Request Update</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 0;
+        }
+        .email-wrapper {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+        }
+        .email-container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+        .logo-container {
+            position: relative;
+            z-index: 1;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            border-radius: 50%;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .app-title {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin: 0;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+        .app-subtitle {
+            font-size: 14px;
+            color: #a0aec0;
+            margin-top: 8px;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        .content {
+            padding: 50px 40px;
+            background: linear-gradient(to bottom, #ffffff 0%, #f7fafc 100%);
+        }
+
+        /* Status-specific badge styling */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .status-badge.approved {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .status-badge.rejected {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        .status-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .greeting {
+            font-size: 28px;
+            color: #1a202c;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        /* Status-specific messages */
+        .message {
+            font-size: 17px;
+            color: #4a5568;
+            line-height: 1.8;
+            margin-bottom: 35px;
+        }
+        .message.approved {
+            color: #2d3748;
+        }
+        .message.rejected {
+            color: #4a5568;
+        }
+
+        /* Song details card */
+        .song-details {
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 35px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .song-details::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+        }
+        .song-details.approved::before {
+            background: linear-gradient(to bottom, #10b981, #059669);
+        }
+        .song-details.rejected::before {
+            background: linear-gradient(to bottom, #ef4444, #dc2626);
+        }
+
+        .song-details-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .song-icon {
+            font-size: 28px;
+        }
+        .song-details-title {
+            font-size: 16px;
+            color: #2d3748;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 16px 0;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        .detail-row:hover {
+            background: rgba(124, 58, 237, 0.03);
+            margin: 0 -15px;
+            padding: 16px 15px;
+            border-radius: 8px;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 700;
+            color: #2d3748;
+            min-width: 140px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .detail-label::before {
+            content: '▪';
+            color: #7c3aed;
+            font-size: 18px;
+        }
+        .detail-value {
+            color: #1a202c;
+            font-size: 16px;
+            flex: 1;
+            font-weight: 500;
+        }
+
+        /* Admin note styling */
+        .admin-note {
+            border-radius: 12px;
+            padding: 28px;
+            margin: 35px 0;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        .admin-note.approved {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-left: 5px solid #10b981;
+        }
+        .admin-note.rejected {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border-left: 5px solid #ef4444;
+        }
+
+        .admin-note-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .admin-note-icon {
+            font-size: 24px;
+        }
+        .admin-note-title {
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .admin-note-title.approved {
+            color: #065f46;
+        }
+        .admin-note-title.rejected {
+            color: #991b1b;
+        }
+
+        .admin-note-content {
+            font-size: 16px;
+            line-height: 1.8;
+            font-style: italic;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+        }
+        .admin-note-content.approved {
+            color: #047857;
+        }
+        .admin-note-content.rejected {
+            color: #7f1d1d;
+        }
+
+        /* Celebration/Info boxes */
+        .info-box {
+            border-radius: 12px;
+            padding: 25px;
+            margin: 35px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        .info-box.approved {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 5px solid #3b82f6;
+        }
+        .info-box.rejected {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 5px solid #f59e0b;
+        }
+
+        .info-box-content {
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .info-box-content.approved {
+            color: #1e3a8a;
+        }
+        .info-box-content.rejected {
+            color: #78350f;
+        }
+        .info-box-content strong {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .closing-message {
+            font-size: 17px;
+            color: #2d3748;
+            line-height: 1.8;
+            margin-top: 35px;
+            padding: 20px;
+            background: rgba(124, 58, 237, 0.05);
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .footer {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px;
+            text-align: center;
+            color: #a0aec0;
+        }
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+        .footer-brand {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .footer-divider {
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            margin: 20px auto;
+            border-radius: 2px;
+        }
+        .footer-links {
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        .footer-links a {
+            color: #7c3aed;
+            text-decoration: none;
+            margin: 0 12px;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover {
+            color: #a78bfa;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-wrapper {
+                padding: 20px 10px;
+            }
+            .email-container {
+                border-radius: 12px;
+            }
+            .header {
+                padding: 40px 20px;
+            }
+            .app-title {
+                font-size: 26px;
+            }
+            .content {
+                padding: 35px 25px;
+            }
+            .greeting {
+                font-size: 24px;
+            }
+            .detail-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .detail-label {
+                min-width: auto;
+            }
+            .status-badge {
+                font-size: 13px;
+                padding: 12px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-wrapper">
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-container">
+                <img th:src="@{/images/app_logo_wn.png}" alt="Connecting Notes Logo" class="logo">
+                <div class="app-title">CONNECTING NOTES</div>
+                <div class="app-subtitle">Your Music, Your Moments</div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Status Badge - Conditional -->
+            <div th:if="${status.name() == 'APPROVED'}" class="status-badge approved">
+                <span class="status-icon">✓</span>
+                <span>Request Approved</span>
+            </div>
+            <div th:if="${status.name() == 'REJECTED'}" class="status-badge rejected">
+                <span class="status-icon">✗</span>
+                <span>Request Not Approved</span>
+            </div>
+
+            <!-- Greeting - Conditional -->
+            <div th:if="${status.name() == 'APPROVED'}" class="greeting">
+                🎉 Fantastic News!
+            </div>
+            <div th:if="${status.name() == 'REJECTED'}" class="greeting">
+                📋 Song Request Update
+            </div>
+
+            <!-- Message - Conditional -->
+            <div th:if="${status.name() == 'APPROVED'}" class="message approved">
+                We're thrilled to inform you that your song request has been <strong>successfully approved and uploaded</strong>
+                to our music library! Your contribution enriches our collection and brings joy to our entire community.
+                The song is now available for everyone to enjoy in their listening rooms.
+            </div>
+            <div th:if="${status.name() == 'REJECTED'}" class="message rejected">
+                Thank you for taking the time to submit your song request. After thorough review and consideration by our team,
+                we regret to inform you that we are <strong>unable to approve your request</strong> at this time.
+                We understand this may be disappointing, and we genuinely appreciate your interest in expanding our music collection.
+            </div>
+
+            <!-- Song Details - Conditional styling -->
+            <div th:class="${'song-details ' + (status.name() == 'APPROVED' ? 'approved' : 'rejected')}">
+                <div class="song-details-header">
+                    <span class="song-icon">🎵</span>
+                    <span class="song-details-title" th:text="${status.name() == 'APPROVED' ? 'Your Requested Song' : 'Request Details'}">Song Details</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Song Title</span>
+                    <span class="detail-value" th:text="${songName}">Song Name</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Movie/Album</span>
+                    <span class="detail-value" th:text="${movieName}">Movie Name</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Artist/Singer</span>
+                    <span class="detail-value" th:text="${singerName}">Singer Name</span>
+                </div>
+            </div>
+
+            <!-- Admin Note - Conditional styling -->
+            <div th:if="${note != null and !#strings.isEmpty(note)}"
+                 th:class="${'admin-note ' + (status.name() == 'APPROVED' ? 'approved' : 'rejected')}">
+                <div class="admin-note-header">
+                    <span class="admin-note-icon" th:text="${status.name() == 'APPROVED' ? '💬' : 'ℹ️'}">Icon</span>
+                    <span th:class="${'admin-note-title ' + (status.name() == 'APPROVED' ? 'approved' : 'rejected')}"
+                          th:text="${status.name() == 'APPROVED' ? 'Message from Our Team' : 'Reason for Decision'}">Note Title</span>
+                </div>
+                <div th:class="${'admin-note-content ' + (status.name() == 'APPROVED' ? 'approved' : 'rejected')}"
+                     th:text="${note}">Admin's note will appear here</div>
+            </div>
+
+            <!-- Info Box - Conditional -->
+            <div th:if="${status.name() == 'APPROVED'}" class="info-box approved">
+                <div class="info-box-content approved">
+                    <strong>🌟 What This Means for You:</strong>
+                    <div style="margin-top: 10px;">
+                        ✓ Your song is now live and available across all rooms<br>
+                        ✓ Other users can discover and enjoy your contribution<br>
+                        ✓ You've helped make our platform better for everyone<br>
+                        ✓ Feel free to request more songs that you'd love to hear
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${status.name() == 'REJECTED'}" class="info-box rejected">
+                <div class="info-box-content rejected">
+                    <strong>💡 Moving Forward:</strong>
+                    <div style="margin-top: 10px;">
+                        • Please review the reason provided above carefully<br>
+                        • You're welcome to submit new requests that align with our guidelines<br>
+                        • Explore our existing music library for similar songs<br>
+                        • Our support team is here to answer any questions you may have<br>
+                        • We value your contributions and hope to approve your future requests
+                    </div>
+                </div>
+            </div>
+
+            <!-- Closing Message - Conditional -->
+            <div th:if="${status.name() == 'APPROVED'}" class="closing-message">
+                🙏 Thank you for being an integral part of our music community!
+                Your passion for music helps create an amazing experience for all our users.
+            </div>
+            <div th:if="${status.name() == 'REJECTED'}" class="closing-message">
+                We appreciate your understanding and continued participation.
+                Together, we're building a vibrant and diverse music community!
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                This is an automated notification from <span class="footer-brand">Connecting Notes</span>
+            </div>
+            <div class="footer-divider"></div>
+            <div class="footer-text">
+                © 2025 Connecting Notes. All rights reserved.
+            </div>
+            <div class="footer-links">
+                <a href="#">Help Center</a> |
+                <a href="#">Contact Support</a> |
+                <a href="#">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
