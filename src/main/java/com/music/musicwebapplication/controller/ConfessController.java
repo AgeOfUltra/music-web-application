@@ -10,11 +10,13 @@ import com.music.musicwebapplication.service.SongControllerService;
 import com.music.musicwebapplication.enums.Status;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -38,6 +40,14 @@ public class ConfessController {
         this.service = service;
         this.repo = repo;
         this.songService = songService;
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(
+                String.class,
+                new StringTrimmerEditor(true) // trims + converts "" to null
+        );
     }
 
 //    admin validation page controller

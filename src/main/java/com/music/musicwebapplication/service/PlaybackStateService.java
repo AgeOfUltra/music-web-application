@@ -7,10 +7,13 @@ import com.music.musicwebapplication.dto.FavoriteSongDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PreDestroy;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -20,21 +23,56 @@ import java.util.concurrent.TimeUnit;
 public class PlaybackStateService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ApplicationContext applicationContext;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String PLAYBACK_KEY = "room:%s:playback";
     private static final String FAVORITES_KEY = "room:%s:favorites";
 
-    private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     // 24 hours TTL
     private static final long TTL_24H = 24;
+
+    // Shutdown flag
+    private volatile boolean shuttingDown = false;
+
+    @PreDestroy
+    public void onShutdown() {
+        log.info("🛑 PlaybackStateService shutting down...");
+        shuttingDown = true;
+    }
+
+    // ---------------------------------------------------------
+    // HELPER METHODS
+    // ---------------------------------------------------------
+
+    private boolean isApplicationActive() {
+        if (shuttingDown) {
+            return false;
+        }
+        try {
+            return applicationContext instanceof ConfigurableApplicationContext
+                    && ((ConfigurableApplicationContext) applicationContext).isActive();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean canAccessRedis() {
+        if (!isApplicationActive()) {
+            log.debug("⚠️ Skipping Redis operation - application not active");
+            return false;
+        }
+        return true;
+    }
 
     // ---------------------------------------------------------
     // PLAYBACK STATE
     // ---------------------------------------------------------
 
     public void savePlaybackState(String roomName, PlaybackState state) {
+        if (!canAccessRedis()) return;
+
         String key = String.format(PLAYBACK_KEY, roomName);
 
         try {
@@ -50,12 +88,16 @@ public class PlaybackStateService {
             } else {
                 log.info("✅ Verified: Data exists in Redis for {}", roomName);
             }
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable for {}: {}", roomName, e.getMessage());
         } catch (Exception e) {
             log.error("❌ Error saving playback state for {}: {}", roomName, e.getMessage(), e);
         }
     }
 
     public Optional<PlaybackState> getPlaybackState(String roomName) {
+        if (!canAccessRedis()) return Optional.empty();
+
         String key = String.format(PLAYBACK_KEY, roomName);
 
         try {
@@ -71,6 +113,9 @@ public class PlaybackStateService {
             log.info("✅ Retrieved playback state for {}: {}", roomName, state);
             return Optional.of(state);
 
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable for {}: {}", roomName, e.getMessage());
+            return Optional.empty();
         } catch (Exception e) {
             log.error("❌ Error retrieving playback state for {}: {}", roomName, e.getMessage(), e);
             return Optional.empty();
@@ -78,55 +123,91 @@ public class PlaybackStateService {
     }
 
     public void clearPlaybackState(String roomName) {
+        if (!canAccessRedis()) return;
+
         String key = String.format(PLAYBACK_KEY, roomName);
 
         try {
             Boolean deleted = stringRedisTemplate.delete(key);
-            if (deleted) {
+            if (Boolean.TRUE.equals(deleted)) {
                 log.info("🗑️ Playback state deleted for: {}", roomName);
             } else {
                 log.warn("⚠️ No playback state to delete for: {}", roomName);
             }
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable during cleanup: {}", e.getMessage());
         } catch (Exception e) {
             log.error("❌ Error deleting playback state: {}", e.getMessage(), e);
         }
     }
-
-//    public void clearPlaybackState(String roomName) {
-//        redisTemplate.delete(String.format(PLAYBACK_KEY, roomName));
-//        log.info("🧹 Cleared playback state for {}", roomName);
-//    }
 
     // ---------------------------------------------------------
     // FAVORITES (LIST OF FavoriteSongDto)
     // ---------------------------------------------------------
 
     public void saveFavorites(String roomName, List<FavoriteSongDto> favorites) {
-        String key = String.format(FAVORITES_KEY, roomName);
-        redisTemplate.opsForValue().set(key, favorites, TTL_24H, TimeUnit.HOURS);
+        if (!canAccessRedis()) return;
 
-        log.info("💾 Saved {} favorites for {}",
-                favorites == null ? 0 : favorites.size(),
-                roomName);
+        String key = String.format(FAVORITES_KEY, roomName);
+
+        try {
+            redisTemplate.opsForValue().set(key, favorites, TTL_24H, TimeUnit.HOURS);
+
+            log.info("💾 Saved {} favorites for {}",
+                    favorites == null ? 0 : favorites.size(),
+                    roomName);
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable for {}: {}", roomName, e.getMessage());
+        } catch (Exception e) {
+            log.error("❌ Error saving favorites for {}: {}", roomName, e.getMessage(), e);
+        }
     }
 
     public List<FavoriteSongDto> getFavorites(String roomName) {
-        String key = String.format(FAVORITES_KEY, roomName);
-        Object data = redisTemplate.opsForValue().get(key);
+        if (!canAccessRedis()) return new ArrayList<>();
 
-        if (data == null) return new ArrayList<>();
+        String key = String.format(FAVORITES_KEY, roomName);
 
         try {
+            Object data = redisTemplate.opsForValue().get(key);
+
+            if (data == null) return new ArrayList<>();
+
             return (List<FavoriteSongDto>) data;
-        } catch (Exception e) {
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable for {}: {}", roomName, e.getMessage());
+            return new ArrayList<>();
+        } catch (ClassCastException e) {
             log.error("❌ Favorites casting failed — clearing corrupted data ({})", roomName);
-            redisTemplate.delete(key);
+            try {
+                redisTemplate.delete(key);
+            } catch (Exception ignored) {
+                // Ignore if we can't delete during shutdown
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            log.error("❌ Error retrieving favorites for {}: {}", roomName, e.getMessage(), e);
             return new ArrayList<>();
         }
     }
 
     public void clearFavorites(String roomName) {
-        redisTemplate.delete(String.format(FAVORITES_KEY, roomName));
-        log.info("🧹 Cleared all favorites for {}", roomName);
+        if (!canAccessRedis()) {
+            log.debug("⚠️ Skipping favorites cleanup for {} - application shutting down", roomName);
+            return;
+        }
+
+        try {
+            Boolean deleted = redisTemplate.delete(String.format(FAVORITES_KEY, roomName));
+            if (Boolean.TRUE.equals(deleted)) {
+                log.info("🧹 Cleared all favorites for {}", roomName);
+            } else {
+                log.debug("⚠️ No favorites to clear for {}", roomName);
+            }
+        } catch (IllegalStateException e) {
+            log.warn("⚠️ Redis connection unavailable during cleanup: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("❌ Error clearing favorites for {}: {}", roomName, e.getMessage(), e);
+        }
     }
 }

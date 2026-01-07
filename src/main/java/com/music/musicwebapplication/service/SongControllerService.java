@@ -12,6 +12,8 @@ import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -41,12 +43,16 @@ public class SongControllerService {
     private String bucketName;
 
 
+    private final CacheManager cacheManager;
+
+
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo, SongRequestRepo songRequestRepo, ObjectMapper objectMapper){
+    SongControllerService(S3Client client, SongRepo repo, SongRequestRepo songRequestRepo, ObjectMapper objectMapper, CacheManager cacheManager){
         this.client = client;
         this.repo = repo;
         this.songRequestRepo = songRequestRepo;
         this.objectMapper = objectMapper;
+        this.cacheManager = cacheManager;
     }
 
     public String fileUploadHelper(SongContainer container) throws Exception {
@@ -66,7 +72,7 @@ public class SongControllerService {
             String url = getStreamUrl(s3key);
             log.info("Generated URL: {}", url);
 
-            SongDto uploadedSong = updateSongInDb(container,url);
+            SongDto uploadedSong = saveSong(container,url);
             log.info("song saved with name {}",uploadedSong.getSongName());
 
             return "Song uploaded and saved successfully";
@@ -90,19 +96,61 @@ public class SongControllerService {
        return s3Key;
     }
 
+    // future implementation using the folders
+
+//    private String uploadFile(MultipartFile file, String folderPath) throws IOException {
+//        // Remove trailing slash if present
+//        folderPath = folderPath.endsWith("/") ? folderPath : folderPath + "/";
+//
+//        String fileName = Objects.requireNonNull(file.getOriginalFilename());
+//        String s3Key = folderPath + fileName;  // e.g., "album/mysong.mp3"
+//
+//        PutObjectResponse response = client.putObject(
+//                PutObjectRequest.builder()
+//                        .bucket(bucketName)
+//                        .key(s3Key)
+//                        .build(),
+//                RequestBody.fromBytes(file.getBytes())
+//        );
+//
+//        if(response == null || response.eTag() == null) {
+//            throw new IOException("Failed to upload the song");
+//        }
+//
+//        return s3Key;
+//    }
+
     private String getStreamUrl(String fileName){
         return "/app/music/public/streamSong/"+fileName;
     }
 
 
+    private void evictAllSongCaches() {
+        try {
+            Cache allSongsCache = cacheManager.getCache("AllSongsPaged");
+            Cache patternCache = cacheManager.getCache("CachedSongsPattern");
+            Cache fileNamesCache = cacheManager.getCache("CachedFileNames");
 
-    @Caching(
-            evict = {
-                    @CacheEvict( value ="AllSongsPaged", allEntries = true),
-                    @CacheEvict(value = "CachedSongsPattern",allEntries = true),
-                    @CacheEvict(value = "CachedFileNames",allEntries = true)
+            if (allSongsCache != null) {
+                allSongsCache.clear();
+                log.info("🗑️ Cleared cache: AllSongsPaged");
             }
-    )
+
+            if (patternCache != null) {
+                patternCache.clear();
+                log.info("🗑️ Cleared cache: CachedSongsPattern");
+            }
+
+            if (fileNamesCache != null) {
+                fileNamesCache.clear();
+                log.info("🗑️ Cleared cache: CachedFileNames");
+            }
+
+            log.info("✅ All song caches evicted successfully");
+        } catch (Exception e) {
+            log.error("❌ Error evicting caches: {}", e.getMessage(), e);
+        }
+    }
     protected SongDto updateSongInDb(SongContainer song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
@@ -117,9 +165,24 @@ public class SongControllerService {
 
 
         Optional<Song> savedSong = Optional.of(repo.save(newSong));
+        evictAllSongCaches();
+
+        log.info("Saved  Song : {}",savedSong);
 
         return toDto(savedSong.get());
     }
+
+    @Caching(
+            evict = {
+                    @CacheEvict( value ="AllSongsPaged", allEntries = true),
+                    @CacheEvict(value = "CachedSongsPattern",allEntries = true),
+                    @CacheEvict(value = "CachedFileNames",allEntries = true)
+            }
+    ) // this method is for eviction purpose only.
+    public SongDto saveSong(SongContainer song, String url){
+        return updateSongInDb(song,url);
+    }
+
 
 
     @Cacheable(value = "AllSongsPaged", key = "{#page, #size}")

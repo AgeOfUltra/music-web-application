@@ -1,32 +1,23 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.chatDto.ChatMessage;
 import com.music.musicwebapplication.dto.CreateRoom;
 import com.music.musicwebapplication.dto.RoomJoin;
 import com.music.musicwebapplication.entity.Participant;
 import com.music.musicwebapplication.entity.Room;
-import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomManageException;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
-import com.music.musicwebapplication.service.PlaybackStateService;
-import com.music.musicwebapplication.service.PublicLoginService;
-import com.music.musicwebapplication.service.RoomService;
-import com.music.musicwebapplication.service.UserSessionService;
-import com.music.musicwebapplication.utils.JwtTokenUtil;
+import com.music.musicwebapplication.service.*;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.StaleObjectStateException;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -40,19 +31,12 @@ public class RoomController {
     private final RoomService rService;
     private final PublicLoginService loginService;
     private final UserSessionService sessionService;
-    private final JwtTokenUtil jwtUtil;
-    private final SimpMessagingTemplate simpMessagingTemplate;
-    private final PlaybackStateService playbackStateService;
 
     public RoomController(RoomService rService, PublicLoginService loginService,
-                          UserSessionService sessionService, JwtTokenUtil jwtUtil,
-                          SimpMessagingTemplate simpMessagingTemplate, PlaybackStateService playbackStateService) {
+                          UserSessionService sessionService) {
         this.rService = rService;
         this.loginService = loginService;
         this.sessionService = sessionService;
-        this.jwtUtil = jwtUtil;
-        this.simpMessagingTemplate = simpMessagingTemplate;
-        this.playbackStateService = playbackStateService;
     }
 
     @GetMapping("/chat")
@@ -76,6 +60,13 @@ public class RoomController {
         return "chat";
     }
 
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(
+                String.class,
+                new StringTrimmerEditor(true) // trims + converts "" to null
+        );
+    }
     @PostMapping("/room/create")
     public ModelAndView createRoom(@Valid @ModelAttribute("newRoom") CreateRoom newRoom, Errors error,
                                    RedirectAttributes redirectAttributes, Authentication auth) {

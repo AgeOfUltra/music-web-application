@@ -5,12 +5,14 @@ import com.music.musicwebapplication.service.SongControllerService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
@@ -34,6 +36,14 @@ public class AdminSongController {
     @Autowired
     AdminSongController(SongControllerService songControllerService) {
         this.songControllerService = songControllerService;
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(
+                String.class,
+                new StringTrimmerEditor(true) // trims + converts "" to null
+        );
     }
 
     @PostMapping("/upload")
@@ -87,6 +97,8 @@ public class AdminSongController {
             log.error("Sent file name {}", container.getFileName());
             return ResponseEntity.badRequest().body("Only mp3 files are accepted");
         }
+
+        container.setSongName(container.getSongName().replace(".mp3",""));
 
         String result = songControllerService.fileUploadHelper(container);
         return ResponseEntity.ok(result);

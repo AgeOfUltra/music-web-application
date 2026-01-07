@@ -3,11 +3,15 @@ package com.music.musicwebapplication.controller;
 import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.Song;
+import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.SongControllerService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,9 +26,19 @@ import java.util.List;
 public class SongRequestController {
 
     private final SongControllerService songService;
+    private final RegisterUserService userService;
 
-    public SongRequestController(SongControllerService songService) {
+    public SongRequestController(SongControllerService songService, RegisterUserService userService) {
         this.songService = songService;
+        this.userService = userService;
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(
+                String.class,
+                new StringTrimmerEditor(true) // trims + converts "" to null
+        );
     }
 
     @PostMapping("/request/song")
@@ -48,6 +62,8 @@ public class SongRequestController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
+
+        requestSongDto.setEmail(userService.getUserEmail(requestSongDto.getRequestor()));
         String result = songService.requestedSongSave(requestSongDto);
         if(result.contains("Failed")){
             redirectAttributes.addFlashAttribute("requestSongError", "Request Sent failed. Please try again");

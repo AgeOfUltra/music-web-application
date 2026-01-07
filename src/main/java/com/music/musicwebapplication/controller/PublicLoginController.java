@@ -48,7 +48,6 @@ public class PublicLoginController {
     private final RegisterUserService userService;
     private final UserSessionService sessionService;
     private final JwtTokenUtil jwtUtil;
-    private final SimpMessagingTemplate simpMessagingTemplate;
     private final PublicLoginService loginService;
 
     public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService, PublicLoginService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate, PublicLoginService loginService1) {
@@ -58,7 +57,6 @@ public class PublicLoginController {
         this.userService = userService;
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
-        this.simpMessagingTemplate = simpMessagingTemplate;
         this.loginService = loginService1;
     }
 
@@ -97,10 +95,12 @@ public class PublicLoginController {
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
-        binder.registerCustomEditor(
-                String.class,
-                new StringTrimmerEditor(true) // trims + converts "" to null
-        );
+//        binder.registerCustomEditor(
+//                String.class,
+//                new StringTrimmerEditor(true) // trims + converts "" to null
+//        );
+        binder.registerCustomEditor(String.class, "username", new StringTrimmerEditor(true));
+        binder.registerCustomEditor(String.class, "email", new StringTrimmerEditor(true));
     }
     // Handle login and return JWT token
     @PostMapping("/authenticate")
@@ -124,7 +124,7 @@ public class PublicLoginController {
                     .httpOnly(true)
                     .secure(false)           // true in production (HTTPS)
                     .path("/")
-                    .maxAge(60 * 3)         // 1 hour
+                    .maxAge(60 * 62)         // 1 hour
                     .sameSite("Lax")      // or "Lax" depending on your flows
                     .build();
 

@@ -1,7 +1,10 @@
 package com.music.musicwebapplication.schedulers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.entity.Confess;
+import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.repo.ConfessRepo;
+import com.music.musicwebapplication.repo.SongRequestRepo;
 import com.music.musicwebapplication.service.EmailAgentService;
 import com.music.musicwebapplication.enums.Status;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +18,7 @@ import java.util.*;
 @Slf4j
 public class RequestScheduler {
     private final ConfessRepo confessRepo;
+    private final SongRequestRepo songRequest;
 
     private final EmailAgentService emailService;
 
@@ -22,8 +26,9 @@ public class RequestScheduler {
     private String baseUrl;
 
 
-    public RequestScheduler(ConfessRepo confessRepo, EmailAgentService emailService) {
+    public RequestScheduler(ConfessRepo confessRepo, SongRequestRepo songRequest, EmailAgentService emailService, ObjectMapper objectMapper) {
         this.confessRepo = confessRepo;
+        this.songRequest = songRequest;
         this.emailService = emailService;
     }
 
@@ -73,9 +78,10 @@ public class RequestScheduler {
         }
     }
 
-    @Scheduled(cron = "0 */2 * * * *")
+    @Scheduled(cron = "0 */3 * * * *")
     public void updateExpiry(){
         Optional<List<Confess>> doneRequest =  Optional.of(confessRepo.findByStatus(Status.DONE));
+        Optional<List<RequestSong>> requestedSongs = songRequest.findRequestSongByStatus(Status.DONE);
 
         doneRequest.ifPresent(c-> c.forEach(a -> {
             try{
@@ -87,6 +93,57 @@ public class RequestScheduler {
             }
 
         }));
+        requestedSongs.ifPresent(c-> c.forEach(a -> {
+            try{
+                a.setStatus(Status.EXPIRED);
+                songRequest.save(a);
+                log.info("updated the status successfully for song request to expired");
+            }catch (Exception e){
+                log.error(Arrays.toString(e.getStackTrace()));
+            }
 
+        }));
+
+    }
+
+    @Scheduled(cron = "0 */5 * * * *")
+    public void sendScheduledEmailForSongRequest() {
+
+        Optional<List<RequestSong>> requestedSongs = songRequest.findRequestSongByUploadedAndRejected();
+
+        if(requestedSongs.isEmpty()){
+            log.info("No Request to Send Emails");
+            return;
+        }
+        for (RequestSong c : requestedSongs.get()) {
+            try {
+
+
+                Map<String, Object> templateVariables = new HashMap<>();
+                templateVariables.put("status", c.getStatus());
+                templateVariables.put("songName", c.getSongName());
+                templateVariables.put("movieName", c.getSongName());
+                templateVariables.put("singerName", c.getSingerName());
+                templateVariables.put("note", c.getNote());
+
+                emailService.sendTemplateEmail(
+                        c.getEmail(),
+                        "Song Request Update!",
+                        "song-request-notification", // template name
+                        templateVariables
+                );
+
+                c.setStatus(Status.DONE);
+
+                songRequest.save(c);
+                log.info("Email sent successfully for song request to {}", c.getEmail());
+
+
+            } catch (Exception e) {
+                log.error("Failed to send email for song request id {}: {}",
+                        c.getId(), e.getMessage());
+
+            }
+        }
     }
 }

@@ -39,4 +39,12 @@ public class RegisterUserService {
         }
     }
 
+    public String getUserEmail(String username){
+        Optional<User> user = repo.findByUsername(username);
+        if(user.isEmpty()){
+            return "";
+        }
+        return user.get().getEmail();
+    }
+
 }

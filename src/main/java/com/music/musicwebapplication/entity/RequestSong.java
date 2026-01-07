@@ -14,6 +14,8 @@ public class RequestSong {
 
     private String requestor;
 
+    private String email;
+
     private String songName;
 
     private String movieName;

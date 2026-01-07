@@ -15,6 +15,8 @@ public class RequestSongDto {
 
     private String requestor;
 
+    private String email;
+
     @NotBlank(message = "song name cannot be blank")
     @Size(min = 5,message = "song should be at-least 3 characters")
     @UniqueValidator(
@@ -27,7 +29,6 @@ public class RequestSongDto {
 
     @NotBlank(message = "song name cannot be blank")
     private String singerName;
-
 
 //    this both are for response.
     private Status status;

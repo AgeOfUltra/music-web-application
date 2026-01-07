@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface SongRepo extends JpaRepository<Song,Long> {
+    @Query("SELECT s from Song s where LOWER(s.songName) LIKE LOWER(CONCAT('%', :songName, '%'))")
     Optional<Song> findSongBySongName(String songName);
 
     Optional<Song> findSongByFileName(String objectKey);
