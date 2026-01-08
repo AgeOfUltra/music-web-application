@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableJpaAuditing
 @EnableCaching
+@EnableRetry
 public class MusicWebApplication {
 
     public static void main(String[] args) {

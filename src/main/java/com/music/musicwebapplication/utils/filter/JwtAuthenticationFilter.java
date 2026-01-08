@@ -63,7 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         UserSession session = sessionService.getUserSessionForToken(token);
 
-        if (token == null) {
+        if (token == null || session==null) {
             forceLogout(session,response);
             handleUnauthenticated(request, response);
             return;
@@ -132,7 +132,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Continue anyway to clear cookie and security context
                 }
             } else {
-                log.warn("⚠️ No active session found for user: {}",  session.getUsername());
+                log.warn("⚠️ No active session found for unknown user!" );
             }
         } catch (Exception e) {
             log.error("❌ Logout cleanup failed: {}", e.getMessage(), e);

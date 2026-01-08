@@ -53,7 +53,7 @@ let pauseDebounceTimer = null;
 let resumeDebounceTimer = null;
 // ================== Constants ===============================
 const DEBOUNCE_DELAY = 300;
-const METADATA_TIMEOUT = 15000;
+const METADATA_TIMEOUT = 60000;
 const DUPLICATE_EVENT_THRESHOLD = 500;
 
 let reconnectAttempts = 0;
@@ -1187,7 +1187,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
                         .catch(err => {
                             console.error('❌ Play error after timeout:', err.message);
                             ignoreLocalEvents = false;
-                            ToastNotification.error('❌ Song took too long to load. Please try again.', 5000);
+                            ToastNotification.error('❌ Song took too long to load. Please try again.', 6000);
                         });
                 } else {
                     ignoreLocalEvents = false;
