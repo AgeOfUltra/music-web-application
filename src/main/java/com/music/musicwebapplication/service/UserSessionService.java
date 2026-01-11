@@ -106,35 +106,6 @@ public class UserSessionService {
         }
     }
 
-    @Transactional
-    public void setIntentionalLogout(String username, boolean intentional) {
-        Optional<UserSession> sessionOpt = repo.findByUsername(username);
-        if (sessionOpt.isPresent()) {
-            UserSession session = sessionOpt.get();
-            session.setIntentionalLogout(intentional);
-            repo.save(session);
-            log.info("🔖 Set intentionalLogout={} for user {}", intentional, username);
-        } else {
-            log.warn("⚠️ Could not set intentionalLogout flag - no session for user {}", username);
-        }
-    }
-
-    /**
-     * Checks if the user's exit should delete the session
-     */
-    public boolean shouldDeleteSession(String username) {
-        Optional<UserSession> sessionOpt = repo.findByUsername(username);
-        if (sessionOpt.isEmpty()) {
-            return false;
-        }
-
-        UserSession session = sessionOpt.get();
-        boolean intentional = session.isIntentionalLogout();
-
-        log.info("🔍 Checking logout intent for {}: intentionalLogout={}", username, intentional);
-
-        return intentional;
-    }
 
     /**
      * Resets the intentional logout flag
@@ -182,7 +153,7 @@ public class UserSessionService {
             Boolean exists = redisTemplate.hasKey(redisKey);
             if (exists) {
                 redisTemplate.expire(redisKey, sessionTtlHours, TimeUnit.HOURS);
-                log.debug("🔄 Refreshed Redis TTL for session: {}", username);
+                log.info("🔄 Refreshed Redis TTL for session: {}", username);
             } else {
                 // Key expired or doesn't exist - recreate it
                 setRedisSessionTTL(username);
@@ -240,7 +211,7 @@ public class UserSessionService {
      * Scheduled job to clean up stale sessions
      * Runs every 6 hours
      */
-    @Scheduled(cron = "0 0 */6 * * *")
+    @Scheduled(cron = "0 0 /1 * * *")
     @Transactional
     public void cleanupStaleSessions() {
         if (canAccessRedis()) {
@@ -257,7 +228,6 @@ public class UserSessionService {
             List<UserSession> allSessions = repo.findAll();
             int expiredCount = 0;
             int staleCount = 0;
-
             for (UserSession session : allSessions) {
                 String username = session.getUsername();
 
@@ -290,28 +260,13 @@ public class UserSessionService {
         }
     }
 
-    /**
-     * Manual cleanup trigger (for testing or admin use)
-     */
-    @Transactional
-    public void cleanupExpiredSessionsNow() {
-        log.info("🧹 Manual session cleanup triggered...");
-        cleanupStaleSessions();
-    }
 
     // ==================== EXISTING METHODS ====================
-
-    public Optional<List<UserSession>> getUserSessionByEmptyRoom() {
-        return repo.getUserSessionByRoomNameEmpty();
-    }
 
     public UserSession getUserSessionForToken(String token) {
         return repo.findUserSessionByToken(token);
     }
 
-    public Optional<String> getRoomName(String username) {
-        return repo.findByUsername(username).map(UserSession::getRoomName);
-    }
 
     public Optional<String> getToken(String username) {
         return repo.findByUsername(username).map(UserSession::getToken);
@@ -328,22 +283,6 @@ public class UserSessionService {
         log.info("🗑️ Deleted session for user {}", username);
     }
 
-    @Transactional
-    public void deleteUserSessionByToken(String token) {
-        UserSession session = repo.findUserSessionByToken(token);
-        if (session == null) {
-            log.warn("⚠️ No session found for token");
-            return;
-        }
-
-        // Remove from Redis
-        removeRedisSession(session.getUsername());
-
-        // Remove from database
-        repo.deleteByUsername(session.getUsername());
-
-        log.info("🗑️ Deleted session for user {} via session expiry", session.getUsername());
-    }
 
     @PreDestroy
     private void clearUserSessions() {
@@ -391,21 +330,12 @@ public class UserSessionService {
         return user.orElse(null);
     }
 
-    public void updateUsesSessionExpiry(String token) {
-        UserSession currentSession = getUserSessionForToken(token);
-        if (currentSession != null) {
-            currentSession.setSessionExpired(true);
-            repo.save(currentSession);
-        }
-    }
+
 
     public void updateSession(UserSession session) {
         repo.save(session);
     }
 
-    public List<UserSession> getInactiveUsers() {
-        return repo.getUserSessionBySessionExpired();
-    }
 
     public List<UserSession> getExpiredSessions() {
         LocalDateTime now = LocalDateTime.now();
