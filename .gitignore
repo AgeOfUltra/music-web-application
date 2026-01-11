@@ -38,3 +38,5 @@ build/
 *.env
 .env.local
 .env.*.local
+/docker-compose.yml
+/Dockerfile

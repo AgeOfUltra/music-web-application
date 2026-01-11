@@ -211,7 +211,7 @@ public class UserSessionService {
      * Scheduled job to clean up stale sessions
      * Runs every 6 hours
      */
-    @Scheduled(cron = "0 0 /1 * * *")
+    @Scheduled(cron = "0 0 */1 * * *")
     @Transactional
     public void cleanupStaleSessions() {
         if (canAccessRedis()) {

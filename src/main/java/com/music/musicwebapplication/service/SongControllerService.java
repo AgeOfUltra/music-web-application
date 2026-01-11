@@ -234,7 +234,7 @@ public class SongControllerService {
 
     @Cacheable(
             value = "CachedSongsPattern",
-            key = "#prefix.toLowerCase().substring(0, #prefix.length() > 2 ? 2 : #prefix.length())"
+            key = "#prefix.toLowerCase().split(' ')[0]"
     )
     public List<SongDto> searchSongsByName(String prefix) {
         log.info("🔍 Database query for prefix: {}", prefix);
