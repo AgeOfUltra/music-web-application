@@ -53,7 +53,7 @@ let pauseDebounceTimer = null;
 let resumeDebounceTimer = null;
 // ================== Constants ===============================
 const DEBOUNCE_DELAY = 300;
-const METADATA_TIMEOUT = 60000;
+const METADATA_TIMEOUT = 80000;
 const DUPLICATE_EVENT_THRESHOLD = 500;
 
 let reconnectAttempts = 0;
@@ -65,12 +65,8 @@ let lastSuccessfulConnection = null;
 let sessionExpired = false;
 // ==================== GLOBAL ERROR HANDLER ====================
 const toastRateLimiter = {
-    lastToast: {},
-    rateLimits: {
-        'favorites-update': 2000,
-        'playback-change': 1000,
-        'participant-change': 3000,
-        'default': 2000
+    lastToast: {}, rateLimits: {
+        'favorites-update': 2000, 'playback-change': 1000, 'participant-change': 3000, 'default': 2000
     },
 
     canShow(key, customCooldown = null) {
@@ -383,9 +379,7 @@ const onOrganizerPause = (e) => {
             lastPlaybackTimestamp = currentTime;
 
             const playbackMessage = {
-                action: 'PAUSE',
-                timestamp: currentTime,
-                controller: currentUsername
+                action: 'PAUSE', timestamp: currentTime, controller: currentUsername
             };
 
             stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
@@ -412,8 +406,7 @@ const onOrganizerPlay = (e) => {
             clearTimeout(resumeDebounceTimer);
         }
 
-        if (action === 'RESUME' && lastPlaybackAction === 'RESUME' &&
-            Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
+        if (action === 'RESUME' && lastPlaybackAction === 'RESUME' && Math.abs(currentTime - lastPlaybackTimestamp) < DUPLICATE_EVENT_THRESHOLD) {
             return;
         }
 
@@ -435,13 +428,11 @@ const onOrganizerPlay = (e) => {
             stompClient.send(`/app/music/chat/${currentRoomName}/playback`, {}, JSON.stringify(playbackMessage));
 
             // ✅ Clear the timer
-            if (action === 'PLAY') playDebounceTimer = null;
-            else resumeDebounceTimer = null;
+            if (action === 'PLAY') playDebounceTimer = null; else resumeDebounceTimer = null;
         }, DEBOUNCE_DELAY);
 
         // ✅ Store the timer
-        if (action === 'PLAY') playDebounceTimer = timer;
-        else resumeDebounceTimer = timer;
+        if (action === 'PLAY') playDebounceTimer = timer; else resumeDebounceTimer = timer;
     }
 };
 
@@ -494,6 +485,20 @@ function bindAudioHandlersForRole(role) {
 
 function onSongEnded() {
     if (!isOrganizer) return;
+
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    // ✅ NEW: Check if song actually ended naturally (not due to error)
+    if (audioPlayer.error || audioPlayer.networkState === 3) {
+        console.warn('⚠️ Song ended due to error/network issue, not auto-playing next');
+        return;
+    }
+
+    // ✅ NEW: Check if song duration is reasonable (>10 seconds played)
+    if (audioPlayer.currentTime < 10) {
+        console.warn('⚠️ Song ended too quickly (likely an error), not auto-playing next');
+        return;
+    }
 
     const current = currentSongData?.songFileName;
     if (!current) return;
@@ -1000,6 +1005,36 @@ function setupAudioPlayerListeners() {
     updateAudioControls();
     updatePlaybackButtons();
     bindAudioHandlersForRole(isOrganizer ? 'organizer' : 'participant');
+
+    // ✅ NEW: Add error handler to catch loading failures
+    audioPlayer.addEventListener('error', (e) => {
+        console.error('❌ Audio error:', e);
+
+        // Clear timeout if it exists
+        if (audioLoadTimeout) {
+            clearTimeout(audioLoadTimeout);
+            audioLoadTimeout = null;
+        }
+
+        ignoreLocalEvents = false;
+
+        const errorMsg = audioPlayer.error ? `Error code: ${audioPlayer.error.code}` : 'Unknown error';
+
+        console.error('Audio error details:', errorMsg);
+
+        ToastNotification.error('❌ Failed to load audio. Please try a different song or check your connection.', 6000);
+
+        // Reset display
+        currentSongData = null;
+        document.getElementById('currentSongTitle').textContent = "Playback failed";
+        document.getElementById('currentSongDetails').textContent = "Try playing the song again";
+    });
+
+    // ✅ NEW: Add stalled handler for slow loading
+    audioPlayer.addEventListener('stalled', () => {
+        console.warn('⚠️ Audio loading stalled');
+        ToastNotification.warning('Song loading is slow. Please wait...', 4000);
+    });
 }
 
 // ==================== PLAYBACK HANDLING ====================
@@ -1170,28 +1205,25 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         audioPlayer.addEventListener('loadedmetadata', metadataHandler, {once: true});
 
         // ⭐ Timeout for large files
+        // ⭐ Timeout for large files
         audioLoadTimeout = setTimeout(() => {
             if (!metadataLoaded) {
                 console.warn('⚠️ Metadata loading timeout (60s)');
                 audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
 
-                audioPlayer.currentTime = startTime;
-                const playPromise = audioPlayer.play();
+                // ✅ FIX: Stop the audio completely instead of forcing play
+                audioPlayer.pause();
+                audioPlayer.src = '';
+                audioPlayer.removeAttribute('src');
 
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            ignoreLocalEvents = false;
-                            ToastNotification.success(`✅ Now Playing: ${playbackMsg.songName}`, 3000);
-                        })
-                        .catch(err => {
-                            console.error('❌ Play error after timeout:', err.message);
-                            ignoreLocalEvents = false;
-                            ToastNotification.error('❌ Song took too long to load. Please try again.', 6000);
-                        });
-                } else {
-                    ignoreLocalEvents = false;
-                }
+                ignoreLocalEvents = false;
+
+                ToastNotification.error('❌ Song took too long to load. Please check your connection and try again.', 8000);
+
+                // ✅ Optional: Reset current song display
+                currentSongData = null;
+                document.getElementById('currentSongTitle').textContent = "Loading failed";
+                document.getElementById('currentSongDetails').textContent = "Please try playing the song again";
             }
         }, METADATA_TIMEOUT); // 60 seconds
     }
@@ -1263,6 +1295,7 @@ function updateServerTimeOffset(serverTime) {
 function getAdjustedServerTime() {
     return Date.now() + serverTimeOffset;
 }
+
 function handlePlaybackSyncState(syncMsg) {
     syncRequestPending = false;
     hasReceivedInitialSync = true;
@@ -1447,9 +1480,7 @@ function requestPlaybackSync() {
     isSyncing = true;
 
     const syncRequest = {
-        username: currentUsername,
-        timestamp: Date.now(),
-        roomName: currentRoomName
+        username: currentUsername, timestamp: Date.now(), roomName: currentRoomName
     };
 
     try {
@@ -1826,8 +1857,7 @@ function startHeartbeat() {
             try {
                 // ✅ Send WebSocket heartbeat
                 stompClient.send(`/app/music/chat/${currentRoomName}/heartbeat`, {}, JSON.stringify({
-                    username: currentUsername,
-                    timestamp: Date.now()
+                    username: currentUsername, timestamp: Date.now()
                 }));
                 lastHeartbeat = Date.now();
 
@@ -2006,15 +2036,12 @@ function connectWebSocket(token) {
 
         const msg = error?.headers?.message || error?.body || error?.toString?.() || '';
 
-        if (msg.includes('401') || msg.includes('403') ||
-            msg.toLowerCase().includes('unauthorized') ||
-            msg.toLowerCase().includes('forbidden')) {
+        if (msg.includes('401') || msg.includes('403') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('forbidden')) {
             handleSessionExpired('WebSocket authentication failed');
             return;
         }
 
-        if (lastSuccessfulConnection &&
-            (Date.now() - lastSuccessfulConnection) > RECONNECT_RESET_TIME) {
+        if (lastSuccessfulConnection && (Date.now() - lastSuccessfulConnection) > RECONNECT_RESET_TIME) {
             reconnectAttempts = 0;
             console.log('🔄 Resetting reconnect counter (last success > 1 min ago)');
         }
@@ -2321,15 +2348,14 @@ function displayMessage(message) {
     messageDiv.className = 'chat-bubble ' + (isCurrentUser ? 'my-message' : 'other-message');
     messageDiv.dataset.messageId = messageId;
 
-    const time = new Date(message.timestamp || Date.now()).toLocaleTimeString('en-US', {  // ✅ UPDATE THIS
+    const time = new Date(message.timestamp || Date.now()).toLocaleTimeString('en-US', {
         hour: '2-digit', minute: '2-digit'
     });
-
 
     let replyHTML = '';
     if (message.replyTo) {
         replyHTML = `
-            <div class="reply-reference" onclick="scrollToMessage(${message.replyTo.id})">
+            <div class="reply-reference" data-scroll-to="${message.replyTo.id}">
                 <div class="reply-reference-header">
                     <i class="bi bi-reply-fill"></i>
                     <span>${escapeHtml(message.replyTo.sender)}</span>
@@ -2349,13 +2375,39 @@ function displayMessage(message) {
             ${escapeHtml(message.content)}
         </div>
         <div class="message-actions">
-            <button class="message-action-btn" 
-                    onclick="setReplyToMessage(${messageId}, '${escapeHtml(message.sender)}', '${escapeHtml(message.content)}')" 
+            <button class="message-action-btn reply-btn" 
+                    data-message-id="${messageId}"
+                    data-sender="${escapeHtml(message.sender)}"
+                    data-content="${escapeHtml(message.content)}"
                     title="Reply">
                 <i class="bi bi-reply"></i>
             </button>
         </div>
     `;
+
+    // ✅ Add event listener for reply button
+    const replyBtn = messageDiv.querySelector('.reply-btn');
+    if (replyBtn) {
+        replyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const msgId = this.dataset.messageId;
+            const sender = this.dataset.sender;
+            const content = this.dataset.content;
+            setReplyToMessage(msgId, sender, content);
+        });
+    }
+
+    // ✅ Add event listener for reply reference (clicking on quoted message)
+    const replyReference = messageDiv.querySelector('.reply-reference');
+    if (replyReference) {
+        replyReference.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetId = this.dataset.scrollTo;
+            scrollToMessage(targetId);
+        });
+    }
 
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -2440,6 +2492,7 @@ function handleFavoriteToggle(heartButton) {
     // console.log('💖 Toggling favorite for:', song.songName);
     toggleFavorite(song, heartButton);
 }
+
 /**
  * Determines the best playlist mode for a song
  * Priority: 1. Favorites, 2. Search (if available), 3. Global
@@ -2449,9 +2502,7 @@ function determinePlaylistMode(song) {
     const favIndex = roomFavorites.findIndex(s => s.fileName === song.fileName);
     if (favIndex !== -1) {
         return {
-            mode: 'favorites',
-            playlist: roomFavorites,
-            index: favIndex
+            mode: 'favorites', playlist: roomFavorites, index: favIndex
         };
     }
 
@@ -2460,9 +2511,7 @@ function determinePlaylistMode(song) {
         const searchIndex = searchSongsList.findIndex(s => s.fileName === song.fileName);
         if (searchIndex !== -1) {
             return {
-                mode: 'search',
-                playlist: searchSongsList,
-                index: searchIndex
+                mode: 'search', playlist: searchSongsList, index: searchIndex
             };
         }
     }
@@ -2470,11 +2519,10 @@ function determinePlaylistMode(song) {
     // Default to global playlist
     const globalIndex = allSongsOnPage.findIndex(s => s.fileName === song.fileName);
     return {
-        mode: 'all',
-        playlist: allSongsOnPage,
-        index: globalIndex
+        mode: 'all', playlist: allSongsOnPage, index: globalIndex
     };
 }
+
 function handleSongClick(element) {
     if (!isOrganizer) {
         ToastNotification.warning('Only the organizer can play songs');
@@ -2672,7 +2720,6 @@ let allowUnload = false;
 let isClosing = false;
 
 
-
 function sendFlagBeacon(fullLogout) {
     if (!jwtToken) {
         console.warn('⚠️ Missing JWT for beacon');
@@ -2697,6 +2744,7 @@ function sendFlagBeacon(fullLogout) {
         return false;
     }
 }
+
 // ==================== 2. PAGE RELOAD (F5 / Ctrl+R) ====================
 // ✅ Exit room + Keep session + Redirect to dashboard
 window.addEventListener('beforeunload', (event) => {
@@ -2785,7 +2833,8 @@ function safeDisconnectWebSocket() {
             // Try to disconnect anyway
             try {
                 stompClient.disconnect();
-            } catch (e2) {}
+            } catch (e2) {
+            }
         }
     }
 
@@ -2810,13 +2859,10 @@ async function handleBack() {
 
         // ✅ STEP 1: Set intentionalLogout=false (back button)
         await fetch('/app/music/room/update/session/flag', {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                token: jwtToken,
-                flag: 'false'  // Keep session alive
+            }, body: new URLSearchParams({
+                token: jwtToken, flag: 'false'  // Keep session alive
             })
         });
 
@@ -2855,13 +2901,10 @@ async function logout() {
 
         // ✅ STEP 1: Set intentionalLogout=true (full logout)
         await fetch('/app/music/room/update/session/flag', {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                token: jwtToken,
-                flag: 'true'  // Delete session
+            }, body: new URLSearchParams({
+                token: jwtToken, flag: 'true'  // Delete session
             })
         });
 

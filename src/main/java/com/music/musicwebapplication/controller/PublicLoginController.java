@@ -2,9 +2,7 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
-import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.entity.UserSession;
-import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
@@ -36,6 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Controller
@@ -95,10 +94,6 @@ public class PublicLoginController {
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
-//        binder.registerCustomEditor(
-//                String.class,
-//                new StringTrimmerEditor(true) // trims + converts "" to null
-//        );
         binder.registerCustomEditor(String.class, "username", new StringTrimmerEditor(true));
         binder.registerCustomEditor(String.class, "email", new StringTrimmerEditor(true));
     }
@@ -193,8 +188,17 @@ public class PublicLoginController {
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
-        ResponseEntity<?> response = registerUserApi(newUser);
-        if (response.getStatusCode().equals(HttpStatus.CREATED)) {
+        Optional<UserSession> existingUser = Optional.ofNullable(sessionService.getUserSession(newUser.getUsername()));
+        if(existingUser.isPresent()){
+            redirectAttributes.addAttribute("signUpError", "User Already Registered!");
+            redirectAttributes.addFlashAttribute("newUser", newUser);
+            log.error("User AlreadyRegistered! passed data : {}", newUser);
+            return new ModelAndView("redirect:/app/music/public/signUp");
+        }
+
+        newUser.setRole(Role.LISTENER);
+        boolean result = userService.registerUser(newUser);
+        if (result) {
             log.info("New User created successfully! and his/her data : {}", newUser);
             redirectAttributes.addFlashAttribute("showRegistrationSuccess", true);
             return new ModelAndView("redirect:/app/music/public/login");
@@ -207,12 +211,6 @@ public class PublicLoginController {
 
     }
 
-    private ResponseEntity<String> registerUserApi(RegisterUser newUser) {
-        newUser.setUsername(newUser.getUsername().trim());
-        newUser.setRole(Role.LISTENER);
-        String result = userService.registerUser(newUser);
-        return result.contains("Successfully") ? ResponseEntity.status(HttpStatus.CREATED).body(result) :ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result) ;
-    }
 
 
     @GetMapping("/logout")

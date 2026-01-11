@@ -1,7 +1,7 @@
 :root {
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --card-bg: rgb(21, 138, 211); /*looks nice card constant*/
-    /*--card-bg: rgb(140, 178, 239);*/
+    /*--card-bg: rgb(21, 138, 211); !*looks nice card constant*!*/
+    /*--card-bg: rgba(255, 255, 255, 0.1);*/
     --glass-bg: rgba(255, 255, 255, 0.1);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -69,12 +69,13 @@ body {
 }
 /* Enhanced cards */
 .card {
-    background: var(--card-bg);
-    border: none;
-    border-radius: 20px;
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    background: rgba(255, 255, 255, 0.15); !important;
+    backdrop-filter: blur(15px)  !important;
+    -webkit-backdrop-filter: blur(15px)  !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    color: white !important;
 }
 
 .card:hover {
@@ -126,6 +127,9 @@ body {
 
 .btn-gradient:hover::before {
     left: 100%;
+}
+.text-muted {
+    color: white !important;
 }
 
 /* Modal styling */

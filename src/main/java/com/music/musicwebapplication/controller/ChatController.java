@@ -69,10 +69,14 @@ public class ChatController {
 
         log.info("🔌 WebSocket disconnect notification for user={} in room={}", username, roomName);
 
-        // Just log the disconnect - HTTP endpoint handles the actual removal
-        // This is only for monitoring/debugging purposes
+        // ✅ CRITICAL: Broadcast to all users in the room
+        try {
+            messagingTemplate.convertAndSend("/topic/chat/" + roomName, chatMessage);
+            log.info("📢 Broadcasted LEAVE notification to /topic/chat/{}", roomName);
+        } catch (Exception e) {
+            log.error("❌ Failed to broadcast LEAVE message: {}", e.getMessage(), e);
+        }
 
-        // Optional: Verify if user was already removed by HTTP
         try {
             UserSession session = sessionService.getUserSession(username);
             if (session != null && roomName.equals(session.getRoomName())) {

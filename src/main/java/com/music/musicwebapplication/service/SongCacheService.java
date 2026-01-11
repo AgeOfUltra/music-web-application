@@ -7,7 +7,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.retry.annotation.Backoff;
@@ -20,13 +19,11 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -36,8 +33,8 @@ import java.util.Optional;
 @Slf4j
 public class SongCacheService {
 
-    private final S3Client client;
-    private final SongRepo repo;
+    private final S3Client s3Client;
+    private final SongRepo songRepo;
 
     @Value("${aws.bucket.name}")
     private String bucketName;
@@ -47,248 +44,158 @@ public class SongCacheService {
 
     private Path cacheDir;
 
+    // ---------------- INIT ----------------
+
     @PostConstruct
-    public void initCacheDirectory() throws IOException {
-        cacheDir = Paths.get(cacheDirPath);
-        if (!Files.exists(cacheDir)) {
-            Files.createDirectories(cacheDir);
-        }
-        log.info("📂 Song cache directory initialized at: {}", cacheDir.toAbsolutePath());
+    public void init() throws IOException {
+        cacheDir = Paths.get(cacheDirPath).normalize();
+        Files.createDirectories(cacheDir);
+        log.info("📂 Song cache initialized at {}", cacheDir.toAbsolutePath());
     }
 
+    // ---------------- PUBLIC API ----------------
+
     /**
-     * Main entry point - gets cached resource with retry logic
+     * Returns cached song resource or downloads it if missing
      */
     public Resource getCachedResource(String objectKey) throws IOException {
-        try {
-            String cachedPath = cacheSongIfNeeded(objectKey);
-            return new FileSystemResource(cachedPath);
-
-        } catch (SocketException e) {
-            // Client disconnected - this is normal behavior
-            log.debug("⚠️ Client disconnected while fetching song: {}", objectKey);
-            return null;
-
-        } catch (SongNotFoundException e) {
-            log.error("❌ Song not found in database: {}", objectKey);
-            throw e;
-
-        } catch (IOException e) {
-            log.error("❌ Failed to get cached resource for {}: {}", objectKey, e.getMessage());
-            throw e;
-        }
-    }
-
-    /**
-     * Caches song with metadata caching
-     */
-    @Cacheable(value = "songCacheMetadata", key = "#objectKey")
-    public String cacheSongIfNeeded(String objectKey) throws IOException {
-        if (!Files.exists(cacheDir)) {
-            Files.createDirectories(cacheDir);
-        }
+        validateFileName(objectKey);
 
         Path cachedFile = cacheDir.resolve(objectKey);
 
-        // Check if already cached
+        // Touch file to prevent cleanup during streaming
         if (Files.exists(cachedFile)) {
-            log.debug("✅ Song found in local cache: {}", objectKey);
-            return cachedFile.toAbsolutePath().toString();
+            Files.setLastModifiedTime(cachedFile, FileTime.from(Instant.now()));
+            return new FileSystemResource(cachedFile);
         }
 
-        // Verify song exists in database
-        Optional<Song> song = repo.findSongByFileName(objectKey);
+        // Ensure song exists in DB
+        Optional<Song> song = songRepo.findSongByFileName(objectKey);
         if (song.isEmpty()) {
-            throw new SongNotFoundException("Song not found in DB: " + objectKey);
+            throw new SongNotFoundException("Song not found: " + objectKey);
         }
 
-        // Download from S3 with retry logic
         downloadFromS3WithRetry(objectKey, cachedFile);
 
-        log.info("✅ Successfully cached {} locally", objectKey);
-        return cachedFile.toAbsolutePath().toString();
+        Files.setLastModifiedTime(cachedFile, FileTime.from(Instant.now()));
+        return new FileSystemResource(cachedFile);
     }
 
+    // ---------------- S3 DOWNLOAD ----------------
+
     /**
-     * Downloads from S3 with automatic retry on network errors
+     * Downloads song from S3 with retry on network failures only
      */
     @Retryable(
             retryFor = {SocketException.class, SocketTimeoutException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    private void downloadFromS3WithRetry(String objectKey, Path cachedFile) throws IOException {
-        log.debug("📥 Downloading song {} from S3 (bucket: {})", objectKey, bucketName);
+    protected void downloadFromS3WithRetry(String objectKey, Path targetFile) throws IOException {
+
+        log.info("⬇️ Downloading {} from S3", objectKey);
 
         GetObjectRequest request = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
                 .build();
 
-        try (ResponseInputStream<GetObjectResponse> s3Stream = client.getObject(request);
-             OutputStream out = Files.newOutputStream(cachedFile)) {
+        try (ResponseInputStream<GetObjectResponse> s3Stream = s3Client.getObject(request);
+             OutputStream out = Files.newOutputStream(
+                     targetFile,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.TRUNCATE_EXISTING)) {
 
-            // Transfer with progress tracking
             byte[] buffer = new byte[8192];
-            int bytesRead;
-            long totalBytes = 0;
+            int read;
+            long total = 0;
 
-            while ((bytesRead = s3Stream.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
-                totalBytes += bytesRead;
+            while ((read = s3Stream.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+                total += read;
             }
 
-            log.debug("📦 Downloaded {} bytes for {}", totalBytes, objectKey);
+            log.info("✅ Downloaded {} bytes for {}", total, objectKey);
 
         } catch (SocketException | SocketTimeoutException e) {
-            log.warn("⚠️ Network error downloading {}, will retry: {}", objectKey, e.getMessage());
-
-            // Clean up partial file before retry
-            try {
-                Files.deleteIfExists(cachedFile);
-                log.debug("🧹 Cleaned up partial file for {}", objectKey);
-            } catch (IOException cleanupError) {
-                log.warn("⚠️ Failed to cleanup partial file : {}", cleanupError.getMessage());
-            }
-
-            throw e; // Trigger retry
-
+            cleanupPartialFile(targetFile);
+            log.warn("⚠️ Network error downloading {}, retrying", objectKey);
+            throw e;
         } catch (IOException e) {
+            cleanupPartialFile(targetFile);
             log.error("❌ IO error downloading {}: {}", objectKey, e.getMessage());
-
-            // Clean up partial file
-            try {
-                Files.deleteIfExists(cachedFile);
-            } catch (IOException cleanupError) {
-                log.warn("⚠️ Failed to cleanup partial file: {}", cleanupError.getMessage());
-            }
-
             throw e;
         }
     }
 
+    // ---------------- CLEANUP ----------------
+
     /**
-     * Scheduled cleanup of old cache files
-     * Runs every 1 hour
+     * Cleans cache files older than 2 hours
      */
     @Scheduled(fixedRate = 3600000)
-    public void cleanOldCacheFiles() {
+    public void cleanupOldFiles() {
         try {
-            if (!Files.exists(cacheDir)) {
-                log.debug("📂 Cache directory doesn't exist, skipping cleanup");
-                return;
-            }
+            if (!Files.exists(cacheDir)) return;
 
-            long deletedCount = Files.list(cacheDir)
-                    .filter(this::isFileOlderThan2Hours)
+            long removed = Files.list(cacheDir)
+                    .filter(this::isOlderThan2Hours)
                     .filter(this::deleteFile)
                     .count();
 
-            if (deletedCount > 0) {
-                log.info("🧹 Cleaned up {} old cache files", deletedCount);
-            } else {
-                log.debug("✅ No old cache files to clean");
+            if (removed > 0) {
+                log.info("🧹 Removed {} stale cache files", removed);
             }
 
         } catch (IOException e) {
-            log.error("❌ Error during cache cleanup: {}", e.getMessage(), e);
+            log.error("❌ Cache cleanup failed", e);
         }
     }
 
-    /**
-     * Checks if file is older than 2 hours
-     */
-    private boolean isFileOlderThan2Hours(Path path) {
+    // ---------------- HELPERS ----------------
+
+    private boolean isOlderThan2Hours(Path file) {
         try {
-            Instant lastModified = Files.getLastModifiedTime(path).toInstant();
-            Instant threshold = Instant.now().minus(2, ChronoUnit.HOURS);
-            return lastModified.isBefore(threshold);
+            Instant modified = Files.getLastModifiedTime(file).toInstant();
+            return modified.isBefore(Instant.now().minus(2, ChronoUnit.HOURS));
         } catch (IOException e) {
-            log.warn("⚠️ Failed to check modification time for {}: {}", path, e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Deletes a file and logs the result
-     */
-    private boolean deleteFile(Path path) {
+    private boolean deleteFile(Path file) {
         try {
-            boolean deleted = Files.deleteIfExists(path);
-            if (deleted) {
-                log.debug("🗑️ Deleted old cache: {}", path.getFileName());
-            }
-            return deleted;
+            return Files.deleteIfExists(file);
         } catch (IOException e) {
-            log.warn("⚠️ Failed to delete cache file {}: {}", path, e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Manually clear all cache files (for admin/testing)
-     */
-    public void clearAllCache() {
+    private void cleanupPartialFile(Path file) {
         try {
-            if (!Files.exists(cacheDir)) {
-                log.info("📂 Cache directory doesn't exist, nothing to clear");
-                return;
-            }
-
-            long deletedCount = Files.list(cacheDir)
-                    .filter(this::deleteFile)
-                    .count();
-
-            log.info("🧹 Cleared entire cache: {} files deleted", deletedCount);
-
-        } catch (IOException e) {
-            log.error("❌ Error clearing cache: {}", e.getMessage(), e);
+            Files.deleteIfExists(file);
+        } catch (IOException ignored) {
         }
     }
 
     /**
-     * Get cache statistics
+     * Prevents path traversal & invalid names
      */
-    public CacheStats getCacheStats() {
-        try {
-            if (!Files.exists(cacheDir)) {
-                return new CacheStats(0, 0L);
-            }
+    private void validateFileName(String fileName) {
 
-            long[] stats = Files.list(cacheDir)
-                    .mapToLong(path -> {
-                        try {
-                            return Files.size(path);
-                        } catch (IOException e) {
-                            return 0L;
-                        }
-                    })
-                    .collect(
-                            () -> new long[2], // [count, totalSize]
-                            (arr, size) -> {
-                                arr[0]++;
-                                arr[1] += size;
-                            },
-                            (arr1, arr2) -> {
-                                arr1[0] += arr2[0];
-                                arr1[1] += arr2[1];
-                            }
-                    );
+        if (fileName == null || fileName.isBlank()) {
+            throw new IllegalArgumentException("File name is empty");
+        }
 
-            return new CacheStats((int) stats[0], stats[1]);
+        // Prevent path traversal
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
 
-        } catch (IOException e) {
-            log.error("❌ Error getting cache stats: {}", e.getMessage());
-            return new CacheStats(0, 0L);
+        // Allow spaces + safe characters
+        if (!fileName.matches("^[a-zA-Z0-9 ._\\-]+\\.mp3$")) {
+            throw new IllegalArgumentException("Invalid file name");
         }
     }
 
-    /**
-     * Cache statistics data class
-     */
-    public record CacheStats(int fileCount, long totalSizeBytes) {
-        public String getTotalSizeMB() {
-            return String.format("%.2f MB", totalSizeBytes / (1024.0 * 1024.0));
-        }
-    }
 }

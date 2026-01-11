@@ -64,7 +64,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserSession session = sessionService.getUserSessionForToken(token);
 
         if (token == null || session==null) {
-            forceLogout(session,response);
             handleUnauthenticated(request, response);
             return;
         }

@@ -40,6 +40,25 @@ public class PlaybackStateService {
     public void onShutdown() {
         log.info("🛑 PlaybackStateService shutting down...");
         shuttingDown = true;
+        try {
+            // Clear all playback states
+            Set<String> playbackKeys = stringRedisTemplate.keys("room:*:playback");
+            if (playbackKeys != null && !playbackKeys.isEmpty()) {
+                Long deletedPlayback = stringRedisTemplate.delete(playbackKeys);
+                log.info("🧹 Cleared {} playback state(s) during shutdown", deletedPlayback);
+            }
+
+            // Clear all favorites
+            Set<String> favoritesKeys = redisTemplate.keys("room:*:favorites");
+            if (favoritesKeys != null && !favoritesKeys.isEmpty()) {
+                Long deletedFavorites = redisTemplate.delete(favoritesKeys);
+                log.info("🧹 Cleared {} favorite(s) during shutdown", deletedFavorites);
+            }
+
+            log.info("✅ PlaybackStateService shutdown cleanup completed");
+        } catch (Exception e) {
+            log.error("❌ Error during shutdown cleanup: {}", e.getMessage(), e);
+        }
     }
 
     // ---------------------------------------------------------
@@ -129,13 +148,13 @@ public class PlaybackStateService {
 
         try {
             Boolean deleted = stringRedisTemplate.delete(key);
-            if (Boolean.TRUE.equals(deleted)) {
+            if (deleted) {
                 log.info("🗑️ Playback state deleted for: {}", roomName);
             } else {
                 log.warn("⚠️ No playback state to delete for: {}", roomName);
             }
         } catch (IllegalStateException e) {
-            log.warn("⚠️ Redis connection unavailable during cleanup: {}", e.getMessage());
+            log.warn("⚠️ Redis connection unavailable during cleanup :  {}", e.getMessage());
         } catch (Exception e) {
             log.error("❌ Error deleting playback state: {}", e.getMessage(), e);
         }
@@ -154,7 +173,7 @@ public class PlaybackStateService {
             redisTemplate.opsForValue().set(key, favorites, TTL_24H, TimeUnit.HOURS);
 
             log.info("💾 Saved {} favorites for {}",
-                    favorites == null ? 0 : favorites.size(),
+                    favorites.size(),
                     roomName);
         } catch (IllegalStateException e) {
             log.warn("⚠️ Redis connection unavailable for {}: {}", roomName, e.getMessage());
@@ -199,7 +218,7 @@ public class PlaybackStateService {
 
         try {
             Boolean deleted = redisTemplate.delete(String.format(FAVORITES_KEY, roomName));
-            if (Boolean.TRUE.equals(deleted)) {
+            if (deleted) {
                 log.info("🧹 Cleared all favorites for {}", roomName);
             } else {
                 log.debug("⚠️ No favorites to clear for {}", roomName);

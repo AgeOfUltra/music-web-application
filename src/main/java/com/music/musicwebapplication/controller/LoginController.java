@@ -37,11 +37,11 @@ public class LoginController {
     @PostMapping("/private/signUp")
     public ResponseEntity<String> registerUser(@RequestBody RegisterUser newUser){
         newUser.setRole(Role.LISTENER);
-        String result = userService.registerUser(newUser);
+        boolean result = userService.registerUser(newUser);
 
         return ResponseEntity.status(
                 HttpStatus.CREATED
-        ).body(result);
+        ).body(result  ? "Created" : "Failed");
     }
 
     @PostMapping("/private/authenticate")

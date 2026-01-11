@@ -42,25 +42,19 @@ public class PublicSongController {
         this.repo = repo;
     }
 
-    @GetMapping(value = "/public/streamSong/{name}",produces = "audio/mpeg")
+    @GetMapping(value = "/public/streamSong/{name}", produces = "audio/mpeg")
     public ResponseEntity<Resource> streamSong(@PathVariable String name) {
         try {
             Resource resource = songCacheService.getCachedResource(name);
 
-            // Handle client disconnection
-            if (resource == null) {
-                log.debug("⚠️ Resource unavailable (client disconnected): {}", name);
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-            }
-
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("audio/mpeg"))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .contentLength(resource.contentLength())
                     .body(resource);
 
         } catch (SongNotFoundException e) {
-            log.error("❌ Song not found: {}", name);
+            log.warn("⚠️ Song not found: {}", name);
             return ResponseEntity.notFound().build();
 
         } catch (IOException e) {
