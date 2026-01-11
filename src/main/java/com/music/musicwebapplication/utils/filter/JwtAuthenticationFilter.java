@@ -63,16 +63,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         UserSession session = sessionService.getUserSessionForToken(token);
 
-        if (token == null || session==null) {
+        if (token == null || session == null) {
             handleUnauthenticated(request, response);
             return;
         }
-
-        if (shouldNotFilter(request)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
 
 
         try {
@@ -98,7 +92,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-            forceLogout(session,response);
+            forceLogout(session, response);
             handleUnauthenticated(request, response);
         }
     }
@@ -131,7 +125,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Continue anyway to clear cookie and security context
                 }
             } else {
-                log.warn("⚠️ No active session found for unknown user!" );
+                log.warn("⚠️ No active session found for unknown user!");
             }
         } catch (Exception e) {
             log.error("❌ Logout cleanup failed: {}", e.getMessage(), e);
@@ -158,7 +152,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         List<String> ignore = Arrays.asList("public", "css", "js", "images", "h2-console", "favicon");
 
         boolean isIgnored = ignore.stream().anyMatch(path::contains);
-        log.info("requested path {} is ignored {}", path, isIgnored || path.equals("/"));
+        log.debug("requested path {} is ignored {}", path, isIgnored || path.equals("/"));
 
         return path.equals("/") || isIgnored;
     }
