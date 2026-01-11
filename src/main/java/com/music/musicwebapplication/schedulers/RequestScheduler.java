@@ -43,7 +43,7 @@ public class RequestScheduler {
 
                 String joinUrl = String.format(
                         "%s/app/music/nodes/join?sender=%s&roomId=%s",
-                        baseUrl, // e.g., "http://localhost:8080" or your production URL
+                        baseUrl,
                         c.getSenderOriginalName(),
                         c.getRoomHash()
                 );
@@ -87,7 +87,7 @@ public class RequestScheduler {
             try{
                 a.setStatus(Status.EXPIRED);
                 confessRepo.save(a);
-                log.info("updated the status success full to expired");
+                log.info("updated the status success full to expired {}",a.getRoomHash());
             }catch (Exception e){
                 log.error(Arrays.toString(e.getStackTrace()));
             }
@@ -141,6 +141,40 @@ public class RequestScheduler {
 
             } catch (Exception e) {
                 log.error("Failed to send email for song request id {}: {}",
+                        c.getId(), e.getMessage());
+
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 */5 * * * *")
+    public void sendRejectedConfess(){
+        Optional<List<Confess>> rejectedConfess = Optional.of(confessRepo.findByStatus(Status.REJECTED));
+
+        for (Confess c : rejectedConfess.get()) {
+            try {
+
+
+                Map<String, Object> templateVariables = new HashMap<>();
+                templateVariables.put("confessType", c.getConfessType());
+                templateVariables.put("receiverAlias", c.getReceiverAlias());
+                templateVariables.put("note", c.getNote());
+
+                emailService.sendTemplateEmail(
+                        c.getEmail(),
+                        "Confess Request Update!",
+                        "confession-rejection", // template name
+                        templateVariables
+                );
+
+                c.setStatus(Status.DONE);
+
+                confessRepo.save(c);
+                log.info("Rejected email sent successfully {}", c.getEmail());
+
+
+            } catch (Exception e) {
+                log.error("Failed to send email for  request id {}: {}",
                         c.getId(), e.getMessage());
 
             }

@@ -44,7 +44,7 @@ public class EmailAgentService {
         String htmlContent = templateEngine.process(templateName, context);
 
         helper.setText(htmlContent, true); // true = HTML
-        log.info("email content {} , to : {} , subject : {}, from {} ",htmlContent,to,subject,from);
+        log.debug("email content {} , to : {} , subject : {}, from {} ",htmlContent,to,subject,from);
         mailSender.send(message);
     }
 
