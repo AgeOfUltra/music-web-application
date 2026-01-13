@@ -15,7 +15,7 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)
 public class Room {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column(unique = true)
     private String roomName;

@@ -1,6 +1,5 @@
 package com.music.musicwebapplication.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.ConfessDto;
 import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.repo.ConfessRepo;
@@ -11,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.random.RandomGenerator;
 
@@ -19,7 +19,7 @@ import java.util.random.RandomGenerator;
 public class ConfessService {
 
     private final ConfessRepo repo;
-    private static final RandomGenerator RNG = RandomGenerator.of("L128X256MixRandom");
+    private static final SecureRandom RNG = new SecureRandom();
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$&";
 
 

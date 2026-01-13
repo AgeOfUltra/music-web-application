@@ -9,7 +9,7 @@ import lombok.Data;
 public class RequestSong {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     private String requestor;
