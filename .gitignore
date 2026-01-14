@@ -40,3 +40,4 @@ build/
 .env.*.local
 /docker-compose.yml
 /Dockerfile
+*.sql
