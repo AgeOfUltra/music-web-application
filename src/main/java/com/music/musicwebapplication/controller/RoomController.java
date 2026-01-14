@@ -104,7 +104,7 @@ public class RoomController {
             return new ModelAndView("redirect:/app/music/dashboard");
         } catch (Exception e) {
             log.error("Unexpected error during room creation: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("creationError", "An unexpected error occurred: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("creationError", "An unexpected error occurred: ");
             redirectAttributes.addFlashAttribute("newRoom", newRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
@@ -169,7 +169,7 @@ public class RoomController {
             return new ModelAndView("redirect:/app/music/dashboard");
         } catch (Exception e) {
             log.error("Unexpected error during room join: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("joinError", "An unexpected error occurred: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("joinError", "An unexpected error occurred");
             redirectAttributes.addFlashAttribute("joinRoom", joinRoom);
             return new ModelAndView("redirect:/app/music/dashboard");
         }
