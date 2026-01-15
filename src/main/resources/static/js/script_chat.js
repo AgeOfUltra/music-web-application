@@ -63,6 +63,14 @@ let lastSuccessfulConnection = null;
 
 
 let sessionExpired = false;
+//  =========================== Debug
+
+const DEBUG = true; // Set to false to disable all console.logs
+
+if (!DEBUG) {
+    console.log = function() {};
+}
+
 // ==================== GLOBAL ERROR HANDLER ====================
 const toastRateLimiter = {
     lastToast: {}, rateLimits: {
@@ -398,8 +406,6 @@ const onOrganizerPlay = (e) => {
         const action = currentTime > 1000 ? 'RESUME' : 'PLAY';
 
         // ✅ FIX: Use appropriate timer based on action
-        const timerToUse = action === 'PLAY' ? 'playDebounceTimer' : 'resumeDebounceTimer';
-
         if (action === 'PLAY' && playDebounceTimer) {
             clearTimeout(playDebounceTimer);
         } else if (action === 'RESUME' && resumeDebounceTimer) {
