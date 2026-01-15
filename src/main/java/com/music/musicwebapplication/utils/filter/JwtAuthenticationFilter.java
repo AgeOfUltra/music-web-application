@@ -149,7 +149,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         String path = request.getRequestURI();
 
-        List<String> ignore = Arrays.asList("public", "css", "js", "images", "h2-console", "favicon");
+        List<String> ignore = Arrays.asList("public", "css", "js", "images", "h2-console", "favicon","nodes");
 
         boolean isIgnored = ignore.stream().anyMatch(path::contains);
         log.debug("requested path {} is ignored {}", path, isIgnored || path.equals("/"));
