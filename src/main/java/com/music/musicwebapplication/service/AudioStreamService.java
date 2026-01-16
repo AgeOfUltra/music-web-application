@@ -2,7 +2,7 @@ package com.music.musicwebapplication.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.music.musicwebapplication.dto.RequestSongDto;
-import com.music.musicwebapplication.dto.SongContainer;
+import com.music.musicwebapplication.dto.SongUploadContainer;
 import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.entity.Song;
@@ -56,7 +56,7 @@ public class AudioStreamService {
         this.cacheManager = cacheManager;
     }
 
-    public String fileUploadHelper(SongContainer container) throws Exception {
+    public String fileUploadHelper(SongUploadContainer container) throws Exception {
         log.info("Song uploading process started");
 
         Optional<Song> currentSong = repo.findSongBySongName(container.getSongName());
@@ -173,7 +173,7 @@ public class AudioStreamService {
             log.error("❌ Error evicting caches: {}", e.getMessage(), e);
         }
     }
-    protected SongDto updateSongInDb(SongContainer song, String url){
+    protected SongDto updateSongInDb(SongUploadContainer song, String url){
         Song newSong = new Song();
         newSong.setSongName(song.getSongName());
         newSong.setFileName(song.getFileName());
@@ -201,7 +201,7 @@ public class AudioStreamService {
                     @CacheEvict(value = "CachedFileNames",allEntries = true)
             }
     ) // this method is for eviction purpose only.
-    public SongDto saveSong(SongContainer song, String url){
+    public SongDto saveSong(SongUploadContainer song, String url){
         return updateSongInDb(song,url);
     }
 

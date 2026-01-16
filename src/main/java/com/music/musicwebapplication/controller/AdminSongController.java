@@ -1,6 +1,6 @@
 package com.music.musicwebapplication.controller;
 
-import com.music.musicwebapplication.dto.SongContainer;
+import com.music.musicwebapplication.dto.SongUploadContainer;
 import com.music.musicwebapplication.service.AudioStreamService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ public class AdminSongController {
     @PreAuthorize("isAuthenticated()")
     public String uploadSongPage(Model model) {
         if (!model.containsAttribute("songContainer")) {
-            model.addAttribute("songContainer", new SongContainer());
+            model.addAttribute("songContainer", new SongUploadContainer());
         }
         return "upload";
     }
@@ -52,7 +52,7 @@ public class AdminSongController {
     )
     @PreAuthorize("isAuthenticated()")
     public ModelAndView uploadSong(
-            @Valid @ModelAttribute("songContainer") SongContainer songContainer,
+            @Valid @ModelAttribute("songContainer") SongUploadContainer songContainer,
             Errors errors,
             RedirectAttributes redirectAttributes) {
 

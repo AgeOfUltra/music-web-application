@@ -7,7 +7,7 @@ import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
 @Data
-public class SongContainer {
+public class SongUploadContainer {
     @NotNull(message = "Please select a file")
     private MultipartFile file;
 

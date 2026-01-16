@@ -35,6 +35,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @Slf4j
 @Controller
@@ -147,6 +149,17 @@ public class PublicAuthController {
             redirectAttributes.addFlashAttribute("newUser", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
+
+        String username = newUser.getUsername();
+//        validate if the username is having other than "@ $ & #" as special characters.
+        boolean allowedChar = username.chars().anyMatch(c -> "@#$&!".indexOf(c)==-1);
+        if(allowedChar){
+            redirectAttributes.addAttribute("signUpError", "Only '@$&#!' as special Character are allowed ");
+            redirectAttributes.addFlashAttribute("newUser", newUser);
+            log.error("User AlreadyRegistered! passed data : {}", newUser);
+            return new ModelAndView("redirect:/app/music/public/signUp");
+        }
+
 
         Optional<UserSession> existingUser = Optional.ofNullable(sessionService.getUserSession(newUser.getUsername()));
         if(existingUser.isPresent()){
