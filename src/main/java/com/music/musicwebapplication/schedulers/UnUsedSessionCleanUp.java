@@ -1,27 +1,22 @@
 package com.music.musicwebapplication.schedulers;
 
 import com.music.musicwebapplication.entity.UserSession;
-import com.music.musicwebapplication.service.PublicLoginService;
+import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.UserSessionService;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.ModelAndView;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
 public class UnUsedSessionCleanUp {
 
     private final UserSessionService sessionService;
-    private final PublicLoginService loginService;
+    private final PublicAuthService loginService;
 
-    public UnUsedSessionCleanUp(UserSessionService sessionService, PublicLoginService loginService) {
+    public UnUsedSessionCleanUp(UserSessionService sessionService, PublicAuthService loginService) {
         this.sessionService = sessionService;
         this.loginService = loginService;
     }

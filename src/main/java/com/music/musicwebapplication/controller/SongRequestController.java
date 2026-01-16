@@ -2,9 +2,8 @@ package com.music.musicwebapplication.controller;
 
 import com.music.musicwebapplication.dto.RequestSongDto;
 import com.music.musicwebapplication.dto.SongDto;
-import com.music.musicwebapplication.entity.Song;
 import com.music.musicwebapplication.service.RegisterUserService;
-import com.music.musicwebapplication.service.SongControllerService;
+import com.music.musicwebapplication.service.AudioStreamService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
@@ -25,10 +24,10 @@ import java.util.List;
 @Slf4j
 public class SongRequestController {
 
-    private final SongControllerService songService;
+    private final AudioStreamService songService;
     private final RegisterUserService userService;
 
-    public SongRequestController(SongControllerService songService, RegisterUserService userService) {
+    public SongRequestController(AudioStreamService songService, RegisterUserService userService) {
         this.songService = songService;
         this.userService = userService;
     }

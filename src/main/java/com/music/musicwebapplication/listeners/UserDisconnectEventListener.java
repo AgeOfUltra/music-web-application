@@ -2,7 +2,7 @@ package com.music.musicwebapplication.listeners;
 
 import com.music.musicwebapplication.dto.UserDisconnectedEvent;
 import com.music.musicwebapplication.entity.UserSession;
-import com.music.musicwebapplication.service.PublicLoginService;
+import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.UserSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class UserDisconnectEventListener {
 
     private final UserSessionService sessionService;
-    private final PublicLoginService loginService;
+    private final PublicAuthService loginService;
 
     @EventListener
     public void onUserDisconnected(UserDisconnectedEvent event) {

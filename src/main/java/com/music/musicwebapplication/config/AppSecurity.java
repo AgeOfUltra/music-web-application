@@ -1,7 +1,6 @@
 package com.music.musicwebapplication.config;
 
 import com.music.musicwebapplication.service.CustomUserDetailService;
-import com.music.musicwebapplication.service.PublicLoginService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import com.music.musicwebapplication.utils.filter.JwtAuthenticationFilter;

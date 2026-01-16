@@ -1,25 +1,37 @@
 package com.music.musicwebapplication.service;
 
+import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.entity.Room;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
-public class PublicLoginService {
+public class PublicAuthService {
+    private final AuthenticationManager authenticationManager;
+
     private final JwtTokenUtil jwtUtil;
     private final RoomService roomService;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final UserSessionService sessionService;
 
-    public PublicLoginService(JwtTokenUtil jwtUtil, RoomService roomService, SimpMessagingTemplate simpMessagingTemplate, UserSessionService sessionService) {
+    public PublicAuthService(AuthenticationManager authenticationManager, JwtTokenUtil jwtUtil, RoomService roomService, SimpMessagingTemplate simpMessagingTemplate, UserSessionService sessionService) {
+        this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.roomService = roomService;
         this.simpMessagingTemplate = simpMessagingTemplate;
@@ -43,6 +55,44 @@ public class PublicLoginService {
 // This handles BOTH scenarios:
 // 1. User in room → Exit room + delete session
 // 2. User NOT in room → Just delete session
+
+    public ResponseEntity<?> authenticate(LoginUser loginUser) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginUser.getUsername(), loginUser.getPassword())
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            Optional<UserSession> loggedUser = Optional.ofNullable(sessionService.getUserSession(userDetails.getUsername()));
+
+            if (loggedUser.isPresent()) {
+                response.put("UserError", "User already logged In!");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // <— map, not String
+            }
+
+            String token = jwtUtil.generateToken(userDetails.getUsername());
+            String username = userDetails.getUsername();
+
+            response.put("token", token);
+            response.put("username", username);
+            response.put("message", "Login successful");
+
+            boolean isSaved = sessionService.saveSession(token, username);
+            if (!isSaved) {
+                response.put("error", "User account locked! Try again after 30 Minutes.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            response.put("error", "Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
 
     public boolean logout(UserSession session) {
         if (session == null) {

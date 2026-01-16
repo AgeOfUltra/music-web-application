@@ -139,7 +139,7 @@
                     <p class="text-muted mb-4" th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View all pending requests and update them' : 'View your request history and status'">
                         View your request history and status
                     </p>
-                    <form th:action="@{/app/music/connect/request/inProgress/{user}(user=${currentUser})}" method="get">
+                    <form th:action="@{/app/music/connect/request/{user}/inProgress(user=${currentUser})}" method="get">
                         <button type="submit" class="btn btn-gradient" style="background: linear-gradient(135deg, #a8edea 0%, #ef89d2 100%);">
                             <i class="bi bi-list-task me-2"></i>
                             <span th:text="${#authorization.expression('hasRole(''ADMIN'')')} ? 'View Pending Requests' : 'View My Requests'">

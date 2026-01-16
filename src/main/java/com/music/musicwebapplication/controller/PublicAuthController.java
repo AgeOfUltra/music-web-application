@@ -3,7 +3,7 @@ package com.music.musicwebapplication.controller;
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
 import com.music.musicwebapplication.entity.UserSession;
-import com.music.musicwebapplication.service.PublicLoginService;
+import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
@@ -39,20 +39,16 @@ import java.util.Optional;
 @Slf4j
 @Controller
 @RequestMapping("/app/music/public")
-public class PublicLoginController {
+public class PublicAuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenUtil jwtTokenUtil;
-    private final RoomService roomService;
+
     private final RegisterUserService userService;
     private final UserSessionService sessionService;
     private final JwtTokenUtil jwtUtil;
-    private final PublicLoginService loginService;
+    private final PublicAuthService loginService;
 
-    public PublicLoginController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, RoomService roomService, RegisterUserService userService, UserSessionService sessionService, PublicLoginService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate, PublicLoginService loginService1) {
-        this.authenticationManager = authenticationManager;
-        this.jwtTokenUtil = jwtTokenUtil;
-        this.roomService = roomService;
+    public PublicAuthController(RegisterUserService userService, UserSessionService sessionService, PublicAuthService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate, PublicAuthService loginService1) {
+
         this.userService = userService;
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
@@ -101,7 +97,7 @@ public class PublicLoginController {
     @PostMapping("/authenticate")
     public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, RedirectAttributes redirectAttributes) {
         String errorMessage = "";
-        ResponseEntity<?> response = authenticate(loginUser);
+        ResponseEntity<?> response = loginService.authenticate(loginUser);
         log.info(response.toString());
         Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
 
@@ -117,10 +113,10 @@ public class PublicLoginController {
 
             ResponseCookie cookie = ResponseCookie.from("jwt", token)
                     .httpOnly(true)
-                    .secure(false)           // true in production (HTTPS)
+                    .secure(false)
                     .path("/")
                     .maxAge(60 * 62)         // 1 hour
-                    .sameSite("Lax")      // or "Lax" depending on your flows
+                    .sameSite("Lax")
                     .build();
 
             responseServlet.addHeader("Set-Cookie", cookie.toString());
@@ -141,42 +137,6 @@ public class PublicLoginController {
 
     //    API
     // PublicLoginController
-    public ResponseEntity<?> authenticate(LoginUser loginUser) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginUser.getUsername(), loginUser.getPassword())
-            );
-
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-            if (roomService.isUserPresentInAnyRoom(userDetails.getUsername())) {
-                response.put("UserError", "User already exist in one of the room");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // <— map, not String
-            }
-
-            String token = jwtTokenUtil.generateToken(userDetails.getUsername());
-            String username = userDetails.getUsername();
-
-            response.put("token", token);
-            response.put("username", username);
-            response.put("message", "Login successful");
-
-            boolean isSaved = sessionService.saveSession(token, username);
-            if (!isSaved) {
-                response.put("error", "User account locked! Try again after 30 Minutes.");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-            }
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            response.put("error", "Invalid credentials");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        }
-    }
-
 
     @PostMapping("/register")
     public ModelAndView registerUser(@Valid @ModelAttribute("newUser") RegisterUser newUser, Errors error, RedirectAttributes redirectAttributes) {

@@ -29,10 +29,10 @@ import java.util.*;
 @RequestMapping("/app/music")
 public class RoomController {
     private final RoomService rService;
-    private final PublicLoginService loginService;
+    private final PublicAuthService loginService;
     private final UserSessionService sessionService;
 
-    public RoomController(RoomService rService, PublicLoginService loginService,
+    public RoomController(RoomService rService, PublicAuthService loginService,
                           UserSessionService sessionService) {
         this.rService = rService;
         this.loginService = loginService;
@@ -195,19 +195,7 @@ public class RoomController {
         return ResponseEntity.ok(room);
     }
 
-    private int getAvailableParticipants(String roomName) {
-        ResponseEntity<Integer> participants = getAvailableCount(roomName);
-        if (participants.getStatusCode().equals(HttpStatus.OK) && participants.getBody() != null) {
-            return participants.getBody();
-        }
-        return 0;
-    }
 
-    private ResponseEntity<Integer> getAvailableCount(String roomName) {
-        Room room = rService.getRoomDetails(roomName);
-        int availableCount = room.getMaxCount() - room.getParticipant().size();
-        return ResponseEntity.ok(availableCount);
-    }
 
     private int currentParticipantCount(String roomName) {
         ResponseEntity<Integer> participants = currentParticipantCountApi(roomName);

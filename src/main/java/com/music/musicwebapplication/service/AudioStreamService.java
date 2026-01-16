@@ -25,14 +25,14 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
 @Slf4j
 @Service
-public class SongControllerService {
+public class AudioStreamService {
 
     private final S3Client client;
     private final SongRepo repo;
@@ -48,7 +48,7 @@ public class SongControllerService {
 
 
     @Autowired
-    SongControllerService(S3Client client, SongRepo repo, SongRequestRepo songRequestRepo, ObjectMapper objectMapper, CacheManager cacheManager){
+    AudioStreamService(S3Client client, SongRepo repo, SongRequestRepo songRequestRepo, ObjectMapper objectMapper, CacheManager cacheManager){
         this.client = client;
         this.repo = repo;
         this.songRequestRepo = songRequestRepo;

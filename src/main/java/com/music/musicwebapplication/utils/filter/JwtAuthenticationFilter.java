@@ -1,7 +1,7 @@
 package com.music.musicwebapplication.utils.filter;
 
 import com.music.musicwebapplication.entity.UserSession;
-import com.music.musicwebapplication.service.PublicLoginService;
+import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -33,7 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserSessionService sessionService;
 
     @Autowired
-    @Lazy private PublicLoginService loginService;
+    @Lazy private PublicAuthService loginService;
 
 
     public JwtAuthenticationFilter(JwtTokenUtil util,

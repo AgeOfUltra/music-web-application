@@ -4,7 +4,7 @@ import com.music.musicwebapplication.dto.SongDto;
 import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.service.SongCacheService;
-import com.music.musicwebapplication.service.SongControllerService;
+import com.music.musicwebapplication.service.AudioStreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -28,16 +28,16 @@ import java.util.List;
 @Controller
 @RequestMapping("/app/music/audio")
 @Slf4j
-public class PublicSongController {
+public class AudioStreamController {
 
-    private final SongControllerService songControllerService;
+    private final AudioStreamService audioStreamService;
     private final SongCacheService songCacheService;
     private final SongRepo repo;
 
 
     @Autowired
-    PublicSongController(SongControllerService songControllerService, SongCacheService songCacheService, SongRepo repo){
-        this.songControllerService = songControllerService;
+    AudioStreamController(AudioStreamService audioStreamService, SongCacheService songCacheService, SongRepo repo){
+        this.audioStreamService = audioStreamService;
         this.songCacheService = songCacheService;
         this.repo = repo;
     }
@@ -69,7 +69,7 @@ public class PublicSongController {
             @RequestParam(defaultValue = "10") int size) {
 
         List<SongDto> content =
-                songControllerService.getAllSongsName(page, size);
+                audioStreamService.getAllSongsName(page, size);
 
         long total = repo.count();
 
@@ -80,12 +80,12 @@ public class PublicSongController {
 
     @GetMapping("/searchSong")
     public ResponseEntity<List<SongDto>> searchSongsByName(@RequestParam String query){
-        return ResponseEntity.ok(songControllerService.searchSongsByName(query));
+        return ResponseEntity.ok(audioStreamService.searchSongsByName(query));
     }
 
     @GetMapping("/getAllCachedSongs")
     public ResponseEntity<List<String>> getAllCachedSongs(){
-        return ResponseEntity.ok(songControllerService.getSongList());
+        return ResponseEntity.ok(audioStreamService.getSongList());
     }
 
 }

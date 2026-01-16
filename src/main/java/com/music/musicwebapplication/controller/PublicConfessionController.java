@@ -16,10 +16,10 @@ import java.util.Optional;
 @Slf4j
 @Controller
 @RequestMapping("/app/music/nodes")
-public class ConfessPublicJoin {
+public class PublicConfessionController {
     private final ConfessService service ;
 
-    public ConfessPublicJoin(ConfessService service) {
+    public PublicConfessionController(ConfessService service) {
         this.service = service;
     }
 
