@@ -5,7 +5,6 @@ import com.music.musicwebapplication.dto.RegisterUser;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.service.PublicAuthService;
-import com.music.musicwebapplication.service.RegisterUserService;
 import com.music.musicwebapplication.service.UserSessionService;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.Cookie;
@@ -17,7 +16,6 @@ import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,14 +34,13 @@ import java.util.Optional;
 public class PublicAuthController {
 
 
-    private final RegisterUserService userService;
     private final UserSessionService sessionService;
     private final JwtTokenUtil jwtUtil;
     private final PublicAuthService loginService;
 
-    public PublicAuthController(RegisterUserService userService, UserSessionService sessionService, PublicAuthService loginService, JwtTokenUtil jwtUtil, SimpMessagingTemplate simpMessagingTemplate, PublicAuthService loginService1) {
+    public PublicAuthController(UserSessionService sessionService, JwtTokenUtil jwtUtil, PublicAuthService loginService1) {
 
-        this.userService = userService;
+
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
         this.loginService = loginService1;
@@ -155,7 +152,7 @@ public class PublicAuthController {
         }
 
         newUser.setRole(Role.LISTENER);
-        boolean result = userService.registerUser(newUser);
+        boolean result = loginService.registerUser(newUser);
         if (result) {
             log.info("New User created successfully! and his/her data : {}", newUser);
             redirectAttributes.addFlashAttribute("showRegistrationSuccess", true);
@@ -172,8 +169,8 @@ public class PublicAuthController {
     @GetMapping("/verify")
     public ModelAndView VerifyUserEmail(@RequestParam("user") String username, @RequestParam("token") String token) {
 
-        String result = userService.validateTokenAndUpdate(username, token);
-//result = token username
+        String result = loginService.validateTokenAndUpdate(username, token);
+        //result format = token$username
         return new ModelAndView("redirect:/app/music/public/verification-success?token=" + result);
 
     }
@@ -184,7 +181,7 @@ public class PublicAuthController {
         token = parts[0];
         String username=parts[1];
         log.info("Received username {}",username);
-        boolean result = userService.validateToken(token,username);
+        boolean result = loginService.validateToken(token,username);
 
         ModelAndView mav = new ModelAndView("verification-result");
         mav.addObject("success", result);
