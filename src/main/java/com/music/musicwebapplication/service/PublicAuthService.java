@@ -2,8 +2,10 @@ package com.music.musicwebapplication.service;
 
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.entity.Room;
+import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.exception.RoomNotFoundException;
+import com.music.musicwebapplication.repo.UserRepo;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -29,13 +31,16 @@ public class PublicAuthService {
     private final RoomService roomService;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final UserSessionService sessionService;
+    private final UserRepo repo;
 
-    public PublicAuthService(AuthenticationManager authenticationManager, JwtTokenUtil jwtUtil, RoomService roomService, SimpMessagingTemplate simpMessagingTemplate, UserSessionService sessionService) {
+
+    public PublicAuthService(AuthenticationManager authenticationManager, JwtTokenUtil jwtUtil, RoomService roomService, SimpMessagingTemplate simpMessagingTemplate, UserSessionService sessionService, UserRepo repo) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.roomService = roomService;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.sessionService = sessionService;
+        this.repo = repo;
     }
 
     public String extractUsernameFromJwt(HttpServletRequest request) {
@@ -45,7 +50,7 @@ public class PublicAuthService {
                 String trimmed = c.trim();
                 if (trimmed.startsWith("jwt=")) {
                     String token = trimmed.substring("jwt=".length());
-                    return jwtUtil.getUserNameFromToken(token);
+                    return jwtUtil.getIdentityFromToken(token);
                 }
             }
         }
@@ -59,33 +64,50 @@ public class PublicAuthService {
     public ResponseEntity<?> authenticate(LoginUser loginUser) {
         Map<String, Object> response = new HashMap<>();
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginUser.getUsername(), loginUser.getPassword())
-            );
 
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            Optional<UserSession> loggedUser = Optional.ofNullable(sessionService.getUserSession(userDetails.getUsername()));
+
+            Optional<User> currentUse = repo.findByUsername(loginUser.getUsername());
+//            Case 1 : User not registered.
+            if(currentUse.isEmpty()){
+                response.put("UserError", "Try gain After SingUp");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+//            Case 2 : User registered but not verified
+            if(!currentUse.get().isVerified()){
+                response.put("UserError", "Kindly Validate the your account");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+//Case 3 : User registered and Verified, if already logged in
+            Optional<UserSession> loggedUser = Optional.ofNullable(sessionService.getUserSession(loginUser.getUsername()));
 
             if (loggedUser.isPresent()) {
                 response.put("UserError", "User already logged In!");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // <— map, not String
             }
 
+
+//            successful Case : User Registered, Verified, and First time logging
+
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginUser.getUsername(), loginUser.getPassword())
+            );
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String token = jwtUtil.generateToken(userDetails.getUsername());
             String username = userDetails.getUsername();
 
             response.put("token", token);
             response.put("username", username);
-            response.put("message", "Login successful");
+
 
             boolean isSaved = sessionService.saveSession(token, username);
             if (!isSaved) {
-                response.put("error", "User account locked! Try again after 30 Minutes.");
+                response.put("error", "Unexpected Error! Try again after Some time");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-
+            response.put("message", "Login successful");
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

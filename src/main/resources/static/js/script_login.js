@@ -57,7 +57,7 @@ window.addEventListener('DOMContentLoaded', function () {
     const showSuccess = registrationSuccessContainer.textContent.trim();
 
     if (showSuccess === 'true') {
-        notifier.success('Registration Successful! Please login now.', 5000);
+        notifier.success('Validation link Sent to Email', 7000);
     }
     const errorContainer = document.getElementById('errorMessage');
     const errorMessage = errorContainer.textContent.trim();

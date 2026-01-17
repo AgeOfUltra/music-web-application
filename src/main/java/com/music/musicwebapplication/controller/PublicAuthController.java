@@ -3,11 +3,10 @@ package com.music.musicwebapplication.controller;
 import com.music.musicwebapplication.dto.LoginUser;
 import com.music.musicwebapplication.dto.RegisterUser;
 import com.music.musicwebapplication.entity.UserSession;
+import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.RegisterUserService;
-import com.music.musicwebapplication.service.RoomService;
 import com.music.musicwebapplication.service.UserSessionService;
-import com.music.musicwebapplication.enums.Role;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,11 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
@@ -32,11 +27,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @Slf4j
 @Controller
@@ -59,17 +51,14 @@ public class PublicAuthController {
 
     // Return login page
     @GetMapping("/login")
-    public String loginPage(@RequestParam(required=false) String error,
-                            @RequestParam(required=false) String logout,
-                            @RequestParam(required=false) String expired,
-                                Model model) {
+    public String loginPage(@RequestParam(required = false) String error, @RequestParam(required = false) String logout, @RequestParam(required = false) String expired, Model model) {
         if ("alreadyLoggedIn".equals(error)) {
             model.addAttribute("loginError", "User already logged in");
         }
         if ("sessionError".equals(error)) {
             model.addAttribute("sessionError", "Error occurred while session create/update Please try again after sometime.");
         }
-        if(logout!=null && logout.equals("true")){
+        if (logout != null && logout.equals("true")) {
             model.addAttribute("loginError", "User logged out successfully");
         }
         if ("true".equals(expired)) {
@@ -95,6 +84,7 @@ public class PublicAuthController {
         binder.registerCustomEditor(String.class, "username", new StringTrimmerEditor(true));
         binder.registerCustomEditor(String.class, "email", new StringTrimmerEditor(true));
     }
+
     // Handle login and return JWT token
     @PostMapping("/authenticate")
     public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, RedirectAttributes redirectAttributes) {
@@ -113,13 +103,8 @@ public class PublicAuthController {
             String token = "";
             token = (String) responseBody.get("token");
 
-            ResponseCookie cookie = ResponseCookie.from("jwt", token)
-                    .httpOnly(true)
-                    .secure(false)
-                    .path("/")
-                    .maxAge(60 * 62)         // 1 hour
-                    .sameSite("Lax")
-                    .build();
+            ResponseCookie cookie = ResponseCookie.from("jwt", token).httpOnly(true).secure(false).path("/").maxAge(60 * 62)         // 1 hour
+                    .sameSite("Lax").build();
 
             responseServlet.addHeader("Set-Cookie", cookie.toString());
 
@@ -127,8 +112,8 @@ public class PublicAuthController {
             return new ModelAndView("redirect:/app/music/dashboard");
         } else {
             errorMessage = (String) responseBody.get("error");
-            if( errorMessage == null || errorMessage.isEmpty()){
-                errorMessage=(String)responseBody.get("UserError");
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = (String) responseBody.get("UserError");
             }
             redirectAttributes.addFlashAttribute("loginError", errorMessage);
             redirectAttributes.addFlashAttribute("loginUser", loginUser);
@@ -152,18 +137,18 @@ public class PublicAuthController {
 
         String username = newUser.getUsername();
 //        validate if the username is having other than "@ $ & #" as special characters.
-        boolean allowedChar = username.chars().anyMatch(c -> "@#$&!".indexOf(c)==-1);
-        if(allowedChar){
-            redirectAttributes.addAttribute("signUpError", "Only '@$&#!' as special Character are allowed ");
+//        boolean allowedChar = username.chars().filter(c -> !Character.isLetterOrDigit(c)).anyMatch(c -> "@#$&".indexOf(c)==-1);
+        if (!username.matches("^[a-zA-Z0-9@#$&]*$")) {
+            redirectAttributes.addFlashAttribute("signUpError", "Only '@$&#' as special Character are allowed ");
             redirectAttributes.addFlashAttribute("newUser", newUser);
-            log.error("User AlreadyRegistered! passed data : {}", newUser);
+            log.error("User Entered Data! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
 
         Optional<UserSession> existingUser = Optional.ofNullable(sessionService.getUserSession(newUser.getUsername()));
-        if(existingUser.isPresent()){
-            redirectAttributes.addAttribute("signUpError", "User Already Registered!");
+        if (existingUser.isPresent()) {
+            redirectAttributes.addFlashAttribute("signUpError", "User Already Registered!");
             redirectAttributes.addFlashAttribute("newUser", newUser);
             log.error("User AlreadyRegistered! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
@@ -176,7 +161,7 @@ public class PublicAuthController {
             redirectAttributes.addFlashAttribute("showRegistrationSuccess", true);
             return new ModelAndView("redirect:/app/music/public/login");
         } else {
-            redirectAttributes.addAttribute("signUpError", "Error while creating user.Please try again");
+            redirectAttributes.addFlashAttribute("signUpError", "Error while creating user.Please try again");
             redirectAttributes.addFlashAttribute("newUser", newUser);
             log.error("failed to create new user! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
@@ -184,6 +169,27 @@ public class PublicAuthController {
 
     }
 
+    @GetMapping("/verify")
+    public ModelAndView VerifyUserEmail(@RequestParam("user") String username, @RequestParam("token") String token) {
+
+        String result = userService.validateTokenAndUpdate(username, token);
+//result = token username
+        return new ModelAndView("redirect:/app/music/public/verification-success?token=" + result);
+
+    }
+
+    @GetMapping("/verification-success")
+    public ModelAndView verificationSuccess(@RequestParam("token") String token) {
+        String[] parts = token.split("\\$", 2);
+        token = parts[0];
+        String username=parts[1];
+        log.info("Received username {}",username);
+        boolean result = userService.validateToken(token,username);
+
+        ModelAndView mav = new ModelAndView("verification-result");
+        mav.addObject("success", result);
+        return mav;
+    }
 
 
     @GetMapping("/logout")
@@ -203,7 +209,7 @@ public class PublicAuthController {
             }
 
             if (jwtToken != null) {
-                String username = jwtUtil.getUserNameFromToken(jwtToken);
+                String username = jwtUtil.getIdentityFromToken(jwtToken);
                 log.info("🔓 Processing logout for user: {}", username);
 
                 try {

@@ -70,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
         try {
-            username = jwtTokenUtil.getUserNameFromToken(token); // may throw ExpiredJwtException
+            username = jwtTokenUtil.getIdentityFromToken(token); // may throw ExpiredJwtException
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {

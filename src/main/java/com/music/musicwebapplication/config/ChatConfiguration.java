@@ -79,7 +79,7 @@ public class ChatConfiguration implements WebSocketMessageBrokerConfigurer {
                         }
 
                         String jwt = authToken.substring(7);
-                        String username = jwtTokenUtil.getUserNameFromToken(jwt);
+                        String username = jwtTokenUtil.getIdentityFromToken(jwt);
 
                         if (username != null && jwtTokenUtil.validateToken(username, username, jwt)) {
 

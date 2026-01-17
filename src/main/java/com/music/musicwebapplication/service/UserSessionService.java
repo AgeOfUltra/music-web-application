@@ -69,11 +69,13 @@ public class UserSessionService {
     // SESSION MANAGEMENT
     // ---------------------------------------------------------
 
+    @Transactional
     public boolean saveSession(String token, String username) {
         LocalDateTime now = LocalDateTime.now();
-        if (repo.existsByUsername(username)) {
-            return false;
-        }
+//        No needed because already verified.
+//        if (repo.existsByUsername(username)) {
+//            return false;
+//        }
 
         UserSession session = new UserSession();
         session.setToken(token);
@@ -81,14 +83,17 @@ public class UserSessionService {
         session.setRoomName(null);
         session.setAbsoluteExpiry(now.plusHours(1)); // for testing
         session.setSessionExpired(false);
-        repo.save(session);
+        try{
+            repo.save(session);
+            // ✅ Set Redis TTL for session expiration
+            setRedisSessionTTL(username);
+            log.info("💾 Session saved for {} with {}h TTL", username, sessionTtlHours);
+            return true;
+        }catch (Exception e){
+            log.error("Error while Saving the user data or Setting the data in redis : {}",e.getMessage());
+            return false;
+        }
 
-        // ✅ Set Redis TTL for session expiration
-        setRedisSessionTTL(username);
-
-        log.info("💾 Session saved for {} with {}h TTL", username, sessionTtlHours);
-
-        return true;
     }
 
     @Transactional

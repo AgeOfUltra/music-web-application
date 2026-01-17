@@ -31,12 +31,25 @@ public class JwtTokenUtil {
                     .signWith(getKey(), SignatureAlgorithm.HS256)
                     .compact();
         } catch (Exception e) {
-            log.error("Error generating JWT token: {}", e.getMessage());
+            log.error("Error generating JWT token for login: {}", e.getMessage());
+            throw new RuntimeException("Failed to generate JWT token", e);
+        }
+    }
+    public String generateToken(String username,long expiry) {
+        try {
+            return Jwts.builder()
+                    .setSubject(username)
+                    .setIssuedAt(new Date())
+                    .setExpiration(new Date(System.currentTimeMillis() + expiry))
+                    .signWith(getKey(), SignatureAlgorithm.HS256)
+                    .compact();
+        } catch (Exception e) {
+            log.error("Error generating JWT token for email: {}", e.getMessage());
             throw new RuntimeException("Failed to generate JWT token", e);
         }
     }
 
-    public String getUserNameFromToken(String token) {
+    public String getIdentityFromToken(String token) {
         return extractClaims(token).getSubject();
     }
 

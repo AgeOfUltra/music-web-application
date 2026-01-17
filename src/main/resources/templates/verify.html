@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+<table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+        <td align="center" style="padding: 40px 0;">
+            <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+                <!-- Header -->
+                <tr>
+                    <td style="padding: 40px 30px; text-align: center; background-color: #2c3e50;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: normal;">
+                            Connecting Notes ∞
+                        </h1>
+                    </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                    <td style="padding: 40px 30px;">
+                        <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">
+                            Welcome, <span th:text="${username}">User</span>!
+                        </h2>
+
+                        <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                            Thank you for joining Connecting Notes. To complete your registration and
+                            start connecting with the music community, please verify your email address.
+                        </p>
+
+                        <!-- Urgency Notice -->
+                        <div style="margin: 20px 0;
+                                        padding: 15px;
+                                        background-color: #fff3cd;
+                                        border-left: 4px solid #ffc107;
+                                        border-radius: 4px;">
+                            <p style="margin: 0; color: #856404; font-size: 14px; font-weight: bold;">
+                                ⏱️ Please verify within 5 minutes
+                            </p>
+                        </div>
+
+                        <!-- Button -->
+                        <table role="presentation" style="margin: 30px 0;">
+                            <tr>
+                                <td align="center">
+                                    <a th:href="${verificationUrl}"
+                                       style="display: inline-block;
+                                                  padding: 15px 40px;
+                                                  background-color: #3498db;
+                                                  color: #ffffff;
+                                                  text-decoration: none;
+                                                  border-radius: 5px;
+                                                  font-size: 16px;
+                                                  font-weight: bold;">
+                                        Verify Email Address
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin: 30px 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                            Or copy and paste this link into your browser:
+                        </p>
+
+                        <p style="margin: 0 0 20px 0;
+                                      padding: 15px;
+                                      background-color: #f8f9fa;
+                                      border-left: 3px solid #3498db;
+                                      color: #555555;
+                                      font-size: 14px;
+                                      word-break: break-all;">
+                            <a th:href="${verificationUrl}"
+                               th:text="${verificationUrl}"
+                               style="color: #3498db; text-decoration: none;">
+                                verification-link
+                            </a>
+                        </p>
+
+                        <p style="margin: 20px 0 0 0; color: #e74c3c; font-size: 14px; line-height: 1.6; font-weight: bold;">
+                            ⚠️ This verification link will expire in 10 minutes.
+                        </p>
+
+                        <p style="margin: 10px 0 0 0; color: #999999; font-size: 13px; line-height: 1.6;">
+                            If the link expires, you'll need to request a new verification email.
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="padding: 30px;
+                                   background-color: #f8f9fa;
+                                   border-top: 1px solid #e0e0e0;
+                                   text-align: center;">
+                        <p style="margin: 0 0 10px 0; color: #999999; font-size: 13px;">
+                            If you didn't create an account with Connecting Notes,
+                            you can safely ignore this email.
+                        </p>
+                        <p style="margin: 0; color: #999999; font-size: 13px;">
+                            © 2026 Connecting Notes. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
