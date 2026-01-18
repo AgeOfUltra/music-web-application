@@ -9,12 +9,11 @@ FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /build
 
 # Copy Maven wrapper and pom.xml
-
-RUN chmod +x mvnw
-
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
 
+
+RUN chmod +x mvnw
 # Download dependencies (cached if pom.xml unchanged)
 RUN ./mvnw dependency:go-offline -B
 
