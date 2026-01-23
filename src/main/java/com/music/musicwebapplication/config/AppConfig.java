@@ -1,5 +1,7 @@
 package com.music.musicwebapplication.config;
 
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,11 +17,15 @@ import java.time.Duration;
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
 @Configuration
+@Slf4j
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class AppConfig {
 
     @Value("${cloud.aws.credentials.access-key}")
     private String accessKey;
+
+    @Value("${aws.bucket.name}")
+    private String bucketName;
 
     @Value("${cloud.aws.credentials.secret-key}")
     private String secretKey;
@@ -34,6 +40,13 @@ public class AppConfig {
     @Value("${aws.s3.api-attempt-timeout}")
     private int apiAttemptTimeout;
 
+    @PostConstruct
+    public void validateConfig() {
+        log.info("📦 AWS S3 Configuration:");
+        log.info("   Bucket: {}", bucketName);
+        log.info("   Region: {}", region);
+        log.info("   Endpoint: s3.{}.amazonaws.com", region);
+    }
     @Bean
     public ModelMapper mapper()
     {

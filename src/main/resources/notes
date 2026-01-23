@@ -1,0 +1,44 @@
+.env file → docker-compose.yml → Spring Boot Container → application.properties
+
+
+## Simplified Flow:
+```
+┌─────────────┐
+│   .env      │  ← Define values ONCE here
+│             │
+│ AWS_BUCKET  │
+│ AWS_KEY     │
+└──────┬──────┘
+       │
+       ↓
+┌──────────────────────┐
+│ docker-compose.yml   │  ← Reference .env variables
+│                      │
+│ environment:         │
+│   - AWS_BUCKET=${..} │
+└──────┬───────────────┘
+       │
+       ↓
+┌──────────────────────┐
+│ Container            │  ← Environment variables available
+│                      │
+│ AWS_BUCKET_NAME=...  │
+└──────┬───────────────┘
+       │
+       ↓
+┌──────────────────────┐
+│ application.props    │  ← Read from environment
+│                      │
+│ aws.bucket.name=     │
+│   ${AWS_BUCKET_NAME} │
+└──────────────────────┘
+
+
+# Test if container can reach internet
+docker exec music-web-application ping -c 3 google.com
+
+# Test S3 endpoint resolution
+docker exec music-web-application nslookup s3.us-east-1.amazonaws.com
+
+# Test if container can reach S3
+docker exec music-web-application curl -I https://s3.us-east-1.amazonaws.com

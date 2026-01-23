@@ -1,33 +1,30 @@
 version: '3.8'
 
-services:
-
-  # Spring Boot Application
+services: # Spring Boot Application
   music-app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: music-web-application
     stop_grace_period: 45s
+    dns:
+        - 8.8.8.8
+        - 8.8.4.4
     ports:
       - "8080:8080"
     env_file:
       - .env
-    environment:
-      # Spring Profile
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-machine1}
-
-      # Cloud Database Configuration (PostgreSQL in cloud)
+    environment: # Cloud Database Configuration (PostgreSQL in cloud)
       - SPRING_DATASOURCE_URL=${DB_URL}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
         
         # Upstash Redis
-        - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
-        - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
-        - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
-        - SPRING_DATA_REDIS_USERNAME=${REDIS_USERNAME}
-        - SPRING_DATA_REDIS_SSL_ENABLED=true
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_USERNAME=${REDIS_USERNAME}
+      - SPRING_DATA_REDIS_SSL_ENABLED=true
 
       # JWT Secret
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
@@ -47,20 +44,15 @@ services:
 
       # Cache directory
       - APP_CACHE_DIR=/app/song-cache
-
-    depends_on:
-      redis:
-        condition: service_healthy
     networks:
       - music-network
-    volumes:
-      # Persist song cache
+    volumes: # Persist song cache
       - song-cache:/app/song-cache
       # Persist logs
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
