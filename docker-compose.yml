@@ -1,49 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: music-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-music}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - music-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${POSTGRES_DB:-music}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: music-redis
-    ports:
-      - "6379:6379"
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-    volumes:
-      - redis-data:/data
-    networks:
-      - music-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
 
   # Spring Boot Application
   music-app:
@@ -60,14 +17,17 @@ services:
       # Spring Profile
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-machine1}
 
-      # Database Configuration
-      - DB_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-music}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-
-      # Redis Configuration
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      # Cloud Database Configuration (PostgreSQL in cloud)
+      - SPRING_DATASOURCE_URL=${DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+        
+        # Upstash Redis
+        - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+        - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
+        - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+        - SPRING_DATA_REDIS_USERNAME=${REDIS_USERNAME}
+        - SPRING_DATA_REDIS_SSL_ENABLED=true
 
       # JWT Secret
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
@@ -75,6 +35,8 @@ services:
       # AWS S3 Configuration
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
 
       # Email Configuration
       - MAIL_USERNAME=${MAIL_USERNAME}
@@ -82,9 +44,11 @@ services:
 
       # JVM Options
       - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+
+      # Cache directory
+      - APP_CACHE_DIR=/app/song-cache
+
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -109,8 +73,6 @@ networks:
 
 # Volumes
 volumes:
-  postgres-data:
-    driver: local
   redis-data:
     driver: local
   song-cache:
