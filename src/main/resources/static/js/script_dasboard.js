@@ -420,6 +420,53 @@ window.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    const pasteMethod = document.getElementById('pasteMethod');
+    const manualMethod = document.getElementById('manualMethod');
+    const pasteSection = document.getElementById('pasteSection');
+    const manualSection = document.getElementById('manualSection');
+    const roomDetailsPaste = document.getElementById('roomDetailsPaste');
+    const extractedInfo = document.getElementById('extractedInfo');
+
+    // Toggle sections
+    pasteMethod?.addEventListener('change', () => {
+        pasteSection.classList.remove('d-none');
+        manualSection.classList.add('d-none');
+    });
+
+    manualMethod?.addEventListener('change', () => {
+        pasteSection.classList.add('d-none');
+        manualSection.classList.remove('d-none');
+        extractedInfo.classList.add('d-none');
+    });
+
+    // Auto-extract from paste
+    roomDetailsPaste?.addEventListener('input', function() {
+        const text = this.value;
+        const roomCode = text.match(/Room\s*Code\s*:\s*(\S+)/i)?.[1];
+        const passcode = text.match(/Passcode\s*:\s*(\S+)/i)?.[1];
+
+        if (roomCode && passcode) {
+            document.getElementById('extractedRoomCode').textContent = roomCode;
+            document.getElementById('extractedPasscode').textContent = passcode;
+            document.getElementById('joinRoomName').value = roomCode;
+            document.getElementById('joinPassCode').value = passcode;
+            extractedInfo.classList.remove('d-none');
+        } else {
+            extractedInfo.classList.add('d-none');
+        }
+    });
+
+    // Manual input sync
+    document.getElementById('manualRoomCode')?.addEventListener('input', function() {
+        document.getElementById('joinRoomName').value = this.value;
+    });
+
+    document.getElementById('manualPasscode')?.addEventListener('input', function() {
+        document.getElementById('joinPassCode').value = this.value;
+    });
+});
+
 function dashboardLogout() {
     window.location.href = '/app/music/public/logout';
 }

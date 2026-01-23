@@ -210,19 +210,62 @@
             </div>
             <div class="modal-body p-4">
                 <form th:action="@{/app/music/room/join}" id="joinRoomForm" th:method="POST" th:object="${joinRoom}">
-                    <div class="mb-3">
-                        <label for="joinRoomName" class="form-label">
-                            <i class="bi bi-key me-2"></i>Room Code
+
+                    <!-- Method Selector -->
+                    <div class="btn-group w-100 mb-4" role="group">
+                        <input type="radio" class="btn-check" name="inputMethod" id="pasteMethod" checked>
+                        <label class="btn btn-outline-primary" for="pasteMethod">
+                            <i class="bi bi-clipboard"></i> Paste Details
                         </label>
-                        <input type="text" class="form-control" id="joinRoomName" th:field="*{roomCode}" placeholder="Enter room code" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="joinPassCode" class="form-label">
-                            <i class="bi bi-shield-lock me-2"></i>Pass Code
+
+                        <input type="radio" class="btn-check" name="inputMethod" id="manualMethod">
+                        <label class="btn btn-outline-primary" for="manualMethod">
+                            <i class="bi bi-pencil"></i> Enter Manually
                         </label>
-                        <input type="text" class="form-control" id="joinPassCode" th:field="*{passCode}" placeholder="Enter passcode" required>
                     </div>
+
+                    <!-- Paste Section -->
+                    <div id="pasteSection">
+                        <div class="mb-3">
+                            <label for="roomDetailsPaste" class="form-label">
+                                <i class="bi bi-clipboard-check me-2"></i>Paste Room Details
+                            </label>
+                            <textarea class="form-control font-monospace" id="roomDetailsPaste" rows="4"
+                                      placeholder="Paste here, e.g.:&#10;Room Code: sprtmp&#10;Passcode: RSu6v"></textarea>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> We'll auto-extract the room code and passcode
+                            </div>
+                        </div>
+                        <div id="extractedInfo" class="alert alert-success d-none">
+                            <i class="bi bi-check-circle-fill me-2"></i><strong>Extracted:</strong>
+                            <div class="mt-2 ms-4">
+                                <div><strong>Room Code:</strong> <span id="extractedRoomCode"></span></div>
+                                <div><strong>Passcode:</strong> <span id="extractedPasscode"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Section -->
+                    <div id="manualSection" class="d-none">
+                        <div class="mb-3">
+                            <label for="manualRoomCode" class="form-label">
+                                <i class="bi bi-door-closed me-2"></i>Room Code
+                            </label>
+                            <input type="text" class="form-control" id="manualRoomCode" placeholder="Enter room code">
+                        </div>
+                        <div class="mb-3">
+                            <label for="manualPasscode" class="form-label">
+                                <i class="bi bi-key me-2"></i>Passcode
+                            </label>
+                            <input type="text" class="form-control" id="manualPasscode" placeholder="Enter passcode">
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields for form submission (Thymeleaf bound) -->
+                    <input type="hidden" id="joinRoomName" th:field="*{roomCode}">
+                    <input type="hidden" id="joinPassCode" th:field="*{passCode}">
                     <input type="hidden" id="joinUsername" name="username" th:value="${currentUser}">
+
                     <button type="submit" class="btn btn-gradient w-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Join Room
                     </button>
