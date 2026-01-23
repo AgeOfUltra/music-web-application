@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.context.request.async.DeferredResult;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,24 +44,58 @@ public class AudioStreamController {
     }
 
     @GetMapping(value = "/public/streamSong/{name}", produces = "audio/mpeg")
-    public ResponseEntity<Resource> streamSong(@PathVariable String name) {
-        try {
-            Resource resource = songCacheService.getCachedResource(name);
+    public DeferredResult<ResponseEntity<Resource>> streamSong(@PathVariable String name) {
+        DeferredResult<ResponseEntity<Resource>> deferredResult = new DeferredResult<>(30000L); // 30 sec timeout
 
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("audio/mpeg"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
-                    .contentLength(resource.contentLength())
-                    .body(resource);
+        // Handle timeout
+        deferredResult.onTimeout(() -> {
+            log.warn("⏱️ Request timeout for song: {}", name);
+            deferredResult.setErrorResult(
+                    ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).build()
+            );
+        });
 
-        } catch (SongNotFoundException e) {
-            log.warn("⚠️ Song not found: {}", name);
-            return ResponseEntity.notFound().build();
+        // Handle the async response
+        songCacheService.getCachedResource(name)
+                .thenAccept(resource -> {
+                    try {
+                        ResponseEntity<Resource> response = ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType("audio/mpeg"))
+                                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
+                                .contentLength(resource.contentLength())
+                                .body(resource);
 
-        } catch (IOException e) {
-            log.error("❌ Error streaming song {}: {}", name, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+                        deferredResult.setResult(response);
+
+                    } catch (IOException e) {
+                        log.error("❌ Error reading resource length for {}: {}", name, e.getMessage());
+                        deferredResult.setErrorResult(
+                                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+                        );
+                    }
+                })
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+
+                    if (cause instanceof SongNotFoundException) {
+                        log.warn("⚠️ Song not found: {}", name);
+                        deferredResult.setErrorResult(ResponseEntity.notFound().build());
+                    } else if (cause instanceof IOException) {
+                        log.error("❌ IO Error streaming song {}: {}", name, cause.getMessage());
+                        deferredResult.setErrorResult(
+                                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+                        );
+                    } else {
+                        log.error("❌ Unexpected error streaming song {}: {}", name, cause.getMessage());
+                        deferredResult.setErrorResult(
+                                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+                        );
+                    }
+
+                    return null;
+                });
+
+        return deferredResult;
     }
 
     @GetMapping("/fetchAllSongs")

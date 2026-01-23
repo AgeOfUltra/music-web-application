@@ -84,7 +84,7 @@ public class SongRequestController {
             model.addFlashAttribute("successUpdate","Updated!");
         }
 
-        return new ModelAndView("redirect:/app/music/connect/request/inProgress/admin");
+        return new ModelAndView("redirect:/app/music/connect/request/admin/inProgress");
     }
 
 

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
-
+//@Component
 public class CreateAdmin {
     @Bean
     public CommandLineRunner init(UserRepo userRepo, PasswordEncoder passwordEncoder){

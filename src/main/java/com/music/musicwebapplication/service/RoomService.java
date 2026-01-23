@@ -238,5 +238,9 @@ public class RoomService {
         repo.deleteAll();
         log.info("All rooms deletion completed...");
     }
+
+    public List<String> getAllActiveRoomNames() {
+        return repo.findAllRoomName();
+    }
 }
 
