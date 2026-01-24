@@ -1,5 +1,6 @@
 package com.music.musicwebapplication.schedulers;
 
+import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.service.PublicAuthService;
 import com.music.musicwebapplication.service.UserSessionService;
@@ -8,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -30,11 +32,11 @@ public class UnUsedSessionCleanUp {
             List<UserSession> expiredSessions = sessionService.getExpiredSessions();
 
             if (expiredSessions.isEmpty()) {
-                log.info("ℹ️ No expired sessions to clean");
+                log.debug("ℹ️ No expired sessions to clean");
                 return;
             }
 
-            log.info("🗑️ Found {} expired sessions to clean", expiredSessions.size());
+            log.debug("🗑️ Found {} expired sessions to clean", expiredSessions.size());
 
             for (UserSession session : expiredSessions) {
                 try {
@@ -63,6 +65,19 @@ public class UnUsedSessionCleanUp {
             log.error("❌ Scheduler error: {}", e.getMessage(), e);
         }
     }
+
+    @Scheduled(cron = "0 */10 * * * *")
+    public void deleteUnVerifiedAccounts(){
+        Optional<List<User>> users = loginService.getOlderThan5MinUsers();
+        if(users.isEmpty()){
+            log.debug("No records to Update");
+        }
+        users.get().forEach(
+                loginService::deleteWithRetry
+        );
+        log.info("CleanUpDone for Expired Verifications");
+    }
+
 
 
 }

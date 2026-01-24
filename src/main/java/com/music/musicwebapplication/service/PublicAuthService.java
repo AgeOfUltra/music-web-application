@@ -29,7 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -415,5 +417,23 @@ public class PublicAuthService {
         }
         log.debug("Email retrieved for user: {}", username);
         return user.get().getEmail();
+    }
+
+    public Optional<List<User>> getOlderThan5MinUsers() {
+        LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(5);
+        return repo.findRecordsOlderThan5Minutes(cutoffTime);
+    }
+    @Retryable(
+            retryFor = {SocketException.class, SocketTimeoutException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public void deleteWithRetry(User u){
+        try{
+            repo.delete(u);
+//            log.info("Deleted {}",u.getEmail());
+        }catch (Exception e){
+            log.debug("failed to delete user because : {}",e.getMessage());
+        }
     }
 }
