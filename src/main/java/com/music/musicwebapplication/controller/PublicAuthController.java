@@ -39,26 +39,31 @@ public class PublicAuthController {
     private final PublicAuthService loginService;
 
     public PublicAuthController(UserSessionService sessionService, JwtTokenUtil jwtUtil, PublicAuthService loginService1) {
-
-
         this.sessionService = sessionService;
         this.jwtUtil = jwtUtil;
         this.loginService = loginService1;
+        log.debug("PublicAuthController initialized");
     }
 
     // Return login page
     @GetMapping("/login")
     public String loginPage(@RequestParam(required = false) String error, @RequestParam(required = false) String logout, @RequestParam(required = false) String expired, Model model) {
+        log.debug("Login page accessed with params - error: {}, logout: {}, expired: {}", error, logout, expired);
+
         if ("alreadyLoggedIn".equals(error)) {
+            log.info("Login page displayed with 'already logged in' error");
             model.addAttribute("loginError", "User already logged in");
         }
         if ("sessionError".equals(error)) {
+            log.warn("Login page displayed with session error");
             model.addAttribute("sessionError", "Error occurred while session create/update Please try again after sometime.");
         }
         if (logout != null && logout.equals("true")) {
+            log.info("Login page displayed after successful logout");
             model.addAttribute("loginError", "User logged out successfully");
         }
         if ("true".equals(expired)) {
+            log.info("Login page displayed due to session expiry");
             model.addAttribute("loginError", "Session expired. Please login again.");
         }
 
@@ -70,6 +75,7 @@ public class PublicAuthController {
 
     @GetMapping("/signUp")
     public String signUpPage(Model model) {
+        log.debug("Sign up page accessed");
         if (!model.containsAttribute("newUser")) {
             model.addAttribute("newUser", new RegisterUser());
         }
@@ -85,36 +91,39 @@ public class PublicAuthController {
     // Handle login and return JWT token
     @PostMapping("/authenticate")
     public ModelAndView loginUser(@ModelAttribute("loginUser") LoginUser loginUser, HttpServletResponse responseServlet, RedirectAttributes redirectAttributes) {
+        log.info("Login attempt for user: {}", loginUser.getUsername());
         String errorMessage = "";
         ResponseEntity<?> response = loginService.authenticate(loginUser);
-        log.info(response.toString());
+        log.debug("Authentication response status: {}", response.getStatusCode());
+
         Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
 
         if (responseBody == null) {
-            log.error("Unknown issue occurred in response body generation! please check the api call and relevant methods");
+            log.error("Authentication response body is null for user: {}", loginUser.getUsername());
             redirectAttributes.addFlashAttribute("loginError", "Unknown issue occurred,Please try again");
             redirectAttributes.addFlashAttribute("loginUser", loginUser);
             return new ModelAndView("redirect:/app/music/public/login");
         }
+
         if (response.getStatusCode() == HttpStatus.OK) {
-            String token = "";
-            token = (String) responseBody.get("token");
+            String token = (String) responseBody.get("token");
+            log.debug("JWT token generated for user: {}", loginUser.getUsername());
 
             ResponseCookie cookie = ResponseCookie.from("jwt", token).httpOnly(true).secure(false).path("/").maxAge(60 * 62)         // 1 hour
                     .sameSite("Lax").build();
 
             responseServlet.addHeader("Set-Cookie", cookie.toString());
 
-            log.info("Login Successfully ! log in user data : {}", loginUser);
+            log.info("User logged in successfully: {}", loginUser.getUsername());
             return new ModelAndView("redirect:/app/music/dashboard");
         } else {
             errorMessage = (String) responseBody.get("error");
             if (errorMessage == null || errorMessage.isEmpty()) {
                 errorMessage = (String) responseBody.get("UserError");
             }
+            log.warn("Login failed for user {}: {}", loginUser.getUsername(), errorMessage);
             redirectAttributes.addFlashAttribute("loginError", errorMessage);
             redirectAttributes.addFlashAttribute("loginUser", loginUser);
-            log.info("login failed! user data : {}", loginUser);
             return new ModelAndView("redirect:/app/music/public/login");
         }
     }
@@ -124,9 +133,11 @@ public class PublicAuthController {
 
     @PostMapping("/register")
     public ModelAndView registerUser(@Valid @ModelAttribute("newUser") RegisterUser newUser, Errors error, RedirectAttributes redirectAttributes) {
+//        log.info("Registration attempt for username: {}", newUser.getUsername());
+
         if (error.hasErrors()) {
-            log.error("Register validation failed due to error : {}", error);
-            log.info("failed Dta ! : {}", newUser);
+            log.error("Registration validation failed for user {}: {}", newUser.getUsername(), error);
+            log.debug("Failed registration data: {}", newUser);
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.newUser", error);
             redirectAttributes.addFlashAttribute("newUser", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
@@ -136,31 +147,31 @@ public class PublicAuthController {
 //        validate if the username is having other than "@ $ & #" as special characters.
 //        boolean allowedChar = username.chars().filter(c -> !Character.isLetterOrDigit(c)).anyMatch(c -> "@#$&".indexOf(c)==-1);
         if (!username.matches("^[a-zA-Z0-9@#$&]*$")) {
+            log.warn("Registration failed - invalid characters in username: {}", username);
             redirectAttributes.addFlashAttribute("signUpError", "Only '@$&#' as special Character are allowed ");
             redirectAttributes.addFlashAttribute("newUser", newUser);
-            log.error("User Entered Data! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
 
         Optional<UserSession> existingUser = Optional.ofNullable(sessionService.getUserSession(newUser.getUsername()));
         if (existingUser.isPresent()) {
+            log.warn("Registration failed - user already exists: {}", username);
             redirectAttributes.addFlashAttribute("signUpError", "User Already Registered!");
             redirectAttributes.addFlashAttribute("newUser", newUser);
-            log.error("User AlreadyRegistered! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
         newUser.setRole(Role.LISTENER);
         boolean result = loginService.registerUser(newUser);
         if (result) {
-            log.info("New User created successfully! and his/her data : {}", newUser);
+//            log.info("User registered successfully: {}", username);
             redirectAttributes.addFlashAttribute("showRegistrationSuccess", true);
             return new ModelAndView("redirect:/app/music/public/login");
         } else {
+            log.error("Failed to register user: {}", username);
             redirectAttributes.addFlashAttribute("signUpError", "Error while creating user.Please try again");
             redirectAttributes.addFlashAttribute("newUser", newUser);
-            log.error("failed to create new user! passed data : {}", newUser);
             return new ModelAndView("redirect:/app/music/public/signUp");
         }
 
@@ -168,9 +179,11 @@ public class PublicAuthController {
 
     @GetMapping("/verify")
     public ModelAndView VerifyUserEmail(@RequestParam("user") String username, @RequestParam("token") String token) {
+        log.info("Email verification request received for user: {}", username);
 
         String result = loginService.validateTokenAndUpdate(username, token);
         //result format = token$username
+        log.debug("Verification result for user {}: {}", username, result);
         return new ModelAndView("redirect:/app/music/public/verification-success?token=" + result);
 
     }
@@ -179,9 +192,11 @@ public class PublicAuthController {
     public ModelAndView verificationSuccess(@RequestParam("token") String token) {
         String[] parts = token.split("\\$", 2);
         token = parts[0];
-        String username=parts[1];
-        log.info("Received username {}",username);
-        boolean result = loginService.validateToken(token,username);
+        String username = parts[1];
+        log.info("Verification success page accessed for user: {}", username);
+
+        boolean result = loginService.validateToken(token, username);
+        log.info("Email verification result for user {}: {}", username, result ? "success" : "failed");
 
         ModelAndView mav = new ModelAndView("verification-result");
         mav.addObject("success", result);
@@ -191,6 +206,8 @@ public class PublicAuthController {
 
     @GetMapping("/logout")
     public String logoutHttp(HttpServletRequest request, HttpServletResponse response) {
+        log.info("Logout request received");
+
         try {
             // Get JWT from cookie
             Cookie[] cookies = request.getCookies();
@@ -207,46 +224,48 @@ public class PublicAuthController {
 
             if (jwtToken != null) {
                 String username = jwtUtil.getIdentityFromToken(jwtToken);
-                log.info("🔓 Processing logout for user: {}", username);
+//                log.info("Processing logout for user: {}", username);
 
                 try {
                     // Get current session
                     UserSession session = sessionService.getUserSession(username);
 
                     if (session != null) {
+                        log.debug("Active session found for user: {}", username);
                         // Perform logout cleanup
                         boolean logoutSuccess = loginService.logout(session);
 
                         if (!logoutSuccess) {
-                            log.warn("⚠️ Logout cleanup partially failed for user: {}", username);
+                            log.warn("Logout cleanup partially failed for user: {}", username);
                             // Continue anyway to clear cookie and security context
                         }
                     } else {
-                        log.warn("⚠️ No active session found for user: {}", username);
+                        log.warn("No active session found for user during logout: {}", username);
                     }
 
                 } catch (Exception e) {
-                    log.error("❌ Error during logout cleanup for user {}: {}", username, e.getMessage(), e);
+                    log.error("Error during logout cleanup for user {}: {}", username, e.getMessage(), e);
                     // Continue to clear cookie and security context even if cleanup fails
                 }
             } else {
-                log.warn("⚠️ No JWT token found during logout");
+                log.warn("No JWT token found in cookies during logout");
             }
 
-            // ✅ Always clear JWT cookie (even if logout cleanup failed)
+            // Always clear JWT cookie (even if logout cleanup failed)
             Cookie deleteCookie = new Cookie("jwt", null);
             deleteCookie.setMaxAge(0);
             deleteCookie.setPath("/");
             deleteCookie.setHttpOnly(true);
             response.addCookie(deleteCookie);
-            log.info("✅ JWT cookie cleared");
+            log.debug("JWT cookie cleared successfully");
 
             // Clear security context
             SecurityContextHolder.clearContext();
-            log.info("✅ Security context cleared");
+            log.debug("Security context cleared successfully");
+//            log.info("Logout completed successfully");
 
         } catch (Exception e) {
-            log.error("❌ Unexpected error during HTTP logout: {}", e.getMessage(), e);
+            log.error("Unexpected error during logout: {}", e.getMessage(), e);
             // Still try to clear cookie as fallback
             try {
                 Cookie deleteCookie = new Cookie("jwt", null);
@@ -254,8 +273,9 @@ public class PublicAuthController {
                 deleteCookie.setPath("/");
                 deleteCookie.setHttpOnly(true);
                 response.addCookie(deleteCookie);
+                log.debug("JWT cookie cleared in error recovery");
             } catch (Exception cookieEx) {
-                log.error("❌ Failed to clear cookie during error recovery: {}", cookieEx.getMessage());
+                log.error("Failed to clear cookie during error recovery: {}", cookieEx.getMessage());
             }
         }
 

@@ -40,7 +40,7 @@ public class PlaybackStateService {
         try {
             String jsonString = objectMapper.writeValueAsString(state);
             stringRedisTemplate.opsForValue().set(key, jsonString, TTL_24H, TimeUnit.HOURS);
-            log.info("💾 Playback state saved for {}: {}", roomName, state);
+            log.debug("💾 Playback state saved for {}: {}", roomName, state);
 
             // Verify save
             if (stringRedisTemplate.opsForValue().get(key) == null) {

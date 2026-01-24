@@ -42,10 +42,10 @@ public class AppConfig {
 
     @PostConstruct
     public void validateConfig() {
-        log.info("📦 AWS S3 Configuration:");
-        log.info("   Bucket: {}", bucketName);
-        log.info("   Region: {}", region);
-        log.info("   Endpoint: s3.{}.amazonaws.com", region);
+        log.debug("📦 AWS S3 Configuration:");
+        log.debug("   Bucket: {}", bucketName);
+        log.debug("   Region: {}", region);
+        log.debug("   Endpoint: s3.{}.amazonaws.com", region);
     }
     @Bean
     public ModelMapper mapper()

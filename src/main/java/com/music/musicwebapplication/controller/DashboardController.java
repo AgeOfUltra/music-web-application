@@ -41,12 +41,14 @@ public class DashboardController {
         this.service = service;
         this.repo = repo;
         this.songService = songService;
+        log.debug("DashboardController initialized");
     }
 
 
     @GetMapping("/dashboard")
     public String dashboardPage(Model model, Authentication authentication) {
         String currentUser = authentication.getName();
+        log.debug("Dashboard page accessed by user: {}", currentUser);
 
         model.addAttribute("currentUser",currentUser);
 
@@ -64,6 +66,7 @@ public class DashboardController {
         if(!model.containsAttribute("joinRoom")){
             model.addAttribute("joinRoom",new RoomJoin());
         }
+        log.debug("Dashboard model attributes prepared for user: {}", currentUser);
         return "dashboard";
     }
     @InitBinder
@@ -77,22 +80,27 @@ public class DashboardController {
     //    url : /app/music/connect/request/inProgress
     @GetMapping("/connect/request/{user}/inProgress")
     public String getAllInProgressRequest(@PathVariable(value = "user")String currentUser, Model model){
+        log.info("Fetching in-progress requests for user: {}", currentUser);
         Optional<List<ConfessDto>> availableRequest;
         Optional<List<RequestSongDto>> requestedSongs;
 
         if(currentUser.equals("admin")){
+            log.debug("Admin user detected, fetching all in-progress requests");
             availableRequest = service.getAllInProgressRequest(Status.IN_PROGRESS);
             requestedSongs= songService.getAllRequestStatusSong(Status.SENT);
         }else{
+            log.debug("Regular user detected, fetching user-specific requests");
             availableRequest=service.getAllRequestForUser(currentUser);
             requestedSongs = songService.getAllSongForRequestor(currentUser);
         }
 
         if(availableRequest.isEmpty() || requestedSongs.isEmpty()){
+            log.info("No pending requests found for user: {}", currentUser);
             model.addAttribute("noData","No Pending request");
             model.addAttribute("noRequestData","No Pending request");
         }else{
-
+            log.info("Found {} confess requests and {} song requests for user: {}",
+                    availableRequest.get().size(), requestedSongs.get().size(), currentUser);
             model.addAttribute("inProgressRequests",availableRequest.get());
             model.addAttribute("pendingOrCompleted",requestedSongs.get());
         }
@@ -102,10 +110,11 @@ public class DashboardController {
 
     @PostMapping("/connect/sendRequest")
     public ModelAndView userRequestData(@Valid @ModelAttribute("requestData") ConfessDto requestData, Errors error, RedirectAttributes attribute, Authentication auth){
+        log.info("Received confess request from user: {}", auth.getName());
         //validation
         if(error.hasErrors()){
-            log.error("Room validation failed due to error : {}", error);
-            log.info("failed Data ! : {}", requestData);
+            log.error("Confess request validation failed for user {}: {}", auth.getName(), error);
+            log.debug("Failed request data: {}", requestData);
             attribute.addFlashAttribute("org.springframework.validation.BindingResult.requestData", error);
             attribute.addFlashAttribute("requestData", requestData);
             return new ModelAndView("redirect:/app/music/dashboard");
@@ -116,14 +125,21 @@ public class DashboardController {
 
         Optional<User> user = repo.findByUsername(auth.getName());
         user.ifPresent(value -> requestData.setSenderEmail(value.getEmail()));
-        log.info("Current user: {} and email {}", auth.getName(), user.get().getEmail());
+
+        if(user.isPresent()){
+            log.info("Processing confess request for user: {} with email: {}", auth.getName(), user.get().getEmail());
+        }else{
+            log.warn("User not found in repository: {}", auth.getName());
+        }
 
         String result = service.buildSaveConfessData(requestData);
         if(result.equals("FAILED")){
+            log.error("Failed to save confess request for user: {}", auth.getName());
             attribute.addFlashAttribute("emailStatus", "failed to Send Email");
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
+        log.info("Confess request saved successfully for user: {}", auth.getName());
         attribute.addFlashAttribute("emailStatus", "Confess sent for Validation!");
         attribute.addFlashAttribute("requestData", requestData);
         return new ModelAndView("redirect:/app/music/dashboard?status=sentSuccess");
@@ -133,17 +149,19 @@ public class DashboardController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/connect/admin/update/request")
     public ModelAndView updateRequestStatus(ConfessDto request, RedirectAttributes redirectAttributes){
-        log.info("Requested Data : {}",request);
+        log.info("Admin updating confess request status for room: {}", request.getRoomHash());
+        log.debug("Update request details: {}", request);
 
         Map<String,String> response  = service.updateStatus(request);
         if(response.containsKey("error")){
+            log.error("Failed to update confess request status: {}", response.get("error"));
             redirectAttributes.addFlashAttribute("errorUpdate","update failed");
 
         }else{
+            log.info("Successfully updated confess request status to: {}", request.getStatus());
             redirectAttributes.addFlashAttribute("successUpdate",response.get("saved"));
         }
 
-        log.info("Finished the updating process : {}",request.getStatus());
         return new ModelAndView("redirect:/app/music/connect/request/admin/inProgress");
     }
 }

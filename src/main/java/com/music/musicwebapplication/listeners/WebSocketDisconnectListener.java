@@ -49,7 +49,7 @@ public class WebSocketDisconnectListener implements ApplicationListener<SessionD
         if (username != null) {
             try {
                 // ✅ Delay to allow flag update request to complete
-                log.info("⏰ Delaying cleanup by {}ms to allow flag update", CLEANUP_DELAY_MS);
+                log.debug("⏰ Delaying cleanup by {}ms to allow flag update", CLEANUP_DELAY_MS);
                 TimeUnit.MILLISECONDS.sleep(CLEANUP_DELAY_MS);
 
                 log.info("🚀 Publishing UserDisconnectedEvent for user={} room={}",

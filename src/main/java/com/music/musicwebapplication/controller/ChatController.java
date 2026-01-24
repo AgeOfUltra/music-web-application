@@ -128,25 +128,25 @@ public class ChatController {
             state.setTimestamp(0L);
             state.setPlaying(true);
             state.setPaused(false);
-            log.info("▶️ PLAY action → Starting song from beginning");
+            log.debug("▶️ PLAY action → Starting song from beginning");
         }
         // For RESUME action, use provided timestamp
         else if ("RESUME".equals(msg.get("action"))) {
             state.setPlaying(true);
             state.setPaused(false);
-            log.info("▶️ RESUME action → timestamp={}ms", state.getTimestamp());
+            log.debug("▶️ RESUME action → timestamp={}ms", state.getTimestamp());
         }
         // For PAUSE action, save current timestamp
         else if ("PAUSE".equals(msg.get("action"))) {
             state.setPlaying(false);
             state.setPaused(true);
-            log.info("⏸️ PAUSE action → timestamp={}ms", state.getTimestamp());
+            log.debug("⏸️ PAUSE action → timestamp={}ms", state.getTimestamp());
         }
 
         // Save to Redis
         playbackStateService.savePlaybackState(roomName, state);
 
-        log.info("💾 Saved playback state → room={}, valid={}", roomName, state.isValid());
+        log.debug("💾 Saved playback state → room={}, valid={}", roomName, state.isValid());
 
         // Broadcast to all participants
         messagingTemplate.convertAndSend(
@@ -204,7 +204,7 @@ public class ChatController {
         syncResponse.put("requestTime", request.getTimestamp());
         syncResponse.put("responseTime", System.currentTimeMillis());
 
-        log.info("📤 Sending sync response → valid={}, isPlaying={}, song={}",
+        log.debug("📤 Sending sync response → valid={}, isPlaying={}, song={}",
                 syncResponse.get("valid"),
                 syncResponse.get("isPlaying"),
                 syncResponse.get("songName"));

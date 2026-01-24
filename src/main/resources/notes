@@ -42,3 +42,6 @@ docker exec music-web-application nslookup s3.us-east-1.amazonaws.com
 
 # Test if container can reach S3
 docker exec music-web-application curl -I https://s3.us-east-1.amazonaws.com
+
+
+https://transelementary-saltishly-flora.ngrok-free.dev

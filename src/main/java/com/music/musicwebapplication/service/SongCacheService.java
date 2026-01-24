@@ -71,7 +71,7 @@ public class SongCacheService {
     public void init() throws IOException {
         cacheDir = Paths.get(cacheDirPath).normalize();
         Files.createDirectories(cacheDir);
-        log.info("📂 Song cache initialized at {}", cacheDir.toAbsolutePath());
+        log.debug("📂 Song cache initialized at {}", cacheDir.toAbsolutePath());
     }
 
     // ---------------- PUBLIC API ----------------
@@ -260,7 +260,7 @@ public class SongCacheService {
     protected void downloadFromS3WithRetry(String objectKey, Path targetFile) throws IOException {
         downloadStatus.put(objectKey, DownloadStatus.DOWNLOADING);
 
-        log.info("⬇️ Downloading {} from S3", objectKey);
+        log.debug("⬇️ Downloading {} from S3", objectKey);
 
         // Download to temporary file first
         Path tempFile = targetFile.getParent().resolve(objectKey + ".tmp");
@@ -322,7 +322,7 @@ public class SongCacheService {
 
             long removed = Files.list(cacheDir)
                     .filter(path -> path.toString().endsWith(".mp3")) // Only mp3 files
-                    .filter(this::isOlderThan2Hours)
+                    .filter(this::isOlderThan1Hours)
                     .peek(path -> {
                         String fileName = path.getFileName().toString();
                         downloadStatus.remove(fileName);
@@ -367,10 +367,10 @@ public class SongCacheService {
         }
     }
 
-    private boolean isOlderThan2Hours(Path file) {
+    private boolean isOlderThan1Hours(Path file) {
         try {
             Instant modified = Files.getLastModifiedTime(file).toInstant();
-            return modified.isBefore(Instant.now().minus(2, ChronoUnit.HOURS));
+            return modified.isBefore(Instant.now().minus(1, ChronoUnit.HOURS));
         } catch (IOException e) {
             return false;
         }
