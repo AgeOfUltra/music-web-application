@@ -5,6 +5,9 @@ import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.service.SongCacheService;
 import com.music.musicwebapplication.service.AudioStreamService;
+import com.music.musicwebapplication.utils.JwtTokenUtil;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,17 +38,56 @@ public class AudioStreamController {
     private final AudioStreamService audioStreamService;
     private final SongCacheService songCacheService;
     private final SongRepo repo;
+    private final JwtTokenUtil tokenUtil;
 
 
     @Autowired
-    AudioStreamController(AudioStreamService audioStreamService, SongCacheService songCacheService, SongRepo repo){
+    AudioStreamController(AudioStreamService audioStreamService, SongCacheService songCacheService, SongRepo repo, JwtTokenUtil tokenUtil){
         this.audioStreamService = audioStreamService;
         this.songCacheService = songCacheService;
         this.repo = repo;
+        this.tokenUtil = tokenUtil;
     }
 
-    @GetMapping(value = "/public/streamSong/{name}", produces = "audio/mpeg")
-    public DeferredResult<ResponseEntity<Resource>> streamSong(@PathVariable String name) {
+    @GetMapping(value = "/public/streamSong/{currentUsername}/{name}", produces = "audio/mpeg")
+    public DeferredResult<ResponseEntity<Resource>> streamSong(@PathVariable String currentUsername, @PathVariable String name, @RequestParam("token") String token, @RequestParam("ts") long timestamp) {
+
+        long now = System.currentTimeMillis();
+
+        if (Math.abs(now - timestamp) > 75_000) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Expired stream request"
+            );
+        }
+
+
+        try {
+            String username = tokenUtil.getIdentityFromToken(token);
+
+            if (username == null || !username.equals(currentUsername)) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Expired stream request"
+                );
+            }
+
+        } catch (ExpiredJwtException e) {
+            log.warn("Expired token: {}", e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Expired stream request"
+            );
+
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("Invalid token: {}", e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Expired stream request"
+            );
+        }
+
+
         DeferredResult<ResponseEntity<Resource>> deferredResult = new DeferredResult<>(30000L); // 30 sec timeout
 
         // Handle timeout

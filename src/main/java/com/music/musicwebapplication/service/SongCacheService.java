@@ -132,7 +132,7 @@ public class SongCacheService {
                     touchFile(cachedFile);
                     downloadStatus.put(objectKey, DownloadStatus.DOWNLOADED);
 
-                    log.info("✅ Successfully cached: {} (size: {} bytes)",
+                    log.debug("✅ Successfully cached: {} (size: {} bytes)",
                             objectKey, Files.size(cachedFile));
 
                     return new FileSystemResource(cachedFile);

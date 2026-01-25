@@ -1134,7 +1134,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
     //     ignoreLocalEvents: ignoreLocalEvents
     // });
 
-    const newSrc = `/app/music/audio/public/streamSong/${playbackMsg.songFileName}?t=${Date.now()}`;
+    const newSrc = `/app/music/audio/public/streamSong/${encodeURIComponent(currentUsername)}/${playbackMsg.songFileName}?token=${jwtToken}&ts=${Date.now()}`;
 
     currentSongData = {
         songFileName: playbackMsg.songFileName,
@@ -1394,7 +1394,7 @@ function handlePlaybackSyncState(syncMsg) {
     updateCurrentSongDisplay(syncMsg.songName, syncMsg.hero, syncMsg.language, syncMsg.movie, syncMsg.singer);
 
     // Build audio source URL
-    const audioSrc = `/app/music/audio/public/streamSong/${syncMsg.songFileName}?t=${Date.now()}`;
+    const audioSrc = `/app/music/audio/public/streamSong/${encodeURIComponent(currentUsername)}/${syncMsg.songFileName}?token=${jwtToken}&ts=${Date.now()}`;
     // console.log('🔗 [SYNC] Loading audio from:', audioSrc);
 
     // Load and sync audio
