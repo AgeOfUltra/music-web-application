@@ -51,6 +51,7 @@ public class DashboardController {
         log.debug("Dashboard page accessed by user: {}", currentUser);
 
         model.addAttribute("currentUser",currentUser);
+        model.addAttribute("alreadySentRequest",service.isRequestCreatedInLast24hours(currentUser));
 
         if(!model.containsAttribute("newRoom")){
             model.addAttribute("newRoom",new CreateRoom());
@@ -95,11 +96,11 @@ public class DashboardController {
         }
 
         if(availableRequest.isEmpty() || requestedSongs.isEmpty()){
-            log.info("No pending requests found for user: {}", currentUser);
+            log.debug("No pending requests found for user: {}", currentUser);
             model.addAttribute("noData","No Pending request");
             model.addAttribute("noRequestData","No Pending request");
         }else{
-            log.info("Found {} confess requests and {} song requests for user: {}",
+            log.debug("Found {} confess requests and {} song requests for user: {}",
                     availableRequest.get().size(), requestedSongs.get().size(), currentUser);
             model.addAttribute("inProgressRequests",availableRequest.get());
             model.addAttribute("pendingOrCompleted",requestedSongs.get());
@@ -120,6 +121,11 @@ public class DashboardController {
             return new ModelAndView("redirect:/app/music/dashboard");
         }
 
+        if(!service.isRequestCreatedInLast24hours(requestData.getInitiatedBy())){
+            log.error("Trying to tamper with url: {}", auth.getName());
+            attribute.addFlashAttribute("emailStatus", "Initiated failed");
+            return new ModelAndView("redirect:/app/music/dashboard");
+        }
         //CONVERT THE DTO TO entity and pass to service for save.
         requestData.setInitiatedBy(auth.getName());
 

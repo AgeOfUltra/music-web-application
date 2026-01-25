@@ -96,19 +96,50 @@
 
         <!-- Send Confess -->
         <div class="col-md-6">
-            <div class="card h-100" role="button" data-bs-toggle="modal" data-bs-target="#sendConfess">
+
+            <div class="card h-100 confess-card"
+                 th:classappend="${!alreadySentRequest} ? 'disabled-card' : ''"
+                 th:attr="role=${alreadySentRequest} ? 'button' : null"
+                 th:data-bs-toggle="${alreadySentRequest} ? 'modal' : null"
+                 th:data-bs-target="${alreadySentRequest} ? '#sendConfess' : null">
+
                 <div class="card-body text-center p-4">
-                    <div class="card-icon mx-auto" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+
+                    <div class="card-icon mx-auto"
+                         th:style="${!alreadySentRequest} ?
+                 'background:#cccccc;' :
+                 'background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);'">
                         <i class="bi bi-heart-fill"></i>
                     </div>
+
                     <h3 class="h4 fw-bold mb-3">Send Confess Request</h3>
-                    <p class="text-muted mb-4">Send your music and feelings to loved ones</p>
-                    <button class="btn btn-gradient w-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                        <i class="bi bi-envelope-heart me-2"></i>Send Request
+
+                    <!-- STATUS -->
+                    <p class="fw-semibold mb-2"
+                       th:text="${!alreadySentRequest} ?
+               '1/1 request completed' :
+               '0/1 can request with in next 24'"></p>
+
+                    <p class="text-muted mb-4"
+                       th:text="${!alreadySentRequest} ?
+               'You have already sent your request.' :
+               'Send your music and feelings to loved ones'"></p>
+
+                    <!-- BUTTON -->
+                    <button class="btn w-100"
+                            th:disabled="${!alreadySentRequest}"
+                            th:classappend="${!alreadySentRequest} ? 'btn-secondary' : 'btn-gradient'"
+                            th:style="${!alreadySentRequest} ?
+                    'background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);' : ''">
+                        <i class="bi bi-envelope-heart me-2"></i>
+                        <span th:text="${!alreadySentRequest} ? 'Request Sent' : 'Send Request'"></span>
                     </button>
+
                 </div>
             </div>
         </div>
+
+
 
         <!-- Request Song -->
         <div class="col-md-6">

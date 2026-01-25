@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.random.RandomGenerator;
 
@@ -241,6 +243,14 @@ public class ConfessService {
             log.warn("No confess data found for room hash: {}", roomHash);
         }
         return confess;
+    }
+
+//    check if the user has created any request in last 24 hours.
+
+    public boolean isRequestCreatedInLast24hours(String username){
+        LocalDateTime time = LocalDateTime.now().minusHours(24);
+        List<Confess> limitConfess = repo.findRecordsWithIn24Hours(time,username);
+        return  limitConfess.isEmpty();
     }
 
 

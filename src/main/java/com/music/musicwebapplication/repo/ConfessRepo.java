@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +23,6 @@ public interface ConfessRepo extends JpaRepository<Confess,Long> {
     @Query("SELECT c from Confess c where c.initiatedBy = :initiatedBy")
     List<Confess> findByInitiatedBy(@Param("initiatedBy") String initiatedBy);
 
+    @Query("Select c from Confess c where c.createdAt > :time and c.initiatedBy= :username")
+    List<Confess> findRecordsWithIn24Hours(@Param("time") LocalDateTime time ,@Param("username") String username);
 }
