@@ -1,6 +1,6 @@
 version: '3.8'
 
-services: # Spring Boot Application
+services:
   music-app:
     build:
       context: .
@@ -8,18 +8,27 @@ services: # Spring Boot Application
     container_name: music-web-application
     stop_grace_period: 45s
     dns:
-        - 8.8.8.8
-        - 8.8.4.4
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "8080:8080"
     env_file:
       - .env
-    environment: # Cloud Database Configuration (PostgreSQL in cloud)
+
+   # Docker-level logging (catches crashes before app writes to file)
+    logging:
+        driver: "json-file"
+        options:
+          max-size: "50m"
+          max-file: "5"
+          compress: "true"
+    environment:
+      # Cloud Database Configuration
       - SPRING_DATASOURCE_URL=${DB_URL}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
-        
-        # Upstash Redis
+
+      # Upstash Redis
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -38,27 +47,25 @@ services: # Spring Boot Application
       # Email Configuration
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
+
       # Url Config
       - BASE_URL=${BASE_URL}
 
-      # JVM Options
-      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
-
       # Cache directory
       - APP_CACHE_DIR=/app/song-cache
+
     networks:
       - music-network
-    volumes: # Persist song cache
+    volumes:
       - song-cache:/app/song-cache
-      # Persist logs
       - ./logs:/app/logs
-    restart: unless-stopped
+    restart: always
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "https://music-web-application-6unh.onrender.com/actuator/health" ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 90s
 
 # Networks
 networks:
@@ -67,7 +74,5 @@ networks:
 
 # Volumes
 volumes:
-  redis-data:
-    driver: local
   song-cache:
     driver: local

@@ -1,6 +1,5 @@
 package com.music.musicwebapplication.service;
 
-import com.music.musicwebapplication.entity.User;
 import com.music.musicwebapplication.entity.UserSession;
 import com.music.musicwebapplication.repo.UserSessionRepo;
 import jakarta.annotation.PreDestroy;
@@ -77,7 +76,7 @@ public class UserSessionService {
 
     @Transactional
     public boolean saveSession(String token, String username) {
-        log.info("Attempting to save session for user: {}", username);
+        log.debug("Attempting to save session for user: {}", username);
         LocalDateTime now = LocalDateTime.now();
 //        No needed because already verified.
 //        if (repo.existsByUsername(username)) {

@@ -300,7 +300,7 @@ public class PublicAuthService {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            log.info("User authenticated successfully: {}", username);
+            log.debug("User authenticated successfully: {}", username);
             response.put("message", "Login successful");
             return ResponseEntity.ok(response);
 

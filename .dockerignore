@@ -1,0 +1,10 @@
+.idea/
+*.iml
+target/
+logs/
+song-cache/
+.mvn/
+mvnw
+mvnw.cmd
+backup-logs.sh
+logs-backup/
