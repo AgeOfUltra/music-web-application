@@ -8,3 +8,5 @@ mvnw
 mvnw.cmd
 backup-logs.sh
 logs-backup/
+.git
+.gitignore

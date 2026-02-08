@@ -317,4 +317,66 @@ body {
         height: 50px;
         font-size: 24px;
     }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 10px;
+        gap: 4px;
+        min-height: 75px;
+        border-radius: 0 0 12px 12px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+
+    .logo {
+        height: 50px;
+        width: auto;
+        flex-shrink: 0;
+    }
+
+
+    .app-title {
+        font-size: 10px;
+        font-weight: 600;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        white-space: wrap;!important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+
+    .header .btn-secondary,
+    .header .logout-btn {
+        font-size: 12px;
+        padding: 5px 10px;
+        min-width: 55px;
+        flex-shrink: 0;
+    }
+
+
+    .header .btn-secondary:hover,
+    .header .logout-btn:hover {
+
+        transform: translateY(-1px);
+
+    }
 }
