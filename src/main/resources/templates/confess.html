@@ -4,7 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connecting Notes ∞ - Confess</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,9 +25,10 @@
         }
 
         body {
-            font-family: "Alan Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #00f2fe 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
             overflow-x: hidden;
         }
@@ -25,6 +39,15 @@
             100% { background-position: 0% 50%; }
         }
 
+        /* GLASS MORPHISM EFFECT */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+        }
+
         /* LOADING OVERLAY */
         .loading-overlay {
             position: fixed;
@@ -32,12 +55,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             z-index: 9999;
             opacity: 1;
             transition: opacity 0.5s ease;
@@ -62,187 +81,49 @@
             100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            margin-top: 20px;
-            color: white;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .loading-subtext {
-            margin-top: 10px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 14px;
-        }
-
-        /* COMPLETION MODAL */
-        .completion-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-        }
-
-        .completion-modal.show {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .completion-content {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            padding: 50px;
+        /* HEADER - CENTERED */
+        .app-header {
             text-align: center;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.6s ease-out;
+            padding: 30px 20px;
+            margin-bottom: 20px;
         }
 
-        @keyframes modalSlideIn {
+        .app-logo {
+            height: 100px;
+            width: 110px;
+            margin: 0 auto 15px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .app-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            margin: 0;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        @keyframes fadeInDown {
             from {
-                transform: translateY(-50px) scale(0.9);
                 opacity: 0;
+                transform: translateY(-20px);
             }
             to {
-                transform: translateY(0) scale(1);
                 opacity: 1;
+                transform: translateY(0);
             }
-        }
-
-        .completion-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: bounceIn 0.8s ease-out;
-        }
-
-        @keyframes bounceIn {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        .completion-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 15px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        .completion-message {
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-
-        .done-button {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .done-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
-        }
-
-        .done-button:active {
-            transform: translateY(0);
-        }
-
-        /* HEADER */
-        .header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 20px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 0 0 16px 16px;
-            margin: 0 10px;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            height: 90px;
-            width: 100px;
-            /*border-radius: 50%;*/
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: white;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-        }
-        .audio-img{
-            height: 40px;
-            width: 45px;
-        }
-        .app-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         /* GREETING SECTION */
         .greeting-section {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-            padding: 30px;
-            margin: 20px;
-            max-width: 1400px;
-            margin-left: auto;
-            margin-right: auto;
-            text-align: center;
-        }
-
-        .greeting-text {
-            font-size: 28px;
-            font-weight: 700;
-            color: white;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             animation: fadeInUp 1s ease-out;
-        }
-
-        .greeting-subtext {
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 10px;
-            animation: fadeInUp 1s ease-out 0.3s both;
         }
 
         @keyframes fadeInUp {
@@ -256,39 +137,25 @@
             }
         }
 
-        /* MAIN CONTAINER */
-        .main-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+        .greeting-text {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        /* VINYL PLAYER SECTION - FIXED HEIGHT */
-        .vinyl-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 600px;
-            position: relative;
-            overflow: hidden;
+        .greeting-subtext {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 10px;
         }
 
+        /* VINYL PLAYER */
         .vinyl-player {
             position: relative;
-            width: 300px;
-            height: 300px;
-            flex-shrink: 0;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
         }
 
         .vinyl-record {
@@ -297,12 +164,17 @@
             background: radial-gradient(circle at center, #1a1a1a 0%, #1a1a1a 35%, #2d2d2d 35%, #2d2d2d 37%, #1a1a1a 37%, #1a1a1a 100%);
             border-radius: 50%;
             position: relative;
-            animation: spin 3s linear infinite;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: spinVinyl 3s linear infinite;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
         }
 
         .vinyl-record.paused {
             animation-play-state: paused;
+        }
+
+        @keyframes spinVinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .vinyl-center {
@@ -324,14 +196,16 @@
             transform: translate(-50%, -50%);
             width: 60px;
             height: 60px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            color: #667eea;
+        }
+
+        .audio-img {
+            height: 40px;
+            width: 45px;
         }
 
         .vinyl-grooves {
@@ -351,21 +225,20 @@
             );
         }
 
-        /* Audio Visualizer */
+        /* AUDIO VISUALIZER */
         .audio-visualizer {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            margin-top: 20px;
+            gap: 6px;
             height: 60px;
-            flex-shrink: 0;
+            margin: 25px 0;
         }
 
         .bar {
-            width: 6px;
+            width: 8px;
             background: linear-gradient(180deg, #667eea, #764ba2);
-            border-radius: 3px;
+            border-radius: 4px;
             animation: audioBar 0.8s ease-in-out infinite;
         }
 
@@ -379,71 +252,44 @@
         .bar:nth-child(8) { animation-delay: 0.1s; }
 
         @keyframes audioBar {
-            0%, 100% { height: 10px; }
+            0%, 100% { height: 12px; }
             50% { height: 50px; }
         }
 
         .audio-visualizer.paused .bar {
             animation: none;
-            height: 10px;
+            height: 12px;
         }
 
-        .song-info {
-            margin-top: 20px;
-            text-align: center;
-            color: white;
-            flex-shrink: 0;
-        }
-
+        /* SONG INFO */
         .song-title {
-            font-size: 22px;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            color: white;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .song-artist {
-            font-size: 16px;
-            opacity: 0.9;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
         }
 
-        /* MESSAGE SECTION - FIXED HEIGHT */
-        .message-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            height: 600px;
-        }
-
-        .message-header {
-            font-size: 20px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            flex-shrink: 0;
-        }
-
+        /* MESSAGE SECTION */
         .message-content {
-            flex: 1;
             background: rgba(255, 255, 255, 0.15);
             border-radius: 15px;
             padding: 25px;
             color: white;
-            font-size: 18px;
+            font-size: 1.1rem;
             line-height: 1.8;
+            min-height: 300px;
+            max-height: 450px;
             overflow-y: auto;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
             white-space: pre-wrap;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        /* Scrollbar styling */
+        /* CUSTOM SCROLLBAR */
         .message-content::-webkit-scrollbar {
             width: 8px;
         }
@@ -462,20 +308,21 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        /* TYPING INDICATOR */
         .typing-indicator {
             display: inline-flex;
             align-items: center;
-            color: rgba(255, 255, 255, 0.7);
+            gap: 4px;
+            color: rgba(255, 255, 255, 0.8);
             font-style: italic;
         }
 
         .typing-indicator span {
-            height: 8px;
-            width: 8px;
-            background: rgba(255, 255, 255, 0.7);
+            height: 10px;
+            width: 10px;
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             display: inline-block;
-            margin: 0 2px;
             animation: typingDot 1.4s infinite;
         }
 
@@ -498,193 +345,318 @@
             }
         }
 
-        .waiting-message {
-            color: rgba(255, 255, 255, 0.6);
-            font-style: italic;
-            text-align: center;
+        /* COMPLETION MODAL - ENHANCED */
+        .completion-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
         }
 
-        /* MOBILE RESPONSIVE */
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 15px;
-                margin: 0 5px;
-            }
+        .completion-modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
 
-            .logo {
-                height: 50px;
-                width: 50px;
-                font-size: 24px;
+        .completion-content {
+            animation: modalSlideIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-100px) scale(0.8);
+                opacity: 0;
             }
-            .audio-img{
-                height: 35px;
-                width: 40px;
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .celebration-icon {
+            font-size: 100px;
+            animation: celebrationBounce 1s ease-out, celebrationRotate 2s ease-in-out infinite 1s;
+        }
+
+        @keyframes celebrationBounce {
+            0% { transform: scale(0) rotate(0deg); }
+            50% { transform: scale(1.3) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        @keyframes celebrationRotate {
+            0%, 100% { transform: rotate(-8deg) scale(1); }
+            50% { transform: rotate(8deg) scale(1.1); }
+        }
+
+        /* CONFETTI */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            opacity: 0;
+            animation: confettiFall linear infinite;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                opacity: 0;
+            }
+            5% {
+                opacity: 1;
+            }
+            95% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .confetti.show {
+            opacity: 1;
+        }
+
+        /* FLOATING EMOJIS */
+        .emoji-float {
+            position: absolute;
+            font-size: 40px;
+            opacity: 0;
+            animation: floatEmoji linear infinite;
+        }
+
+        @keyframes floatEmoji {
+            0% {
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .emoji-float.show {
+            opacity: 0.8;
+        }
+
+        /* SPARKLES */
+        .sparkle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px white;
+            animation: sparkleAnimation 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkleAnimation {
+            0%, 100% {
+                opacity: 0;
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* BUTTONS */
+        .btn-custom {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-custom:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary-gradient {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary-glass {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary-glass:hover {
+            background: rgba(255, 255, 255, 0.35);
+            color: white;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .app-logo {
+                height: 70px;
+                width: 80px;
             }
 
             .app-title {
-                font-size: 16px;
-            }
-
-            .greeting-section {
-                margin: 15px 10px;
-                padding: 20px;
+                font-size: 1.5rem;
             }
 
             .greeting-text {
-                font-size: 20px;
-            }
-
-            .greeting-subtext {
-                font-size: 14px;
-            }
-
-            .main-container {
-                grid-template-columns: 1fr;
-                padding: 10px;
-                gap: 15px;
-            }
-
-            .vinyl-section {
-                padding: 30px 20px;
-                height: auto;
-                min-height: 450px;
-                order: 2;
+                font-size: 1.3rem;
             }
 
             .vinyl-player {
-                width: 250px;
-                height: 250px;
+                width: 220px;
+                height: 220px;
             }
 
             .song-title {
-                font-size: 18px;
+                font-size: 1.2rem;
             }
 
-            .song-artist {
-                font-size: 14px;
+            .celebration-icon {
+                font-size: 70px;
             }
 
-            .message-section {
-                padding: 20px;
-                height: auto;
-                min-height: 400px;
-                order: 3;
-            }
-
-            .message-header {
-                font-size: 18px;
-            }
-
-            .message-content {
-                font-size: 16px;
-                padding: 20px;
-            }
-
-            .completion-content {
-                padding: 30px 20px;
-            }
-
-            .completion-icon {
-                font-size: 60px;
-            }
-
-            .completion-title {
-                font-size: 24px;
-            }
-
-            .completion-message {
-                font-size: 16px;
+            .btn-custom {
+                padding: 12px 30px;
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
 <!-- LOADING OVERLAY -->
-<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay d-flex flex-column align-items-center justify-content-center" id="loadingOverlay">
     <div class="loader"></div>
-    <div class="loading-text" id="loadingText">Loading your song...</div>
-    <div class="loading-subtext" id="loadingSubtext">Please wait</div>
+    <div class="text-white mt-4 fs-5 fw-semibold" id="loadingText">Loading your song...</div>
+    <div class="text-white-50 mt-2" id="loadingSubtext">Please wait</div>
 </div>
 
 <!-- COMPLETION MODAL -->
-<div class="completion-modal" id="completionModal">
-    <div class="completion-content">
-        <div class="completion-icon">✨🎉✨</div>
-        <div class="completion-title">Message Conveyed!</div>
-        <div class="completion-message">
-            The song and message have been delivered successfully. Thank you for listening!
+<div class="completion-modal d-flex align-items-center justify-content-center" id="completionModal">
+    <div class="completion-content glass rounded-4 p-5 text-center position-relative" style="max-width: 600px; width: 90%;">
+        <div class="celebration-icon mb-4">🎊✨🎉</div>
+        <h2 class="text-white fw-bold mb-3">Thanks for Listening!</h2>
+        <p class="text-white-50 mb-4 fs-5">
+            Your journey with us has been amazing. The message has been delivered with love and music.
+        </p>
+        <p class="text-white-50 fst-italic mb-4">
+            You can now close this tab or explore more 🌟
+        </p>
+
+        <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+            <a th:href="@{/app/music/public/login}" class="btn btn-custom btn-primary-gradient">
+                <i class="bi bi-box-arrow-in-right me-2"></i>
+                Login to Your Account
+            </a>
+            <button type="button" onclick="window.close()" class="btn btn-custom btn-secondary-glass">
+                <i class="bi bi-x-circle me-2"></i>
+                Close Tab
+            </button>
         </div>
-        <form th:action="@{/app/music/nodes/confess/complete}" method="post" style="display: inline;">
-            <input type="hidden" th:name="roomId" th:value="${roomId}" />
-            <button type="submit" class="done-button">Done</button>
-        </form>
     </div>
 </div>
 
-<!-- HEADER -->
-<div class="header">
-    <div class="header-content">
-        <div class="logo">
-            <img th:src="@{/images/app_logo_wn.png}" alt="Connecting Notes Logo" class="logo">
-        </div>
-        <div class="app-title">Connecting Nodes - Confess</div>
-    </div>
-</div>
+<!-- HEADER - CENTERED -->
+<header class="app-header glass rounded-4 mx-3 mt-3">
+    <img th:src="@{/images/app_logo_wn.png}" alt="Connecting Notes Logo" class="app-logo">
+    <h1 class="app-title">Connecting Notes - Confess</h1>
+</header>
 
 <!-- GREETING SECTION -->
-<div class="greeting-section">
-    <div class="greeting-text" id="greetingText">Loading...</div>
-    <div class="greeting-subtext">Let's begin the show 🎵</div>
-</div>
+<div class="container">
+    <div class="greeting-section glass rounded-4 p-4 text-center mb-4">
+        <div class="greeting-text" id="greetingText">Loading...</div>
+        <div class="greeting-subtext">Let's begin the show 🎵</div>
+    </div>
 
-<!-- MAIN CONTAINER -->
-<div class="main-container">
-    <!-- VINYL PLAYER SECTION -->
-    <div class="vinyl-section">
-        <div class="vinyl-player">
-            <div class="vinyl-record paused" id="vinylRecord">
-                <div class="vinyl-grooves"></div>
-                <div class="vinyl-center">
-                    <div class="vinyl-label">
-                            <img th:src="@{/images/app_logo_wn.png}" alt="Connecting Notes Logo" class="audio-img">
+    <!-- MAIN CONTENT -->
+    <div class="row g-4">
+        <!-- VINYL PLAYER SECTION -->
+        <div class="col-lg-6">
+            <div class="glass rounded-4 p-4 text-center h-100">
+                <div class="vinyl-player mb-4">
+                    <div class="vinyl-record paused" id="vinylRecord">
+                        <div class="vinyl-grooves"></div>
+                        <div class="vinyl-center">
+                            <div class="vinyl-label">
+                                <img th:src="@{/images/app_logo_wn.png}" alt="Logo" class="audio-img">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Visualizer -->
+                <div class="audio-visualizer paused" id="audioVisualizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+
+                <div class="text-center">
+                    <div class="song-title mb-2" id="songTitle">Now Playing...</div>
+                    <div class="song-artist" id="songArtist">Enjoy the music</div>
+                </div>
+
+                <audio id="audioPlayer" style="display: none;"></audio>
+            </div>
+        </div>
+
+        <!-- MESSAGE SECTION -->
+        <div class="col-lg-6">
+            <div class="glass rounded-4 p-4 h-100">
+                <h3 class="text-white fw-bold mb-3">
+                    <i class="bi bi-envelope-heart me-2"></i>
+                    Your Confession Message
+                </h3>
+                <div class="message-content" id="messageContent">
+                    <div class="text-white-50 fst-italic text-center">
+                        Waiting for the song to start...
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Audio Visualizer -->
-        <div class="audio-visualizer paused" id="audioVisualizer">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </div>
-
-        <div class="song-info">
-            <div class="song-title" id="songTitle">Now Playing...</div>
-            <div class="song-artist" id="songArtist">Enjoy the music</div>
-        </div>
-        <audio id="audioPlayer" style="display: none;" controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture></audio>
-    </div>
-
-    <!-- MESSAGE SECTION -->
-    <div class="message-section">
-        <div class="message-header">Your Confession Message</div>
-        <div class="message-content" id="messageContent">
-            <div class="waiting-message">Waiting for the song to start...</div>
-        </div>
     </div>
 </div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script th:inline="javascript">
     // Get data from Thymeleaf model
     const receiverName = /*[[${receiverName}]]*/ 'Guest';
     const songFileName = /*[[${songFileName}]]*/ '';
     const message = /*[[${message}]]*/ '';
+    const token = /*[[${token}]]*/ '';
+    const roomName = /*[[${roomName}]]*/ '';
+    const roomId = /*[[${roomId}]]*/ '';
+
 
     // Elements
     const vinylRecord = document.getElementById('vinylRecord');
@@ -704,35 +676,211 @@
     let songEnded = false;
     let messageCompleted = false;
 
+    const DEBUG = false;
+
+    if (!DEBUG) {
+        console.log = function() {};
+    }
+
     // Initialize
     function init() {
         console.log('=== Initializing Confess Page ===');
-        console.log('Receiver Name:', receiverName);
-        console.log('Song File Name:', songFileName);
-        console.log('Message:', message ? 'Present' : 'Not present');
-
-        // Display greeting
         displayGreeting();
-
-        // Load and play song
         loadAndPlaySong();
-
-        // Setup audio player events
         setupAudioEvents();
     }
 
-    // Check if both song and message are complete
+    // Check completion
     function checkCompletion() {
         console.log('Checking completion - Song ended:', songEnded, 'Message completed:', messageCompleted);
         if (songEnded && messageCompleted) {
-            console.log('Both song and message complete! Showing modal...');
+            console.log('Both complete! Showing modal and calling completion API...');
+
+            // Call the completion API
+            callCompletionAPI();
+
             setTimeout(() => {
+                createCelebrationEffects();
                 completionModal.classList.add('show');
+
+                // After modal is shown, replace history to prevent going back
+                replaceHistoryToPreventBackNavigation();
             }, 1000);
         }
     }
 
-    // Setup all audio event listeners
+    // Call completion API
+    function callCompletionAPI() {
+        const apiUrl = `/app/music/nodes/confess/complete?roomId=${encodeURIComponent(roomId)}`;
+
+        console.log('Calling completion API:', apiUrl);
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Completion API called successfully');
+                    return response.text();
+                } else {
+                    console.error('Completion API failed with status:', response.status);
+                    throw new Error('API call failed');
+                }
+            })
+            .then(data => {
+                console.log('Completion API response:', data);
+            })
+            .catch(error => {
+                console.error('Error calling completion API:', error);
+                // Even if API fails, still show the completion modal
+            });
+    }
+
+    // Replace history to prevent back navigation to confess page
+    function replaceHistoryToPreventBackNavigation() {
+        // Replace current history entry with a dummy state
+        // This prevents users from going back to the confess page
+        window.history.replaceState(
+            { page: 'completion' },
+            'Completion',
+            window.location.href
+        );
+
+        // Push another state to create a barrier
+        window.history.pushState(
+            { page: 'completion-barrier' },
+            'Completion',
+            window.location.href
+        );
+
+        console.log('History replaced - back navigation to confess page prevented');
+    }
+
+    // Create celebration effects
+    function createCelebrationEffects() {
+        createConfetti();
+        createFloatingEmojis();
+        createSparkles();
+    }
+
+    // Generate confetti
+    function createConfetti() {
+        const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#fff', '#ffd700', '#ff69b4'];
+        const confettiCount = 100;
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            confetti.style.width = (Math.random() * 10 + 5) + 'px';
+            confetti.style.height = (Math.random() * 10 + 5) + 'px';
+
+            if (Math.random() > 0.5) {
+                confetti.style.borderRadius = '50%';
+            }
+
+            // Start from random position off-screen (somewhere between top and middle of fall)
+            const randomStartProgress = Math.random() * 50; // 0-50% of the fall distance
+            const startY = -100 + randomStartProgress; // Start between -100vh and -50vh
+            const endY = 100; // End at bottom
+            const startRotation = Math.random() * 360;
+            const endRotation = startRotation + 720;
+
+            confetti.style.transform = `translateY(${startY}vh) rotate(${startRotation}deg)`;
+            confetti.style.animation = `confettiFallPath${i} ${confetti.style.animationDuration} linear infinite`;
+
+            // Create unique keyframe for this confetti piece
+            const style = document.createElement('style');
+            style.textContent = `
+                    @keyframes confettiFallPath${i} {
+                        0% {
+                            transform: translateY(${startY}vh) rotate(${startRotation}deg);
+                        }
+                        100% {
+                            transform: translateY(${endY}vh) rotate(${endRotation}deg);
+                        }
+                    }
+                `;
+            document.head.appendChild(style);
+
+            completionModal.appendChild(confetti);
+
+            // Fade in gradually one by one
+            setTimeout(() => {
+                confetti.classList.add('show');
+            }, i * 10); // 10ms delay between each confetti piece
+        }
+    }
+
+    // Generate floating emojis
+    function createFloatingEmojis() {
+        const emojis = ['🎉', '🎊', '✨', '⭐', '💫', '🌟', '🎵', '🎶', '💖', '🎈'];
+        const emojiCount = 20;
+
+        for (let i = 0; i < emojiCount; i++) {
+            const emoji = document.createElement('div');
+            emoji.className = 'emoji-float';
+            emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            emoji.style.left = Math.random() * 100 + '%';
+            emoji.style.animationDuration = (Math.random() * 5 + 5) + 's';
+            emoji.style.fontSize = (Math.random() * 30 + 20) + 'px';
+
+            // Start from random position off-screen (somewhere in the middle of float path)
+            const randomStartProgress = Math.random() * 100; // 0-100% of the float distance
+            const startY = 100 - randomStartProgress; // Start between bottom (100vh) and top (-100vh)
+            const endY = -100; // End at top
+            const startRotation = Math.random() * 360;
+            const endRotation = startRotation + 360;
+
+            emoji.style.transform = `translateY(${startY}vh) rotate(${startRotation}deg)`;
+            emoji.style.animation = `emojiFloatPath${i} ${emoji.style.animationDuration} linear infinite`;
+
+            // Create unique keyframe for this emoji
+            const style = document.createElement('style');
+            style.textContent = `
+                    @keyframes emojiFloatPath${i} {
+                        0% {
+                            transform: translateY(${startY}vh) rotate(${startRotation}deg);
+                        }
+                        100% {
+                            transform: translateY(${endY}vh) rotate(${endRotation}deg);
+                        }
+                    }
+                `;
+            document.head.appendChild(style);
+
+            completionModal.appendChild(emoji);
+
+            // Fade in gradually one by one
+            setTimeout(() => {
+                emoji.classList.add('show');
+            }, i * 50); // 50ms delay between each emoji
+        }
+    }
+
+    // Generate sparkles
+    function createSparkles() {
+        const sparkleCount = 30;
+        const container = completionModal.querySelector('.completion-content');
+
+        for (let i = 0; i < sparkleCount; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.style.left = Math.random() * 100 + '%';
+            sparkle.style.top = Math.random() * 100 + '%';
+            sparkle.style.animationDelay = Math.random() * 2 + 's';
+            sparkle.style.animationDuration = (Math.random() * 2 + 1) + 's';
+
+            container.appendChild(sparkle);
+        }
+    }
+
+    // Setup audio events
     function setupAudioEvents() {
         audioPlayer.addEventListener('loadstart', () => {
             console.log('Audio loading started');
@@ -741,17 +889,8 @@
 
         audioPlayer.addEventListener('loadedmetadata', () => {
             console.log('Audio metadata loaded');
-            console.log('Duration:', audioPlayer.duration, 'seconds');
             loadingText.textContent = 'Song loaded!';
             loadingSubtext.textContent = 'Starting playback...';
-        });
-
-        audioPlayer.addEventListener('canplay', () => {
-            console.log('Audio can play');
-        });
-
-        audioPlayer.addEventListener('canplaythrough', () => {
-            console.log('Audio can play through without buffering');
         });
 
         audioPlayer.addEventListener('play', () => {
@@ -786,41 +925,19 @@
             checkCompletion();
         });
 
-        audioPlayer.addEventListener('timeupdate', () => {
-            if (Math.floor(audioPlayer.currentTime) % 5 === 0) {
-                console.log('Current time:', Math.floor(audioPlayer.currentTime), 'seconds');
-            }
-        });
-
         audioPlayer.addEventListener('error', (e) => {
             console.error('Audio playback error:', e);
-            console.error('Error code:', audioPlayer.error?.code);
-            console.error('Error message:', audioPlayer.error?.message);
-            console.error('Current src:', audioPlayer.src);
-
             vinylRecord.classList.add('paused');
             audioVisualizer.classList.add('paused');
 
             let errorMsg = 'Error loading song';
-            let errorDetail = '';
+            let errorDetail = 'Please try again';
 
             switch(audioPlayer.error?.code) {
-                case 1:
-                    errorMsg = 'Audio loading aborted';
-                    errorDetail = 'The download was cancelled';
-                    break;
-                case 2:
-                    errorMsg = 'Network error';
-                    errorDetail = 'Check your connection';
-                    break;
-                case 3:
-                    errorMsg = 'Audio decoding failed';
-                    errorDetail = 'File may be corrupted';
-                    break;
-                case 4:
-                    errorMsg = 'Audio format not supported';
-                    errorDetail = 'Try a different file format';
-                    break;
+                case 1: errorMsg = 'Audio loading aborted'; errorDetail = 'The download was cancelled'; break;
+                case 2: errorMsg = 'Network error'; errorDetail = 'Check your connection'; break;
+                case 3: errorMsg = 'Audio decoding failed'; errorDetail = 'File may be corrupted'; break;
+                case 4: errorMsg = 'Audio format not supported'; errorDetail = 'Try a different file format'; break;
             }
 
             songTitle.textContent = errorMsg;
@@ -830,16 +947,16 @@
         });
     }
 
-    // Display greeting message
+    // Display greeting
     function displayGreeting() {
         greetingText.textContent = `Hey ${receiverName}! Thanks for joining the room`;
     }
 
-    // Load and autoplay song
+    // Load and play song
     function loadAndPlaySong() {
         if (songFileName) {
             const encodedFileName = encodeURIComponent(songFileName);
-            const songUrl = `/app/music/audio/public/streamSong/${encodedFileName}`;
+            const songUrl = `/app/music/audio/public/stream/confess/${encodeURIComponent(roomName)}/${encodedFileName}?token=${token}&ts=${Date.now()}`;
 
             console.log('Song URL:', songUrl);
 
@@ -867,13 +984,13 @@
                             console.log('User clicked, attempting to play...');
                             audioPlayer.play()
                                 .then(() => {
-                                    console.log('Playback started after user interaction');
+                                    console.log('Playback started');
                                     vinylRecord.classList.remove('paused');
                                     audioVisualizer.classList.remove('paused');
                                     songArtist.textContent = 'Now Playing...';
                                 })
                                 .catch(err => {
-                                    console.error('Failed to play after click:', err);
+                                    console.error('Failed to play:', err);
                                 });
                             document.body.removeEventListener('click', startPlayback);
                         };
@@ -884,13 +1001,12 @@
 
             songTitle.textContent = songFileName.replace(/\.[^/.]+$/, "");
         } else {
-            console.error('No song filename provided');
+            console.error('No song filename');
             songTitle.textContent = 'No song available';
-            songArtist.textContent = '';
             vinylRecord.classList.add('paused');
             audioVisualizer.classList.add('paused');
             loadingOverlay.classList.add('hidden');
-            messageContent.innerHTML = '<div class="waiting-message">No song available. Displaying message now...</div>';
+            messageContent.innerHTML = '<div class="text-white-50 fst-italic text-center">No song available. Displaying message now...</div>';
             songEnded = true;
 
             setTimeout(() => {
@@ -899,12 +1015,12 @@
         }
     }
 
-    // Schedule message display 20 seconds after song starts
+    // Schedule message display
     function scheduleMessageDisplay() {
         const delay = 20000;
         console.log('Message will display in 20 seconds...');
 
-        messageContent.innerHTML = '<div class="waiting-message">Enjoy the song... Message coming soon 🎵</div>';
+        messageContent.innerHTML = '<div class="text-white-50 fst-italic text-center">Enjoy the song... Message coming soon 🎵</div>';
 
         messageDelayTimer = setTimeout(() => {
             console.log('20 seconds elapsed, displaying message');
@@ -915,7 +1031,7 @@
     // Display message with typing effect
     function displayTypingMessage() {
         if (!message) {
-            messageContent.innerHTML = '<div style="color: rgba(255, 255, 255, 0.7); font-style: italic;">No message available</div>';
+            messageContent.innerHTML = '<div class="text-white-50 fst-italic text-center">No message available</div>';
             messageCompleted = true;
             checkCompletion();
             return;
@@ -924,12 +1040,12 @@
         console.log('Starting typing animation');
 
         messageContent.innerHTML = `
-            <div class="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        `;
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
 
         setTimeout(() => {
             messageContent.textContent = '';
@@ -937,24 +1053,29 @@
             const paragraphs = message.split(/\n\n+|\n/).filter(p => p.trim() !== '');
             let currentParagraphIndex = 0;
             let currentCharIndex = 0;
-            const typingSpeed = 50;
+            const typingSpeed = 55; // Changed from 50ms to 55ms
+
+            // Auto-scroll function - smooth scroll to bottom
+            function scrollToBottom() {
+                messageContent.scrollTo({
+                    top: messageContent.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
 
             function showLoadingIndicator(callback) {
-                // Save current content
-                const currentText = messageContent.textContent;
-
-                // Add loading indicator
                 const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'typing-indicator';
-                loadingDiv.style.marginTop = '10px';
+                loadingDiv.className = 'typing-indicator mt-3';
                 loadingDiv.innerHTML = `
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                `;
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    `;
                 messageContent.appendChild(loadingDiv);
 
-                // Wait 2 seconds, then remove indicator and continue
+                // Scroll after adding loading indicator
+                scrollToBottom();
+
                 setTimeout(() => {
                     loadingDiv.remove();
                     callback();
@@ -969,20 +1090,24 @@
                         const char = currentParagraph[currentCharIndex];
                         messageContent.textContent += char;
                         currentCharIndex++;
+
+                        // Auto-scroll smoothly as each character appears
+                        scrollToBottom();
+
                         setTimeout(typeCharacter, typingSpeed);
                     } else {
-                        // Paragraph complete - add spacing
                         messageContent.textContent += '\n\n';
                         currentParagraphIndex++;
                         currentCharIndex = 0;
 
-                        // Show loading indicator before next paragraph (except for last paragraph)
+                        // Auto-scroll after each paragraph
+                        scrollToBottom();
+
                         if (currentParagraphIndex < paragraphs.length) {
                             showLoadingIndicator(() => {
                                 typeCharacter();
                             });
                         } else {
-                            // All paragraphs done
                             console.log('Typing animation complete');
                             messageCompleted = true;
                             checkCompletion();
@@ -999,7 +1124,87 @@
         }, 1500);
     }
 
-    // Start the app when DOM is ready
+    // Keyboard shortcut - Escape to close modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && completionModal.classList.contains('show')) {
+            window.close();
+        }
+    });
+
+    // ============================================
+    // PREVENT BROWSER BACK BUTTON NAVIGATION
+    // ============================================
+
+    // Track if completion modal has been shown
+    let completionShown = false;
+
+    // Method 1: History manipulation (works in all modern browsers)
+    (function preventBackButton() {
+        // Push a dummy state to history
+        window.history.pushState(null, document.title, window.location.href);
+
+        // Listen for popstate event (triggered when back button is clicked)
+        window.addEventListener('popstate', function(event) {
+            if (completionShown) {
+                // If completion modal was shown, prevent all back navigation
+                window.history.pushState(null, document.title, window.location.href);
+                alert('You cannot go back to the confess page. Please close this tab or click "Login to Your Account".');
+            } else {
+                // During playback, prevent going back
+                window.history.pushState(null, document.title, window.location.href);
+                alert('Navigation to previous page is disabled. Please wait for the song and message to complete.');
+            }
+        });
+    })();
+
+    // Update completionShown flag when modal appears
+    const originalCheckCompletion = checkCompletion;
+    checkCompletion = function() {
+        originalCheckCompletion();
+        if (songEnded && messageCompleted) {
+            completionShown = true;
+        }
+    };
+
+    // Method 2: Prevent navigation using beforeunload (backup method)
+    // This shows a confirmation dialog when user tries to leave the page
+    let allowNavigation = false;
+
+    window.addEventListener('beforeunload', function(e) {
+        // Only prevent if song is still playing or message is being displayed
+        // Allow navigation after completion modal is shown
+        if (!allowNavigation && !completionShown && (!songEnded || !messageCompleted)) {
+            e.preventDefault();
+            e.returnValue = ''; // Chrome requires returnValue to be set
+            return ''; // For older browsers
+        }
+    });
+
+    // Method 3: Disable back button using keyboard shortcut
+    document.addEventListener('keydown', function(e) {
+        // Prevent Alt+Left Arrow (back) and Backspace (back in some browsers)
+        if ((e.altKey && e.key === 'ArrowLeft') ||
+            (e.key === 'Backspace' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) {
+            e.preventDefault();
+            console.log('Back navigation prevented via keyboard');
+        }
+    });
+
+    // Allow navigation when user clicks "Login to Your Account" button
+    // This ensures they can navigate away to login page
+    document.addEventListener('click', function(e) {
+        // Check if clicked element is the login link/button
+        if (e.target.closest('a[href*="/login"]') || e.target.closest('.btn-custom')) {
+            allowNavigation = true;
+            console.log('Navigation allowed - user clicked login or close button');
+        }
+    });
+
+    // ============================================
+    // END PREVENT BACK BUTTON
+    // ============================================
+
+    // Start the app
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

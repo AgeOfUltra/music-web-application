@@ -41,10 +41,601 @@ class ToastNotifier {
     error(message, duration = 5000) {
         return this.show(message, 'error', duration);
     }
+
+    info(message, duration = 4000) {
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+
+        this.container.insertAdjacentHTML('beforeend', toastHtml);
+
+        const toastElement = document.getElementById(toastId);
+        const bsToast = new bootstrap.Toast(toastElement, { delay: duration });
+        bsToast.show();
+
+        toastElement.addEventListener('hidden.bs.toast', () => {
+            toastElement.remove();
+        });
+
+        return toastElement;
+    }
 }
 
 // Initialize notifier
 const notifier = new ToastNotifier();
+
+// ============================================
+// INTERNET SPEED MONITOR (OPTIMIZED)
+// ============================================
+
+class InternetSpeedMonitor {
+    constructor() {
+        this.isExpanded = false;
+        this.connectionQuality = 'checking';
+        this.downloadSpeed = 0;
+        this.latency = 0;
+        this.autoHideTimer = null;
+        this.wasOffline = false; // Track previous offline state
+
+        this.init();
+    }
+
+    init() {
+        this.createWidget();
+        this.startMonitoring();
+        this.attachEventListeners();
+    }
+
+    createWidget() {
+        const widgetHTML = `
+            <div id="internetSpeedWidget" class="internet-speed-widget">
+                <div class="speed-indicator" id="speedIndicator">
+                    <div class="speed-icon">
+                        <i class="bi bi-wifi"></i>
+                    </div>
+                    <div class="speed-status" id="speedStatus">
+                        <span class="status-dot"></span>
+                    </div>
+                </div>
+                <div class="speed-details" id="speedDetails">
+                    <div class="speed-header">
+                        <i class="bi bi-wifi me-2"></i>
+                        <span>Connection Status</span>
+                    </div>
+                    <div class="speed-info">
+                        <div class="info-row">
+                            <span class="info-label">Quality:</span>
+                            <span class="info-value" id="qualityValue">Checking...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Speed:</span>
+                            <span class="info-value" id="speedValue">-- Mbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Latency:</span>
+                            <span class="info-value" id="latencyValue">-- ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .internet-speed-widget {
+                    position: fixed;
+                    right: 20px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    z-index: 9999;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                }
+
+                .speed-indicator {
+                    width: 50px;
+                    height: 50px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    transition: all 0.3s ease;
+                    position: relative;
+                }
+
+                .speed-indicator:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+                }
+
+                .speed-icon {
+                    color: white;
+                    font-size: 24px;
+                }
+
+                .speed-status {
+                    position: absolute;
+                    bottom: 2px;
+                    right: 2px;
+                }
+
+                .status-dot {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #4ade80;
+                    display: inline-block;
+                    border: 2px solid white;
+                    animation: pulse 2s infinite;
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+
+                .speed-details {
+                    position: absolute;
+                    right: 60px;
+                    top: 0;
+                    background: white;
+                    border-radius: 12px;
+                    padding: 16px;
+                    min-width: 250px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateX(20px);
+                    transition: all 0.3s ease;
+                }
+
+                .speed-details.show {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateX(0);
+                }
+
+                .speed-header {
+                    font-weight: 600;
+                    font-size: 16px;
+                    color: #1f2937;
+                    margin-bottom: 12px;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .speed-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .info-label {
+                    color: #6b7280;
+                    font-size: 14px;
+                }
+
+                .info-value {
+                    color: #1f2937;
+                    font-weight: 600;
+                    font-size: 14px;
+                }
+
+                /* Connection quality colors */
+                .quality-excellent { color: #10b981 !important; }
+                .quality-good { color: #3b82f6 !important; }
+                .quality-fair { color: #f59e0b !important; }
+                .quality-poor { color: #ef4444 !important; }
+                .quality-offline { color: #6b7280 !important; }
+
+                /* Status dot colors */
+                .status-excellent { background: #10b981 !important; }
+                .status-good { background: #3b82f6 !important; }
+                .status-fair { background: #f59e0b !important; }
+                .status-poor { background: #ef4444 !important; }
+                .status-offline { background: #6b7280 !important; animation: none; }
+            </style>
+        `;
+
+        // Insert into the dedicated container
+        const container = document.getElementById('internetWidgetContainer');
+        if (container) {
+            container.innerHTML = widgetHTML;
+        } else {
+            // Fallback to body if container not found
+            document.body.insertAdjacentHTML('beforeend', widgetHTML);
+        }
+    }
+
+    attachEventListeners() {
+        const indicator = document.getElementById('speedIndicator');
+
+        indicator.addEventListener('click', () => {
+            this.toggleDetails();
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            const widget = document.getElementById('internetSpeedWidget');
+            if (!widget.contains(e.target) && this.isExpanded) {
+                this.hideDetails();
+            }
+        });
+    }
+
+    toggleDetails() {
+        if (this.isExpanded) {
+            this.hideDetails();
+        } else {
+            this.showDetails();
+        }
+    }
+
+    showDetails() {
+        const details = document.getElementById('speedDetails');
+        details.classList.add('show');
+        this.isExpanded = true;
+
+        // Auto-hide after 5 seconds
+        this.clearAutoHideTimer();
+        this.autoHideTimer = setTimeout(() => {
+            this.hideDetails();
+        }, 5000);
+    }
+
+    hideDetails() {
+        const details = document.getElementById('speedDetails');
+        details.classList.remove('show');
+        this.isExpanded = false;
+        this.clearAutoHideTimer();
+    }
+
+    clearAutoHideTimer() {
+        if (this.autoHideTimer) {
+            clearTimeout(this.autoHideTimer);
+            this.autoHideTimer = null;
+        }
+    }
+
+    async startMonitoring() {
+        // Initial check
+        await this.checkConnection();
+
+        // Monitor online/offline events with notifications
+        window.addEventListener('online', () => {
+            console.log('🌐 Connection restored');
+            notifier.success('Internet connection restored!', 3000);
+            this.checkConnection();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Connection lost');
+            notifier.error('Internet connection lost!', 4000);
+            this.updateStatus('offline', 0, 0);
+        });
+
+        // Periodic checks every 20 seconds (optimized from 30)
+        setInterval(() => {
+            if (navigator.onLine) {
+                this.checkConnection();
+            }
+        }, 20000);
+    }
+
+    async checkConnection() {
+        if (!navigator.onLine) {
+            this.updateStatus('offline', 0, 0);
+            return;
+        }
+
+        try {
+            const startTime = performance.now();
+
+            // Ping test using a small resource
+            const response = await fetch('/favicon.ico?t=' + Date.now(), {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+
+            const endTime = performance.now();
+            const latency = Math.round(endTime - startTime);
+
+            // Estimate speed based on latency and connection type
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            let estimatedSpeed = 0;
+
+            if (connection && connection.downlink) {
+                estimatedSpeed = connection.downlink;
+            } else {
+                // Estimate based on latency
+                if (latency < 50) estimatedSpeed = 50;
+                else if (latency < 100) estimatedSpeed = 25;
+                else if (latency < 200) estimatedSpeed = 10;
+                else if (latency < 500) estimatedSpeed = 5;
+                else estimatedSpeed = 1;
+            }
+
+            // Determine quality
+            let quality;
+            if (latency < 50 && estimatedSpeed > 20) quality = 'excellent';
+            else if (latency < 100 && estimatedSpeed > 10) quality = 'good';
+            else if (latency < 200 && estimatedSpeed > 5) quality = 'fair';
+            else quality = 'poor';
+
+            this.updateStatus(quality, estimatedSpeed, latency);
+
+            // If was offline and now online, show reconnection message
+            if (this.wasOffline) {
+                notifier.success('Connection quality: ' + quality.charAt(0).toUpperCase() + quality.slice(1), 3000);
+                this.wasOffline = false;
+            }
+
+        } catch (error) {
+            console.error('Connection check failed:', error);
+            this.updateStatus('poor', 0, 999);
+        }
+    }
+
+    updateStatus(quality, speed, latency) {
+        this.connectionQuality = quality;
+        this.downloadSpeed = speed;
+        this.latency = latency;
+
+        // Track offline state
+        if (quality === 'offline') {
+            this.wasOffline = true;
+        }
+
+        const statusDot = document.querySelector('.status-dot');
+        const qualityValue = document.getElementById('qualityValue');
+        const speedValue = document.getElementById('speedValue');
+        const latencyValue = document.getElementById('latencyValue');
+
+        if (!statusDot || !qualityValue || !speedValue || !latencyValue) return;
+
+        // Update status dot color
+        statusDot.className = 'status-dot status-' + quality;
+
+        // Update quality text
+        const qualityText = {
+            'excellent': 'Excellent',
+            'good': 'Good',
+            'fair': 'Fair',
+            'poor': 'Poor',
+            'offline': 'Offline',
+            'checking': 'Checking...'
+        };
+
+        qualityValue.textContent = qualityText[quality] || 'Unknown';
+        qualityValue.className = 'info-value quality-' + quality;
+
+        // Update speed
+        if (quality === 'offline') {
+            speedValue.textContent = 'No Connection';
+            latencyValue.textContent = '--';
+        } else {
+            speedValue.textContent = speed > 0 ? `~${speed.toFixed(1)} Mbps` : 'Checking...';
+            latencyValue.textContent = latency > 0 ? `${latency} ms` : '--';
+        }
+    }
+}
+
+// ============================================
+// PREVENT BROWSER BACK AND FORWARD NAVIGATION
+// ============================================
+
+(function preventBrowserNavigation() {
+    // Track if user is intentionally navigating away
+    let allowNavigation = false;
+
+    console.log('🔒 Dashboard navigation prevention initialized');
+
+    // Check if current page is dashboard.html
+    function isDashboardPage() {
+        return window.location.pathname.includes('dashboard.html') ||
+            window.location.pathname.includes('/dashboard') ||
+            window.location.pathname.endsWith('/dashboard');
+    }
+
+    // ============================================
+    // METHOD 1: HISTORY MANIPULATION
+    // ============================================
+    function setupHistoryPrevention() {
+        // Replace current state
+        window.history.replaceState(
+            { page: 'dashboard', preventNav: true },
+            document.title,
+            window.location.href
+        );
+
+        // Push a dummy state to create a barrier
+        window.history.pushState(
+            { page: 'dashboard-barrier', preventNav: true },
+            document.title,
+            window.location.href
+        );
+
+        // Listen for popstate event (triggered when back/forward button is clicked)
+        window.addEventListener('popstate', function(event) {
+            if (!allowNavigation) {
+
+                // ============================================
+                // BACK NAVIGATION → AUTO LOGOUT
+                // ============================================
+                // When user clicks the browser back button, we detect it here
+                // If the state is NOT the barrier state, it means they're trying to go back
+                // This will IMMEDIATELY log them out without showing any notification
+                if (event.state && event.state.page !== 'dashboard-barrier') {
+                    console.log('⬅️ Back button pressed - Auto logout');
+
+                    // LOGOUT HAPPENS HERE - Redirect to logout endpoint
+                    window.location.href = '/app/music/public/logout';
+                    return;
+                }
+
+                // ============================================
+                // FORWARD NAVIGATION → SILENT BLOCK (dashboard.html only)
+                // ============================================
+                // When user clicks the browser forward button on dashboard.html
+                // We SILENTLY prevent them from going forward (to chat.html)
+                // No notification is shown, navigation is just blocked
+                if (isDashboardPage()) {
+                    // Push two states to create a strong barrier against forward navigation
+                    window.history.pushState(
+                        { page: 'dashboard-barrier', preventNav: true },
+                        document.title,
+                        window.location.href
+                    );
+
+                    window.history.pushState(
+                        { page: 'dashboard-current', preventNav: true },
+                        document.title,
+                        window.location.href
+                    );
+
+                    console.log('➡️ Forward navigation blocked silently on dashboard');
+                    // NO NOTIFICATION - Silent blocking to prevent navigation to chat.html
+                }
+            }
+        });
+    }
+
+    // ============================================
+    // METHOD 2: KEYBOARD SHORTCUTS PREVENTION
+    // ============================================
+    function preventKeyboardNavigation() {
+        document.addEventListener('keydown', function(e) {
+
+            // Prevent Alt+Left (back) → Auto logout
+            if (e.altKey && e.key === 'ArrowLeft') {
+                if (!allowNavigation) {
+                    e.preventDefault();
+                    console.log('⌨️ Alt+Left pressed - Auto logout');
+                    // LOGOUT via keyboard shortcut
+                    window.location.href = '/app/music/public/logout';
+                }
+            }
+
+            // Prevent Alt+Right (forward) on dashboard.html → Block silently
+            if (e.altKey && e.key === 'ArrowRight') {
+                if (!allowNavigation && isDashboardPage()) {
+                    e.preventDefault();
+                    console.log('⌨️ Alt+Right blocked silently on dashboard');
+                    // SILENT BLOCK - No notification, no navigation to chat.html
+                }
+            }
+
+            // Prevent Backspace navigation (when not in input field) → Auto logout
+            if (e.key === 'Backspace' &&
+                e.target.tagName !== 'INPUT' &&
+                e.target.tagName !== 'TEXTAREA' &&
+                !e.target.isContentEditable) {
+                if (!allowNavigation) {
+                    e.preventDefault();
+                    console.log('⌫ Backspace pressed - Auto logout');
+                    // LOGOUT via backspace
+                    window.location.href = '/app/music/public/logout';
+                }
+            }
+        });
+    }
+
+    // ============================================
+    // METHOD 3: MOUSE BUTTONS PREVENTION
+    // ============================================
+    function preventMouseNavigation() {
+        document.addEventListener('mousedown', function(e) {
+
+            // Mouse button 3 = back → Auto logout
+            if (e.button === 3 && !allowNavigation) {
+                e.preventDefault();
+                console.log('🖱️ Mouse back button pressed - Auto logout');
+                // LOGOUT via mouse back button
+                window.location.href = '/app/music/public/logout';
+            }
+
+            // Mouse button 4 = forward on dashboard.html → Block silently
+            if (e.button === 4 && !allowNavigation && isDashboardPage()) {
+                e.preventDefault();
+                console.log('🖱️ Mouse forward button blocked silently on dashboard');
+                // SILENT BLOCK - No notification, prevents navigation to chat.html
+            }
+        });
+    }
+
+    // Method 4: Allow navigation when user explicitly logs out or navigates
+    function setupNavigationWhitelist() {
+        // Allow navigation when logout is clicked
+        const logoutLinks = document.querySelectorAll('a[href*="logout"], button[onclick*="logout"]');
+        logoutLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                allowNavigation = true;
+                console.log('✅ Logout clicked - navigation allowed');
+            });
+        });
+
+        // Allow navigation when clicking on legitimate navigation links
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                // Allow navigation for specific internal links
+                const allowedPaths = [
+                    '/logout',
+                    '/app/music/public/logout',
+                    '/profile',
+                    '/settings',
+                    '/app/music/nodes/confess'
+                ];
+
+                const shouldAllow = allowedPaths.some(path => link.href.includes(path));
+
+                if (shouldAllow || link.classList.contains('allow-navigation')) {
+                    allowNavigation = true;
+                    console.log('✅ Legitimate navigation link clicked - allowed');
+                }
+            }
+        });
+
+        // Allow navigation when forms are submitted
+        document.addEventListener('submit', function(e) {
+            // Don't allow navigation for modal forms that stay on the same page
+            const form = e.target;
+            if (!form.classList.contains('prevent-navigation')) {
+                allowNavigation = true;
+                console.log('✅ Form submitted - navigation allowed');
+            }
+        });
+    }
+
+    // Initialize all prevention methods
+    setupHistoryPrevention();
+    preventKeyboardNavigation();
+    preventMouseNavigation();
+    setupNavigationWhitelist();
+
+    console.log('✅ Dashboard navigation prevention active');
+    console.log('📋 Back navigation → Auto logout (NO notification)');
+    console.log('📋 Forward navigation → Silently blocked on dashboard.html (prevents chat.html navigation)');
+})();
+
+// ============================================
+// END PREVENT BROWSER NAVIGATION
+// ============================================
 
 // Song Autocomplete System
 class SongAutocomplete {
@@ -277,10 +868,15 @@ function clearRequestSongForm() {
     }
 }
 
-// Handle error and success messages on page load
+// ============================================
+// FORM ERROR AND SUCCESS HANDLING (OPTIMIZED)
+// ============================================
 window.addEventListener('DOMContentLoaded', function() {
     // Initialize song autocomplete
     new SongAutocomplete();
+
+    // Initialize Internet Speed Monitor
+    new InternetSpeedMonitor();
 
     let hasErrors = false;
     let hasConfessErrors = false;
@@ -294,7 +890,9 @@ window.addEventListener('DOMContentLoaded', function() {
     const confessModal = new bootstrap.Modal(document.getElementById('sendConfess'));
     const requestSongModal = new bootstrap.Modal(document.getElementById('requestSongModal'));
 
-    // Handle field validation errors for Create Room
+    // ============================================
+    // CREATE ROOM - FIELD VALIDATION ERRORS
+    // ============================================
     const fieldErrorsContainer = document.getElementById('fieldErrors');
     if (fieldErrorsContainer) {
         const errorItems = fieldErrorsContainer.querySelectorAll('.error-item');
@@ -307,7 +905,9 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle field validation errors for Confess Form
+    // ============================================
+    // CONFESS FORM - FIELD VALIDATION ERRORS
+    // ============================================
     const confessFieldErrorsContainer = document.getElementById('confessFieldErrors');
     if (confessFieldErrorsContainer) {
         const errorItems = confessFieldErrorsContainer.querySelectorAll('.error-item');
@@ -320,7 +920,9 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle request song field errors
+    // ============================================
+    // REQUEST SONG - FIELD VALIDATION ERRORS
+    // ============================================
     const requestSongFieldErrorsContainer = document.getElementById('requestSongFieldErrors');
     if (requestSongFieldErrorsContainer) {
         const errorItems = requestSongFieldErrorsContainer.querySelectorAll('.error-item');
@@ -333,7 +935,9 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle request song error/success flash attribute - FIXED
+    // ============================================
+    // REQUEST SONG - ERROR/SUCCESS FLASH MESSAGE
+    // ============================================
     const requestSongErrorContainer = document.getElementById('requestSongError');
     if (requestSongErrorContainer) {
         const requestSongError = requestSongErrorContainer.textContent.trim();
@@ -342,17 +946,23 @@ window.addEventListener('DOMContentLoaded', function() {
             if (requestSongError.toLowerCase().includes('success') ||
                 requestSongError.toLowerCase().includes('submitted') ||
                 requestSongError.toLowerCase().includes('received')) {
-                notifier.success(requestSongError);  // ✅ GREEN notification
+
+                notifier.success(requestSongError);
                 hasRequestSongSuccess = true;
-                clearRequestSongForm();  // Clear form on success
+
+                // ✅ CLEAR FORM ONLY ON SUCCESS
+                clearRequestSongForm();
             } else {
-                notifier.error(requestSongError);  // ❌ RED notification
+                notifier.error(requestSongError);
                 hasRequestSongErrors = true;
+                // ❌ DO NOT CLEAR FORM ON ERROR - User needs to see their input
             }
         }
     }
 
-    // Handle creation error
+    // ============================================
+    // CREATE ROOM - CREATION ERROR
+    // ============================================
     const creationErrorContainer = document.getElementById('creationError');
     if (creationErrorContainer) {
         const creationError = creationErrorContainer.textContent.trim();
@@ -360,10 +970,13 @@ window.addEventListener('DOMContentLoaded', function() {
             notifier.error(creationError);
             createModal.show();
             hasErrors = true;
+            // ❌ DO NOT CLEAR FORM - User needs to see what they entered
         }
     }
 
-    // Handle join error
+    // ============================================
+    // JOIN ROOM - JOIN ERROR
+    // ============================================
     const joinErrorContainer = document.getElementById('joinError');
     if (joinErrorContainer) {
         const joinError = joinErrorContainer.textContent.trim();
@@ -371,10 +984,13 @@ window.addEventListener('DOMContentLoaded', function() {
             notifier.error(joinError);
             joinModal.show();
             hasErrors = true;
+            // ❌ DO NOT CLEAR FORM - User needs to see what they entered
         }
     }
 
-    // Handle email status from Send Confess form - FIXED
+    // ============================================
+    // CONFESS FORM - EMAIL STATUS (SUCCESS/ERROR)
+    // ============================================
     const emailStatusElement = document.getElementById('emailStatus');
     if (emailStatusElement) {
         const emailStatus = emailStatusElement.textContent.trim();
@@ -383,17 +999,23 @@ window.addEventListener('DOMContentLoaded', function() {
             if (emailStatus.toLowerCase().includes('success') ||
                 emailStatus.toLowerCase().includes('sent') ||
                 emailStatus.toLowerCase().includes('submitted')) {
-                notifier.success(emailStatus);  // ✅ GREEN notification
+
+                notifier.success(emailStatus);
                 hasConfessSuccess = true;
-                clearConfessForm();  // Clear form on success
+
+                // ✅ CLEAR FORM ONLY ON SUCCESS
+                clearConfessForm();
             } else {
-                notifier.error(emailStatus);  // ❌ RED notification
+                notifier.error(emailStatus);
                 hasConfessErrors = true;
+                // ❌ DO NOT CLEAR FORM ON ERROR - User needs to see their input
             }
         }
     }
 
-    // Open the appropriate modal if there are errors (but not on success)
+    // ============================================
+    // OPEN MODALS IF THERE ARE ERRORS (NOT SUCCESS)
+    // ============================================
     if (hasConfessErrors && !hasConfessSuccess) {
         confessModal.show();
     }
@@ -402,7 +1024,10 @@ window.addEventListener('DOMContentLoaded', function() {
         requestSongModal.show();
     }
 
-    // Clear fields ONLY if there are actual errors for Create/Join Room
+    // ============================================
+    // CLEAR CREATE/JOIN ROOM FIELDS ONLY ON ERROR
+    // ============================================
+    // This clears the fields so user can start fresh after seeing the error
     if (hasErrors) {
         const roomNameField = document.getElementById('roomName');
         const maxCountField = document.getElementById('maxCount');
@@ -420,6 +1045,9 @@ window.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============================================
+// JOIN ROOM - PASTE/MANUAL INPUT HANDLING
+// ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const pasteMethod = document.getElementById('pasteMethod');
     const manualMethod = document.getElementById('manualMethod');
@@ -467,6 +1095,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============================================
+// LOGOUT FUNCTION
+// ============================================
 function dashboardLogout() {
+    // Allow navigation for logout
+    window.allowNavigation = true;
     window.location.href = '/app/music/public/logout';
 }

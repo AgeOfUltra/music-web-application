@@ -17,14 +17,16 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
-import java.util.random.RandomGenerator;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
 public class ConfessService {
 
+    private final SongCacheService songService;
+    private final TokenService tokenService;
     private final ConfessRepo repo;
     private static final SecureRandom RNG = new SecureRandom();
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$&";
@@ -38,7 +40,9 @@ public class ConfessService {
 
 
 
-    public ConfessService(ConfessRepo repo) {
+    public ConfessService(SongCacheService songService, TokenService tokenService, ConfessRepo repo) {
+        this.songService = songService;
+        this.tokenService = tokenService;
         this.repo = repo;
         log.debug("ConfessService initialized");
     }
@@ -69,6 +73,9 @@ public class ConfessService {
         entity.setStatus(Status.IN_PROGRESS);
         entity.setRoomHash(roomHash);
         entity.setRole(Role.GUEST);
+        long currentTime = System.currentTimeMillis();
+        long updatedTimestamp = currentTime + 24L * 60 * 60 * 1000;
+        entity.setToken(tokenService.generateToken(updatedTimestamp,cr.getRoomName()));
 
         try{
             Confess result = saveConfessInDbWithRetry(entity);
@@ -180,10 +187,23 @@ public class ConfessService {
         if (availableRequest.get().getStatus().equals(s1)) {
             availableRequest.get().setStatus(s2);
             try{
-                Confess updatedConfess = saveConfessInDbWithRetry(availableRequest.get());
+                log.info("parallel action started");
+
+                CompletableFuture<Void> dbUpdate = CompletableFuture.runAsync(()->{
+                    saveConfessInDbWithRetry(availableRequest.get());
+                });
+
                 log.info("Confess status updated successfully from {} to {} for id: {}",
-                        s1, s2, updatedConfess.getId());
+                        s1, s2, availableRequest.get().getId());
                 response.put("saved", "data saved successfully");
+
+// send request to downlaod the song.
+                CompletableFuture<Void> fetchSong = CompletableFuture.runAsync(()->{
+                    songService.songAutoDownload(availableRequest.get().getSongName());
+                });
+
+                CompletableFuture.allOf(dbUpdate, fetchSong).join();
+
             }catch(Exception e){
                 log.error("Error updating confess status: {}", e.getMessage(), e);
                 response.put("error", "Failed to save data");

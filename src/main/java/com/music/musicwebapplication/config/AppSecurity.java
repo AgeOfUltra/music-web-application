@@ -74,7 +74,7 @@ public class AppSecurity {
                                 "/api/music/**",
                                 "/app/music/ws/**",
                                 "/app/music/public/**",
-                                "/app/music/audio/public/streamSong/**",
+                                "/app/music/audio/public/**",
                                 "app/music/nodes/**",
                                 "/favicon.ico",
                                 "/images/**",

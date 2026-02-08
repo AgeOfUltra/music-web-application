@@ -5,6 +5,7 @@ import com.music.musicwebapplication.exception.SongNotFoundException;
 import com.music.musicwebapplication.repo.SongRepo;
 import com.music.musicwebapplication.service.SongCacheService;
 import com.music.musicwebapplication.service.AudioStreamService;
+import com.music.musicwebapplication.service.TokenService;
 import com.music.musicwebapplication.utils.JwtTokenUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -39,14 +40,16 @@ public class AudioStreamController {
     private final SongCacheService songCacheService;
     private final SongRepo repo;
     private final JwtTokenUtil tokenUtil;
+    private final TokenService tokenService;
 
 
     @Autowired
-    AudioStreamController(AudioStreamService audioStreamService, SongCacheService songCacheService, SongRepo repo, JwtTokenUtil tokenUtil){
+    AudioStreamController(AudioStreamService audioStreamService, SongCacheService songCacheService, SongRepo repo, JwtTokenUtil tokenUtil, TokenService tokenService){
         this.audioStreamService = audioStreamService;
         this.songCacheService = songCacheService;
         this.repo = repo;
         this.tokenUtil = tokenUtil;
+        this.tokenService = tokenService;
     }
 
     @GetMapping(value = "/public/streamSong/{currentUsername}/{name}", produces = "audio/mpeg")
@@ -88,7 +91,11 @@ public class AudioStreamController {
         }
 
 
-        DeferredResult<ResponseEntity<Resource>> deferredResult = new DeferredResult<>(30000L); // 30 sec timeout
+        return getResponseEntityDeferredResult(60000L,name);
+    }
+
+    private DeferredResult<ResponseEntity<Resource>> getResponseEntityDeferredResult(long time ,String name) {
+        DeferredResult<ResponseEntity<Resource>> deferredResult = new DeferredResult<>(time); // 30 sec timeout
 
         // Handle timeout
         deferredResult.onTimeout(() -> {
@@ -139,6 +146,18 @@ public class AudioStreamController {
                 });
 
         return deferredResult;
+    }
+
+    @GetMapping(value = "/public/stream/confess/{roomName}/{name}", produces = "audio/mpeg")
+    public DeferredResult<ResponseEntity<Resource>> streamSongConfess(@PathVariable String roomName, @PathVariable String name, @RequestParam("token") String token, @RequestParam("ts") long timestamp) {
+        log.info("Song Streaming started {},{},{}",roomName,name,token);
+        boolean isValid = tokenService. verifyToken(token,timestamp,roomName);
+        if(isValid){
+            return getResponseEntityDeferredResult(45000L,name);
+        }else{
+            return null;
+        }
+
     }
 
     @GetMapping("/fetchAllSongs")

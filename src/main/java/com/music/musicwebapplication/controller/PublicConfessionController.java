@@ -5,6 +5,7 @@ import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.exception.ConfessRoomException;
 import com.music.musicwebapplication.service.ConfessService;
 import com.music.musicwebapplication.enums.Status;
+import com.music.musicwebapplication.service.SongCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,8 +20,11 @@ import java.util.Optional;
 public class PublicConfessionController {
     private final ConfessService service ;
 
-    public PublicConfessionController(ConfessService service) {
+    private final SongCacheService songService;
+
+    public PublicConfessionController(ConfessService service, SongCacheService songService) {
         this.service = service;
+        this.songService = songService;
         log.debug("PublicConfessionController initialized");
     }
 
@@ -110,6 +114,8 @@ public class PublicConfessionController {
         model.addAttribute("roomId",confess.getRoomHash());
         model.addAttribute("songFileName",confess.getSongName());
         model.addAttribute("message",confess.getMessage());
+        model.addAttribute("token",confess.getToken());
+        model.addAttribute("roomName",confess.getRoomName());
 
 
 //        and display the page
@@ -118,7 +124,7 @@ public class PublicConfessionController {
     }
 
     @PostMapping("/confess/complete")
-    public String completeConfession(@RequestParam String roomId) {
+    public void completeConfession(@RequestParam String roomId) {
         log.info("Complete confession request received for roomId: {}", roomId);
 
         if(roomId.isBlank()){
@@ -131,19 +137,14 @@ public class PublicConfessionController {
         Map<String, String> response = service.updateStatus(Status.READING,Status.DONE,roomId);
 
         if(response.containsKey("error")){
-            log.error("Status update failed for roomId: {}, error: {}", roomId, response.get("error"));
+            log.error("Status update failed for roomId: {}, error: {} while confess reading finished", roomId, response.get("error"));
             throw new ConfessRoomException("Oops ! Join failed due to internal error");
         }
         else{
             log.info("Status updated successfully from READING to DONE for roomId: {}", roomId);
         }
 
-        return "redirect:/app/music/nodes/connect/finish";
+
     }
 
-    @GetMapping("/connect/finish")
-    public String showFinishPage() {
-        log.debug("Finish page accessed");
-        return "finish"; // Returns finish.html template
-    }
 }

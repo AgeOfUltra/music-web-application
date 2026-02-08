@@ -53,7 +53,7 @@ let pauseDebounceTimer = null;
 let resumeDebounceTimer = null;
 // ================== Constants ===============================
 const DEBOUNCE_DELAY = 300;
-const METADATA_TIMEOUT = 80000;
+const METADATA_TIMEOUT = 12000;
 const DUPLICATE_EVENT_THRESHOLD = 500;
 
 let reconnectAttempts = 0;
@@ -71,6 +71,368 @@ if (!DEBUG) {
     console.log = function() {};
 }
 
+// ==================== IMPROVED DUPLICATE TAB DETECTION ====================
+const TAB_SESSION_KEY = 'musicRoomActiveTab';
+const TAB_CHECK_INTERVAL = 1000; // Check every 1 second (more responsive)
+let currentTabId = null;
+let isTabActive = true;
+let tabCheckInterval = null;
+let hasShownWarning = false; // Prevent warning spam
+
+function generateTabId() {
+    return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function initTabDetection() {
+    currentTabId = generateTabId();
+
+    // ✅ CRITICAL: Claim the tab BEFORE any other initialization
+    if (!claimTabOwnership()) {
+        console.warn('⚠️ Another tab is already active for this room');
+        showDuplicateTabWarning();
+        return false; // Signal that tab detection failed
+    }
+
+    // Mark this tab as active
+    updateTabActivity();
+
+    // Start checking for other tabs
+    tabCheckInterval = setInterval(() => {
+        checkTabActivity();
+    }, TAB_CHECK_INTERVAL);
+
+    // Update activity on user interaction
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && isTabActive) {
+            updateTabActivity();
+        }
+    });
+
+    // ✅ Handle page focus (user switches back to this tab)
+    window.addEventListener('focus', () => {
+        if (isTabActive) {
+            updateTabActivity();
+        }
+    });
+
+    return true; // Tab detection successful
+}
+
+function claimTabOwnership() {
+    const stored = localStorage.getItem(TAB_SESSION_KEY);
+
+    if (!stored) {
+        // No existing session, claim it
+        updateTabActivity();
+        return true;
+    }
+
+    try {
+        const sessionData = JSON.parse(stored);
+
+        // Check if it's the same room and user
+        if (sessionData.roomName === currentRoomName &&
+            sessionData.username === currentUsername) {
+
+            const age = Date.now() - sessionData.timestamp;
+
+            // If existing tab is recent (< 3 seconds), it's still active
+            if (age < 3000) {
+                return false; // Another active tab exists
+            }
+
+            // Existing tab is stale, take over
+            updateTabActivity();
+            return true;
+        }
+
+        // Different room/user, safe to proceed
+        updateTabActivity();
+        return true;
+
+    } catch (e) {
+        console.error('Tab ownership check error:', e);
+        // On error, allow the tab (fail-open)
+        updateTabActivity();
+        return true;
+    }
+}
+
+function updateTabActivity() {
+    if (!currentRoomName || !currentUsername || !isTabActive) return;
+
+    const sessionData = {
+        tabId: currentTabId,
+        roomName: currentRoomName,
+        username: currentUsername,
+        timestamp: Date.now()
+    };
+
+    try {
+        localStorage.setItem(TAB_SESSION_KEY, JSON.stringify(sessionData));
+    } catch (e) {
+        console.error('Failed to update tab activity:', e);
+    }
+}
+
+function checkTabActivity() {
+    if (!isTabActive) return; // Don't check if we're already inactive
+
+    const stored = localStorage.getItem(TAB_SESSION_KEY);
+
+    if (!stored) {
+        // Storage cleared, reclaim it
+        updateTabActivity();
+        hideDuplicateTabWarning();
+        return;
+    }
+
+    try {
+        const sessionData = JSON.parse(stored);
+
+        // Only care about same room + user
+        if (sessionData.roomName !== currentRoomName ||
+            sessionData.username !== currentUsername) {
+            return;
+        }
+
+        // Check if it's another tab
+        if (sessionData.tabId !== currentTabId) {
+            const age = Date.now() - sessionData.timestamp;
+
+            if (age < 3000) {
+                // Another active tab detected
+                if (!hasShownWarning) {
+                    showDuplicateTabWarning();
+                    hasShownWarning = true;
+                }
+            } else {
+                // Other tab went stale, take over
+                console.log('🔄 Taking over from stale tab');
+                updateTabActivity();
+                hideDuplicateTabWarning();
+                hasShownWarning = false;
+            }
+        } else {
+            // It's our tab, all good
+            hideDuplicateTabWarning();
+            hasShownWarning = false;
+        }
+    } catch (e) {
+        console.error('Tab detection error:', e);
+    }
+}
+
+function showDuplicateTabWarning() {
+    if (document.getElementById('duplicateTabOverlay')) return;
+
+    // ✅ Pause WebSocket to prevent duplicate actions
+    if (stompClient && stompClient.connected) {
+        try {
+            stompClient.disconnect();
+            console.log('⏸️ WebSocket paused due to duplicate tab');
+        } catch (e) {
+            console.error('Error pausing WebSocket:', e);
+        }
+    }
+
+    // ✅ Mark this tab as inactive
+    isTabActive = false;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'duplicateTabOverlay';
+    overlay.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        ">
+            <div style="
+                background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+                padding: 40px;
+                border-radius: 16px;
+                text-align: center;
+                max-width: 500px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            ">
+                <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                <h2 style="color: #fff; margin: 0 0 15px 0; font-size: 24px;">This Room is Open in Another Tab</h2>
+                <p style="color: #a0a0a0; margin: 0 0 10px 0; line-height: 1.6;">
+                    <strong style="color: #ef4444;">Room:</strong> ${escapeHtml(currentRoomName)}<br>
+                    <strong style="color: #10b981;">User:</strong> ${escapeHtml(currentUsername)}
+                </p>
+                <p style="color: #a0a0a0; margin: 0 0 30px 0; line-height: 1.6; font-size: 14px;">
+                    Having multiple tabs can cause sync issues and playback conflicts.
+                </p>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button onclick="takeOverTab()" style="
+                        background: #7c3aed;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                        Use This Tab
+                    </button>
+                    <button onclick="closeThisTab()" style="
+                        background: #4b5563;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#374151'" onmouseout="this.style.background='#4b5563'">
+                        Close This Tab
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+function hideDuplicateTabWarning() {
+    const overlay = document.getElementById('duplicateTabOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+function takeOverTab() {
+    console.log('🎯 Taking over tab ownership');
+    isTabActive = true;
+    hasShownWarning = false;
+    updateTabActivity();
+    hideDuplicateTabWarning();
+
+    // ✅ Reconnect WebSocket
+    if (!stompClient || !stompClient.connected) {
+        ToastNotification.info('Reconnecting...', 2000);
+        setTimeout(() => {
+            connectWebSocket(jwtToken);
+        }, 500);
+    }
+}
+
+function closeThisTab() {
+    allowUnload = true;
+    isTabActive = false;
+    sessionStorage.setItem('cleanExit', 'true');
+
+    // Try to close
+    window.close();
+
+    // Fallback if close() doesn't work
+    setTimeout(() => {
+        window.location.href = '/app/music/dashboard';
+    }, 500);
+}
+
+// ✅ Cleanup on exit
+window.addEventListener('beforeunload', () => {
+    if (tabCheckInterval) {
+        clearInterval(tabCheckInterval);
+    }
+
+    const stored = localStorage.getItem(TAB_SESSION_KEY);
+    if (stored && isTabActive) {
+        try {
+            const sessionData = JSON.parse(stored);
+            if (sessionData.tabId === currentTabId) {
+                localStorage.removeItem(TAB_SESSION_KEY);
+            }
+        } catch (e) {}
+    }
+});
+
+
+// ==================== FAVORITES CONFLICT RESOLUTION ====================
+let favoritesVersion = 0;
+let pendingFavoritesUpdate = null;
+let favoritesUpdateLock = false;
+
+function generateFavoritesHash(favorites) {
+    // Simple hash based on fileName list
+    return favorites.map(f => f.fileName).sort().join('|');
+}
+// ==================== ORGANIZER TRANSITION STATE MACHINE ====================
+let organizerTransitionLock = false;
+let pendingOrganizerChange = null;
+
+async function handleOrganizerTransition(newOrganizer, wasOrganizer) {
+    // Prevent concurrent transitions
+    if (organizerTransitionLock) {
+        console.warn('⚠️ Organizer transition in progress, queueing...');
+        pendingOrganizerChange = { newOrganizer, wasOrganizer };
+        return;
+    }
+
+    organizerTransitionLock = true;
+
+    try {
+        // Step 1: Pause audio completely
+        const audioPlayer = document.getElementById('audioPlayer');
+        ignoreLocalEvents = true;
+
+        if (audioPlayer && !audioPlayer.paused) {
+            audioPlayer.pause();
+        }
+
+        // Step 2: Clear all playback timers
+        if (playDebounceTimer) clearTimeout(playDebounceTimer);
+        if (pauseDebounceTimer) clearTimeout(pauseDebounceTimer);
+        if (resumeDebounceTimer) clearTimeout(resumeDebounceTimer);
+        if (audioLoadTimeout) clearTimeout(audioLoadTimeout);
+
+        // Step 3: Update role-specific UI
+        onRoleChange();
+
+        // Step 4: Handle role-specific logic
+        if (wasOrganizer && !isOrganizer) {
+            // Demoted to participant
+            console.log('⬇️ Demoted to participant - waiting for sync');
+            resetAudioPlayer();
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+            requestPlaybackSync();
+
+        } else if (!wasOrganizer && isOrganizer) {
+            // Promoted to organizer
+            console.log('⬆️ Promoted to organizer - taking control');
+            resetAudioPlayer();
+            ToastNotification.success('🎉 You are now the organizer!');
+        }
+
+        // Step 5: Reset flags
+        ignoreLocalEvents = false;
+
+    } finally {
+        organizerTransitionLock = false;
+
+        // Process queued transition if any
+        if (pendingOrganizerChange) {
+            const queued = pendingOrganizerChange;
+            pendingOrganizerChange = null;
+            setTimeout(() => handleOrganizerTransition(queued.newOrganizer, queued.wasOrganizer), 100);
+        }
+    }
+}
 // ==================== GLOBAL ERROR HANDLER ====================
 const toastRateLimiter = {
     lastToast: {}, rateLimits: {
@@ -114,6 +476,517 @@ window.addEventListener('unhandledrejection', (event) => {
     }
     event.preventDefault();
 });
+
+// ==================== BROWSER NAVIGATION DETECTION ====================
+let hasJoinedRoom = false;
+let navigationWarningShown = false;
+
+// Detect browser back/forward button clicks
+window.addEventListener('popstate', function(event) {
+    console.log('🔙 Browser navigation detected (back/forward arrow)');
+
+    // Set flag for logout
+    allowUnload = true;
+    isClosing = true;
+    sessionExpired = true; // Prevent other logout handlers
+
+    // Mark clean exit
+    sessionStorage.setItem('cleanExit', 'true');
+
+    // Disconnect WebSocket
+    safeDisconnectWebSocket();
+
+    // Immediate logout redirect
+    window.location.href = '/app/music/public/logout';
+});
+
+// Push initial state to enable popstate detection
+window.addEventListener('load', function() {
+    if (!isReload()) {
+        // Add state to enable back button detection
+        history.pushState({ page: 'room' }, '', window.location.href);
+    }
+});
+
+// ==================== INFORMATIVE POPUP AFTER JOINING ====================
+function showNavigationWarningPopup() {
+    if (navigationWarningShown) return;
+    navigationWarningShown = true;
+
+    const popup = document.createElement('div');
+    popup.id = 'navigationWarningPopup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+        padding: 30px 40px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 2px solid #7c3aed;
+        z-index: 99999;
+        max-width: 500px;
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    popup.innerHTML = `
+        <style>
+            @keyframes slideIn {
+                from {
+                    transform: translate(-50%, -60%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translate(-50%, -50%);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes fadeOut {
+                to {
+                    opacity: 0;
+                    transform: translate(-50%, -60%);
+                }
+            }
+        </style>
+        
+        <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+            <h2 style="color: #fff; margin: 0 0 15px 0; font-size: 22px; font-weight: 600;">
+                Important Notice
+            </h2>
+            <div style="color: #a0a0a0; line-height: 1.6; margin-bottom: 25px; text-align: left;">
+                <p style="margin: 10px 0;">
+                    <strong style="color: #ef4444;">⚠ Reloading this page</strong> will log you out of the room.
+                </p>
+                <p style="margin: 10px 0;">
+                    <strong style="color: #ef4444;">⚠ Using browser back/forward buttons</strong> will log you out.
+                </p>
+                <p style="margin: 10px 0; color: #10b981;">
+                    ✓ Use the "Back to Dashboard" button instead.
+                </p>
+            </div>
+            <button id="gotItBtn" style="
+                background: #7c3aed;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                width: 100%;
+                transition: all 0.2s;
+            " onmouseover="this.style.background='#6d28d9'" 
+               onmouseout="this.style.background='#7c3aed'">
+                Got It!
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Auto-close after 10 seconds
+    const autoCloseTimer = setTimeout(() => {
+        closeNavigationWarning();
+    }, 10000);
+
+    // Manual close
+    document.getElementById('gotItBtn').addEventListener('click', () => {
+        clearTimeout(autoCloseTimer);
+        closeNavigationWarning();
+    });
+}
+
+function closeNavigationWarning() {
+    const popup = document.getElementById('navigationWarningPopup');
+    if (popup) {
+        popup.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => {
+            popup.remove();
+        }, 300);
+    }
+}
+
+// ==================== SHOW WARNING AFTER JOINING ====================
+// Modify the WebSocket connection success handler to show warning
+function scheduleNavigationWarning() {
+    if (!hasJoinedRoom) {
+        hasJoinedRoom = true;
+
+        // Show warning after 10 seconds
+        setTimeout(() => {
+            showNavigationWarningPopup();
+        }, 10000);
+    }
+}
+
+// ============================================
+// INTERNET SPEED MONITOR (OPTIMIZED)
+// ============================================
+
+class InternetSpeedMonitor {
+    constructor() {
+        this.isExpanded = false;
+        this.connectionQuality = 'checking';
+        this.downloadSpeed = 0;
+        this.latency = 0;
+        this.autoHideTimer = null;
+        this.wasOffline = false; // Track previous offline state
+
+        this.init();
+    }
+
+    init() {
+        this.createWidget();
+        this.startMonitoring();
+        this.attachEventListeners();
+    }
+
+    createWidget() {
+        const widgetHTML = `
+            <div id="internetSpeedWidget" class="internet-speed-widget">
+                <div class="speed-indicator" id="speedIndicator">
+                    <div class="speed-icon">
+                        <i class="bi bi-wifi"></i>
+                    </div>
+                    <div class="speed-status" id="speedStatus">
+                        <span class="status-dot"></span>
+                    </div>
+                </div>
+                <div class="speed-details" id="speedDetails">
+                    <div class="speed-header">
+                        <i class="bi bi-wifi me-2"></i>
+                        <span>Connection Status</span>
+                    </div>
+                    <div class="speed-info">
+                        <div class="info-row">
+                            <span class="info-label">Quality:</span>
+                            <span class="info-value" id="qualityValue">Checking...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Speed:</span>
+                            <span class="info-value" id="speedValue">-- Mbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Latency:</span>
+                            <span class="info-value" id="latencyValue">-- ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .internet-speed-widget {
+                    position: fixed;
+                    right: 20px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    z-index: 9999;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                }
+
+                .speed-indicator {
+                    width: 50px;
+                    height: 50px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    transition: all 0.3s ease;
+                    position: relative;
+                }
+
+                .speed-indicator:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+                }
+
+                .speed-icon {
+                    color: white;
+                    font-size: 24px;
+                }
+
+                .speed-status {
+                    position: absolute;
+                    bottom: 2px;
+                    right: 2px;
+                }
+
+                .status-dot {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #4ade80;
+                    display: inline-block;
+                    border: 2px solid white;
+                    animation: pulse 2s infinite;
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+
+                .speed-details {
+                    position: absolute;
+                    right: 60px;
+                    top: 0;
+                    background: white;
+                    border-radius: 12px;
+                    padding: 16px;
+                    min-width: 250px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateX(20px);
+                    transition: all 0.3s ease;
+                }
+
+                .speed-details.show {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateX(0);
+                }
+
+                .speed-header {
+                    font-weight: 600;
+                    font-size: 16px;
+                    color: #1f2937;
+                    margin-bottom: 12px;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .speed-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .info-label {
+                    color: #6b7280;
+                    font-size: 14px;
+                }
+
+                .info-value {
+                    color: #1f2937;
+                    font-weight: 600;
+                    font-size: 14px;
+                }
+
+                /* Connection quality colors */
+                .quality-excellent { color: #10b981 !important; }
+                .quality-good { color: #3b82f6 !important; }
+                .quality-fair { color: #f59e0b !important; }
+                .quality-poor { color: #ef4444 !important; }
+                .quality-offline { color: #6b7280 !important; }
+
+                /* Status dot colors */
+                .status-excellent { background: #10b981 !important; }
+                .status-good { background: #3b82f6 !important; }
+                .status-fair { background: #f59e0b !important; }
+                .status-poor { background: #ef4444 !important; }
+                .status-offline { background: #6b7280 !important; animation: none; }
+                
+                /* ✅ NEW: Spinner animation for reconnecting toast */
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+
+        // Insert into the dedicated container
+        const container = document.getElementById('internetWidgetContainer');
+        if (container) {
+            container.innerHTML = widgetHTML;
+        } else {
+            // Fallback to body if container not found
+            document.body.insertAdjacentHTML('beforeend', widgetHTML);
+        }
+    }
+
+    attachEventListeners() {
+        const indicator = document.getElementById('speedIndicator');
+
+        indicator.addEventListener('click', () => {
+            this.toggleDetails();
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            const widget = document.getElementById('internetSpeedWidget');
+            if (!widget.contains(e.target) && this.isExpanded) {
+                this.hideDetails();
+            }
+        });
+    }
+
+    toggleDetails() {
+        if (this.isExpanded) {
+            this.hideDetails();
+        } else {
+            this.showDetails();
+        }
+    }
+
+    showDetails() {
+        const details = document.getElementById('speedDetails');
+        details.classList.add('show');
+        this.isExpanded = true;
+
+        // Auto-hide after 5 seconds
+        this.clearAutoHideTimer();
+        this.autoHideTimer = setTimeout(() => {
+            this.hideDetails();
+        }, 5000);
+    }
+
+    hideDetails() {
+        const details = document.getElementById('speedDetails');
+        details.classList.remove('show');
+        this.isExpanded = false;
+        this.clearAutoHideTimer();
+    }
+
+    clearAutoHideTimer() {
+        if (this.autoHideTimer) {
+            clearTimeout(this.autoHideTimer);
+            this.autoHideTimer = null;
+        }
+    }
+
+    async startMonitoring() {
+        // Initial check
+        await this.checkConnection();
+
+        // Monitor online/offline events with notifications
+        window.addEventListener('online', () => {
+            console.log('🌐 Connection restored');
+            ToastNotification.success('🌐 Connection restored!', 3000);
+            this.checkConnection();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Connection lost');
+            ToastNotification.error('📡 Internet connection lost!', 4000);
+            this.updateStatus('offline', 0, 0);
+        });
+
+        // Periodic checks every 20 seconds (optimized from 30)
+        setInterval(() => {
+            if (navigator.onLine) {
+                this.checkConnection();
+            }
+        }, 20000);
+    }
+
+    async checkConnection() {
+        if (!navigator.onLine) {
+            this.updateStatus('offline', 0, 0);
+            return;
+        }
+
+        try {
+            const startTime = performance.now();
+
+            // Ping test using a small resource
+            const response = await fetch('/favicon.ico?t=' + Date.now(), {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+
+            const endTime = performance.now();
+            const latency = Math.round(endTime - startTime);
+
+            // Estimate speed based on latency and connection type
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            let estimatedSpeed = 0;
+
+            if (connection && connection.downlink) {
+                estimatedSpeed = connection.downlink;
+            } else {
+                // Estimate based on latency
+                if (latency < 50) estimatedSpeed = 50;
+                else if (latency < 100) estimatedSpeed = 25;
+                else if (latency < 200) estimatedSpeed = 10;
+                else if (latency < 500) estimatedSpeed = 5;
+                else estimatedSpeed = 1;
+            }
+
+            // Determine quality
+            let quality;
+            if (latency < 50 && estimatedSpeed > 20) quality = 'excellent';
+            else if (latency < 100 && estimatedSpeed > 10) quality = 'good';
+            else if (latency < 200 && estimatedSpeed > 5) quality = 'fair';
+            else quality = 'poor';
+
+            this.updateStatus(quality, estimatedSpeed, latency);
+
+            // If was offline and now online, show reconnection message
+            if (this.wasOffline) {
+                ToastNotification.success('Connection quality: ' + quality.charAt(0).toUpperCase() + quality.slice(1), 3000);                this.wasOffline = false;
+            }
+
+        } catch (error) {
+            console.error('Connection check failed:', error);
+            this.updateStatus('poor', 0, 999);
+        }
+    }
+
+    updateStatus(quality, speed, latency) {
+        this.connectionQuality = quality;
+        this.downloadSpeed = speed;
+        this.latency = latency;
+
+        // Track offline state
+        if (quality === 'offline') {
+            this.wasOffline = true;
+        }
+
+        const statusDot = document.querySelector('.status-dot');
+        const qualityValue = document.getElementById('qualityValue');
+        const speedValue = document.getElementById('speedValue');
+        const latencyValue = document.getElementById('latencyValue');
+
+        if (!statusDot || !qualityValue || !speedValue || !latencyValue) return;
+
+        // Update status dot color
+        statusDot.className = 'status-dot status-' + quality;
+
+        // Update quality text
+        const qualityText = {
+            'excellent': 'Excellent',
+            'good': 'Good',
+            'fair': 'Fair',
+            'poor': 'Poor',
+            'offline': 'Offline',
+            'checking': 'Checking...'
+        };
+
+        qualityValue.textContent = qualityText[quality] || 'Unknown';
+        qualityValue.className = 'info-value quality-' + quality;
+
+        // Update speed
+        if (quality === 'offline') {
+            speedValue.textContent = 'No Connection';
+            latencyValue.textContent = '--';
+        } else {
+            speedValue.textContent = speed > 0 ? `~${speed.toFixed(1)} Mbps` : 'Checking...';
+            latencyValue.textContent = latency > 0 ? `${latency} ms` : '--';
+        }
+    }
+}
 
 // ==================== FAVORITES MANAGEMENT ====================
 function toggleFavorite(song, heartIcon) {
@@ -166,35 +1039,89 @@ function broadcastFavorites(favorites, action, song, username) {
         return;
     }
 
-    // console.log('📤 Broadcasting favorites:', action, song?.songName);
+    // ✅ FIX: Prevent concurrent updates
+    if (favoritesUpdateLock) {
+        console.warn('⚠️ Favorites update in progress, queuing...');
+        pendingFavoritesUpdate = { favorites, action, song, username };
+        return;
+    }
+
+    favoritesUpdateLock = true;
+
+    // Increment version for conflict detection
+    favoritesVersion++;
 
     const message = {
-        action: action, favorites: favorites, song: song, username: username, timestamp: Date.now()
+        action: action,
+        favorites: favorites,
+        song: song,
+        username: username,
+        timestamp: Date.now(),
+        version: favoritesVersion, // ✅ Add version tracking
+        hash: generateFavoritesHash(favorites) // ✅ Add hash for validation
     };
 
     try {
-        stompClient.send(`/app/music/chat/${currentRoomName}/favorites`, {}, JSON.stringify(message));
+        stompClient.send(
+            `/app/music/chat/${currentRoomName}/favorites`,
+            {},
+            JSON.stringify(message)
+        );
 
-        // console.log('✅ Favorites broadcast successful');
-
-        // Update local state immediately
+        // Update local state immediately (optimistic update)
         roomFavorites = favorites;
         updateFavoritesDisplay();
         updateAllHeartIcons();
 
+        // Unlock after short delay
+        setTimeout(() => {
+            favoritesUpdateLock = false;
+
+            // Process queued update if any
+            if (pendingFavoritesUpdate) {
+                const queued = pendingFavoritesUpdate;
+                pendingFavoritesUpdate = null;
+                broadcastFavorites(queued.favorites, queued.action, queued.song, queued.username);
+            }
+        }, 300);
+
     } catch (error) {
         console.error('❌ Error broadcasting favorites:', error);
         ToastNotification.error('Failed to update favorites');
+        favoritesUpdateLock = false;
     }
 }
 
 function handleFavoritesUpdate(message) {
+    // ✅ FIX: Validate and resolve conflicts
+
+    // Ignore outdated updates (version check)
+    if (message.version && message.version < favoritesVersion) {
+        console.warn('⚠️ Ignoring outdated favorites update');
+        return;
+    }
+
+    // Validate hash
+    const receivedHash = generateFavoritesHash(message.favorites || []);
+    if (message.hash && message.hash !== receivedHash) {
+        console.error('❌ Favorites hash mismatch - data corruption detected');
+        ToastNotification.error('Favorites sync error - refreshing...');
+        requestFavoritesSync();
+        return;
+    }
+
+    // Update version
+    if (message.version) {
+        favoritesVersion = Math.max(favoritesVersion, message.version);
+    }
+
+    // Apply update
     roomFavorites = message.favorites || [];
     updateFavoritesDisplay();
     updateAllHeartIcons();
 
+    // Show notification for remote changes
     if (message.username !== currentUsername) {
-        // ✅ FIX: Rate limit favorite notifications
         const toastKey = `favorites-${message.action}`;
 
         if (toastRateLimiter.canShow(toastKey)) {
@@ -685,6 +1612,13 @@ function initializePage() {
         return;
     }
 
+    // ✅ CRITICAL: Check for duplicate tabs BEFORE connecting
+    if (!initTabDetection()) {
+        console.warn('⚠️ Duplicate tab detected, halting initialization');
+        // Don't proceed with WebSocket or other initialization
+        return;
+    }
+
     updatePermissionNotice();
     setupAudioPlayerListeners();
     connectWebSocket(jwtToken);
@@ -692,12 +1626,65 @@ function initializePage() {
     initializeToastNotifications();
 
 }
+// ==================== RECONNECTION TOAST MANAGEMENT ====================
+let reconnectingToastId = null;
 
+function showReconnectingToast(type = 'reconnecting') {
+    // Remove existing reconnecting toast
+    removeReconnectingToast();
+
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) return;
+
+    const toastDiv = document.createElement('div');
+    toastDiv.className = 'toast reconnecting-toast';
+    toastDiv.id = 'reconnectingToast';
+    reconnectingToastId = 'reconnectingToast';
+
+    const bgColor = type === 'offline' ? '#ef4444' : '#ff9800';
+    const icon = type === 'offline' ? '📡' : '🔄';
+    const message = type === 'offline' ? 'No internet connection' : 'Reconnecting...';
+
+    toastDiv.style.cssText = `
+        min-width: 300px;
+        max-width: 500px;
+        margin-bottom: 10px;
+        padding: 16px;
+        border-radius: 8px;
+        color: white;
+        background-color: ${bgColor};
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Inter", sans-serif;
+        z-index: 9999;
+        position: relative;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    `;
+
+    toastDiv.innerHTML = `
+        <span class="toast-icon" style="font-size: 18px; flex-shrink: 0;">${icon}</span>
+        <span class="toast-message" style="flex: 1;">${message}</span>
+        ${type === 'reconnecting' ? '<div class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>' : ''}
+    `;
+
+    toastContainer.appendChild(toastDiv);
+}
+
+function removeReconnectingToast() {
+    const toast = document.getElementById('reconnectingToast');
+    if (toast) {
+        toast.remove();
+        reconnectingToastId = null;
+    }
+}
 // ==================== NETWORK STATUS MONITORING ====================
 let wasOffline = false;
 
 window.addEventListener('online', () => {
     if (wasOffline) {
+        removeReconnectingToast();
         ToastNotification.success('🌐 Connection restored. Reconnecting...');
 
         // Reconnect WebSocket
@@ -714,7 +1701,9 @@ window.addEventListener('online', () => {
 
 window.addEventListener('offline', () => {
     wasOffline = true;
-    ToastNotification.warning('🌐 No internet connection', 0); // Persistent toast
+
+    // ✅ FIX: Show single persistent toast
+    showReconnectingToast('offline');
 });
 
 // ======================== HANDLE EXPIRED SESSION ============================
@@ -927,6 +1916,15 @@ const ToastNotification = {
             <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; padding: 0; flex-shrink: 0; width: 24px; height: 24px;">×</button>
         `;
 
+        // ✅ FIX: Limit visible toasts to prevent stack overflow
+        const MAX_TOASTS = 5;
+        const currentToasts = toastContainer.querySelectorAll('.toast');
+
+        if (currentToasts.length >= MAX_TOASTS) {
+            // Remove oldest toast
+            this.removeToast(currentToasts[0]);
+        }
+
         toastContainer.appendChild(toastDiv);
 
         toastDiv.querySelector('.toast-close').addEventListener('click', () => {
@@ -976,6 +1974,9 @@ function initializeToastNotifications() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+
+    new InternetSpeedMonitor();
+
     const toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
         console.error('❌ [INIT] Toast container NOT found on page load!');
@@ -1214,7 +2215,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
         // ⭐ Timeout for large files
         audioLoadTimeout = setTimeout(() => {
             if (!metadataLoaded) {
-                console.warn('⚠️ Metadata loading timeout (60s)');
+                console.warn('⚠️ Metadata loading timeout (12s)'); // ✅ Matches METADATA_TIMEOUT
                 audioPlayer.removeEventListener('loadedmetadata', metadataHandler);
 
                 // ✅ FIX: Stop the audio completely instead of forcing play
@@ -1224,8 +2225,7 @@ function handlePlayCommand(audioPlayer, playbackMsg) {
 
                 ignoreLocalEvents = false;
 
-                ToastNotification.error('❌ Song took too long to load. Please check your connection and try again.', 8000);
-
+                ToastNotification.error('❌ Song loading timeout (12s). Try another song or check your connection.', 5000);
                 // ✅ Optional: Reset current song display
                 currentSongData = null;
                 document.getElementById('currentSongTitle').textContent = "Loading failed";
@@ -1954,11 +2954,12 @@ function connectWebSocket(token) {
         reconnectAttempts = 0;
         lastSuccessfulConnection = Date.now();
 
-        ToastNotification.success('Connected to chat room');
+        removeReconnectingToast();
+        ToastNotification.success('✅ Connected to chat room', 2000);
         startHeartbeat();
         // Subscribe to all channels...
         // (keep all existing subscriptions)
-
+        scheduleNavigationWarning();
         // Chat messages
         stompClient.subscribe(`/topic/chat/${currentRoomName}`, (message) => {
             const msg = JSON.parse(message.body);
@@ -2053,7 +3054,8 @@ function connectWebSocket(token) {
         }
 
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-            ToastNotification.error(`Connection error. Reconnecting... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            // ✅ FIX: Show single persistent reconnecting toast
+            showReconnectingToast('reconnecting');
 
             const retryDelay = Math.min(3000 * Math.pow(2, reconnectAttempts - 1), 10000);
 
@@ -2062,8 +3064,9 @@ function connectWebSocket(token) {
                     connectWebSocket(token);
                 }
             }, retryDelay);
-        } else {
-            ToastNotification.error('Unable to connect. Please refresh the page.', 0);
+        }  else {
+            removeReconnectingToast();
+            ToastNotification.error('❌ Unable to connect. Please refresh the page.', 0);
         }
     });
 }
@@ -2172,27 +3175,8 @@ function updateParticipantsDisplay(participants) {
             isOrganizer = p.organizer;
 
             if (wasOrganizer !== isOrganizer) {
-                console.log('🎭 User role changed from', wasOrganizer ? 'ORGANIZER' : 'PARTICIPANT', 'to', isOrganizer ? 'ORGANIZER' : 'PARTICIPANT');
-                onRoleChange();
-
-                if (isOrganizer) {
-                    ToastNotification.success('🎉 You are now the organizer!');
-                    // ⭐ NEW: Clear any stale playback state when becoming organizer
-                    resetAudioPlayer();
-                } else {
-                    ToastNotification.info('You are now a participant');
-
-                    // Reset audio and request sync
-                    console.log('⬇️ Demoted to participant - resetting audio and syncing');
-                    resetAudioPlayer();
-
-                    setTimeout(() => {
-                        if (!isOrganizer) {
-                            console.log('🔄 Requesting sync as new participant');
-                            requestPlaybackSync();
-                        }
-                    }, DUPLICATE_EVENT_THRESHOLD);
-                }
+                // ✅ FIX: Use state machine for atomic transition
+                handleOrganizerTransition(isOrganizer, wasOrganizer);
             }
         }
     });
@@ -2415,7 +3399,15 @@ function displayMessage(message) {
         });
     }
 
+    // ✅ FIX: Limit chat messages to prevent memory leak
+    const MAX_MESSAGES = 100;
     chatMessages.appendChild(messageDiv);
+
+// Remove old messages if exceeds limit
+    while (chatMessages.children.length > MAX_MESSAGES) {
+        chatMessages.removeChild(chatMessages.firstChild);
+    }
+
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
@@ -2572,6 +3564,10 @@ async function searchSongs() {
         return;
     }
 
+    // ✅ FIX: Clear previous search results first
+    searchSongsList = [];
+    document.getElementById('searchResults').innerHTML = '<div class="no-results">Searching...</div>';
+
     try {
         const response = await fetch(`/app/music/audio/searchSong?query=${encodeURIComponent(query)}`, {
             headers: {
@@ -2711,11 +3707,29 @@ function openSearchDrawer() {
     document.getElementById('searchDrawer').classList.add('open');
 }
 
+
 function closeSearchDrawer() {
     document.getElementById('searchDrawer').classList.remove('open');
     document.getElementById('searchInput').value = '';
-    document.getElementById('searchResults').innerHTML = '';
+
+    // ✅ FIX: Properly clear search results and memory
+    const searchResults = document.getElementById('searchResults');
+
+    // Remove all event listeners by cloning
+    const newSearchResults = searchResults.cloneNode(false);
+    searchResults.parentNode.replaceChild(newSearchResults, searchResults);
+
+    // Clear search data
+    searchSongsList = [];
+
+    // If currently in search mode, switch to global mode
+    if (playlistMode === 'search') {
+        playlistMode = 'all';
+        currentPlaylist = [...allSongsOnPage];
+        currentPlaylistIndex = 0;
+    }
 }
+
 
 function isReload() {
     const nav = performance.getEntriesByType("navigation")[0];
@@ -2757,43 +3771,38 @@ window.addEventListener('beforeunload', (event) => {
     const isCleanExit = sessionStorage.getItem('cleanExit') === 'true';
     if (isCleanExit) {
         sessionStorage.removeItem('cleanExit');
+        return; // ✅ Silent exit
+    }
+
+    if (sessionExpired || isClosing) {
+        return; // ✅ Silent exit for navigation/reload
+    }
+
+    // ✅ Only show confirmation for TAB CLOSE (not reload/navigation)
+    const nav = performance.getEntriesByType("navigation")[0];
+    const isReloading = nav && nav.type === "reload";
+
+    if (isReloading) {
+        // Reload detected - don't show dialog, just logout silently
         return;
     }
 
-    if (sessionExpired) {
-        console.log('⏭️ Session expired - skipping beacon');
-        return;
-    }
-
-    // ✅ ONLY show confirmation if NOT intentionally leaving
+    // ✅ Show confirmation ONLY for tab close
     if (!allowUnload) {
-        // Show browser confirmation dialog
-        const confirmationMessage = 'Reloading or closing this tab will log you out. Are you sure you want to leave?';
+        const confirmationMessage = 'Closing this tab will log you out. Are you sure?';
         event.preventDefault();
-        event.returnValue = confirmationMessage; // Standard for most browsers
-        return confirmationMessage; // For some older browsers
+        event.returnValue = confirmationMessage;
+        return confirmationMessage;
     }
 
-    // If allowUnload is true, proceed with cleanup
+    // Proceed with cleanup
     if (allowUnload) {
         console.log('🚪 Confirmed exit - proceeding with cleanup');
         isClosing = true;
-
-        const nav = performance.getEntriesByType("navigation")[0];
-        const isReloading = nav && nav.type === "reload";
-
-        if (isReloading) {
-            console.log('🔄 Page reload confirmed');
-            sendFlagBeacon(false); // Exit room, keep session
-        } else {
-            console.log('🚪 Tab close confirmed');
-            sendFlagBeacon(true); // Full logout
-        }
-
+        sendFlagBeacon(true);
         safeDisconnectWebSocket();
     }
 });
-
 
 // ==================== UNLOAD: FINAL CLEANUP ====================
 window.addEventListener('unload', function () {

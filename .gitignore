@@ -38,6 +38,8 @@ build/
 *.env
 .env.local
 .env.*.local
-#/docker-compose.yml
-#/Dockerfile
+/docker-compose.yml
+/Dockerfile
 *.sql
+*.sh
+.dockerignore

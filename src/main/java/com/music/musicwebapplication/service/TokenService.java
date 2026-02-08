@@ -9,6 +9,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -91,15 +92,26 @@ public class TokenService {
      * Verify token (alternative method)
      */
     public boolean verifyToken(String token, long timestamp, String genericField) {
-        log.debug("Verifying token for timestamp: {}, field: {}", timestamp, genericField);
+        log.debug("Verifying at token service token for timestamp: {}, field: {}", timestamp, genericField);
         TokenData data = extractData(token);
         if (data == null) {
             log.warn("Token verification failed - could not extract data");
             return false;
         }
 
-        boolean isValid = data.getTimestamp() == timestamp && data.getGenericField().equals(genericField);
-        log.info("Token verification result: {}", isValid ? "valid" : "invalid");
+        long originalTimestamp = data.getTimestamp();
+
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(originalTimestamp-timestamp );
+
+        log.debug("Token age: {} seconds for user: {}", seconds, data.getGenericField());
+
+        if (seconds > 86400) {
+            log.warn("Token expired - {} seconds old for user: {}", seconds, data.getGenericField());
+            return false;
+        }
+
+        boolean isValid =  data.getGenericField().equals(genericField);
+        log.debug("Token verification result: {}", isValid ? "valid" : "invalid");
         return isValid;
     }
 

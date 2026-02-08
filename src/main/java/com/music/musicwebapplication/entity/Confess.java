@@ -64,4 +64,6 @@ public class Confess {
 
     private String note;
 
+    private String token;
+
 }

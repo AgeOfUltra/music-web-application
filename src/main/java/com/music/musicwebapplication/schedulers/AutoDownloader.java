@@ -61,7 +61,7 @@ public class AutoDownloader {
 
     @Async("asyncTaskExecutor")
     public void processFavoritesForRoom(String roomName) {
-        log.info("Processing favorites for room: {} on thread: {}",
+        log.debug("Processing favorites for room: {} on thread: {}",
                 roomName, Thread.currentThread().getName());
 
         try {
@@ -81,7 +81,7 @@ public class AutoDownloader {
                     .distinct()
                     .toList();
 
-            log.info("Found {} favorite songs in room: {}", favoriteSongs.size(), roomName);
+            log.debug("Found {} favorite songs in room: {}", favoriteSongs.size(), roomName);
 
             // Download each song asynchronously
             List<CompletableFuture<Boolean>> downloadFutures = favoriteSongs.stream()

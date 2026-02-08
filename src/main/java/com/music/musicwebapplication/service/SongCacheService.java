@@ -285,7 +285,7 @@ public class SongCacheService {
                 total += read;
             }
 
-            log.info("✅ Downloaded {} bytes for {}", total, objectKey);
+            log.debug("✅ Downloaded {} bytes for {}", total, objectKey);
 
             // Atomic move from temp to final location
             Files.move(tempFile, targetFile,
