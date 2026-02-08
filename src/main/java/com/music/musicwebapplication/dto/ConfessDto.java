@@ -3,6 +3,7 @@ package com.music.musicwebapplication.dto;
 import com.music.musicwebapplication.enums.Status;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class ConfessDto {
     private String senderEmail;
 
     @NotBlank(message = "Please enter room name")
+    @Pattern(regexp = "^[a-zA-Z0-9]{3,20}$", message = "Must be 3-20 alphanumeric characters")
     private String roomName;
 
     @NotBlank(message = "Please enter alias name")

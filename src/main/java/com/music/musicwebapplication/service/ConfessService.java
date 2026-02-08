@@ -102,13 +102,15 @@ public class ConfessService {
 
     private String generateRoomName(String message, String alias, String type, String sender, String song, String roomName) {
         log.debug("Generating room name from parameters");
-        String newStr = (message + alias + type + sender + song + roomName).replace(" ", "");
+        String newStr = (message + alias + type + sender + song + roomName)
+                .replaceAll("\\s+", "");
         return generateHashHelper(newStr);
     }
 
     public String generateRoomName(String roomName, int size, String organizer) {
         log.debug("Generating room name for organizer: {}, size: {}", organizer, size);
-        String newStr = (organizer + roomName + Integer.toString(size)).replace(" ", "");
+        String newStr = (organizer + roomName + Integer.toString(size)).replaceAll("\\s+", "");
+
         return generateHashHelper(newStr);
     }
 
@@ -119,7 +121,7 @@ public class ConfessService {
             sb.append(newStr.charAt(index));
         }
 
-        String hash = sb.toString();
+        String hash = sb.toString().replaceAll("\\s+", "");
         log.debug("Room hash generated: {}", hash);
         return hash;
     }
