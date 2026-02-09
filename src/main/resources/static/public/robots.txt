@@ -1,0 +1,14 @@
+# Robots.txt for ConnectingNote.com
+# This file tells search engines which pages to crawl
+
+User-agent: *
+Allow: /
+Disallow: /app/music/private/
+Disallow: /admin/
+Disallow: /api/private/
+
+# Crawl-delay for polite bots
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://connectingnote.com/public/sitemap.xml

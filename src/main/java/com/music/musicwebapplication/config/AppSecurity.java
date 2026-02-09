@@ -79,7 +79,8 @@ public class AppSecurity {
                                 "/favicon.ico",
                                 "/images/**",
                                 "/css/**",
-                                "/js/**"
+                                "/js/**",
+                                "/public/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
