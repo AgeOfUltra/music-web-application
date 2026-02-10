@@ -69,7 +69,10 @@ window.addEventListener('DOMContentLoaded', function() {
 
     if (errorItems.length > 0 || generalError) {
         document.getElementById('password').value = '';
-        document.getElementById('username').value = '';
+        const usernameField = document.getElementById('username');
+        if (usernameField) {
+            usernameField.value = '';
+        }
         document.getElementById('email').value = '';
     }
 });

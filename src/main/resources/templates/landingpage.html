@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="N-arSm7SscrWMdntAq5snbOaQTgO5r9rrFcs_PgdsYs" />
+    <title>Connecting Note - Where Music Meets Confession</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #023a6e 0%, #023d61 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Elements */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .music-note {
+            position: absolute;
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.1);
+            animation: float 15s infinite ease-in-out;
+        }
+
+        .music-note:nth-child(1) { left: 10%; animation-delay: 0s; top: 20%; }
+        .music-note:nth-child(2) { left: 20%; animation-delay: 2s; top: 60%; }
+        .music-note:nth-child(3) { left: 30%; animation-delay: 4s; top: 40%; }
+        .music-note:nth-child(4) { left: 40%; animation-delay: 1s; top: 80%; }
+        .music-note:nth-child(5) { left: 50%; animation-delay: 3s; top: 10%; }
+        .music-note:nth-child(6) { left: 60%; animation-delay: 5s; top: 70%; }
+        .music-note:nth-child(7) { left: 70%; animation-delay: 2.5s; top: 30%; }
+        .music-note:nth-child(8) { left: 80%; animation-delay: 4.5s; top: 50%; }
+        .music-note:nth-child(9) { left: 90%; animation-delay: 1.5s; top: 90%; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
+            50% { transform: translateY(-50px) rotate(180deg); opacity: 0.3; }
+        }
+
+        /* Glassmorphism Components */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 25px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Header/Navbar */
+        .navbar {
+            padding: 0.1rem 0;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .navbar .container {
+            position: relative;
+        }
+
+        .navbar-collapse {
+            position: relative;
+            z-index: 1001;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff !important;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .logo-icon {
+            width: 7rem;
+            height: 7rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            white-space: nowrap;
+            line-height: 1.5;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: #fff;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            border: none;
+            color: #fff;
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            line-height: 1.5;
+        }
+
+        .btn-primary-custom:hover {
+            background: linear-gradient(135deg, #ff8e8e, #ff6b6b);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-large {
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            padding: 4rem 0;
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .hero-image {
+            position: relative;
+            animation: floatImage 3s ease-in-out infinite;
+        }
+
+        @keyframes floatImage {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .heart-icon {
+            color: #ff6b6b;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.1); }
+            50% { transform: scale(1); }
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 5rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 3rem;
+            font-weight: 700;
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover .feature-icon {
+            transform: rotate(360deg) scale(1.1);
+        }
+
+        .feature-title {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .feature-description {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        /* Story Section */
+        .story-section {
+            padding: 5rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .story-card {
+            margin-bottom: 2rem;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 5rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-card {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .cta-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-large {
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+
+            .logo-icon {
+                width: 6rem;
+                height: 6rem;
+            }
+
+            .btn-glass {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .btn-large {
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+            }
+
+            .hero-section {
+                padding: 2rem 0;
+            }
+
+            .glass-card {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .navbar-collapse {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                padding: 1.5rem;
+                border-radius: 15px;
+                margin-top: 1rem;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .navbar-nav {
+                align-items: stretch !important;
+            }
+
+            .navbar-nav .nav-item {
+                margin-bottom: 0.5rem;
+            }
+
+            .navbar-nav .nav-item:last-child {
+                margin-bottom: 0;
+            }
+
+            .btn-glass, .btn-primary-custom {
+                width: 100%;
+                text-align: center;
+                display: block;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .logo-icon {
+                width: 5.5rem;
+                height: 5.5rem;
+            }
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .cta-title {
+                font-size: 2rem;
+            }
+
+            .btn-large {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.95rem;
+                width: 100%;
+                text-align: center;
+            }
+
+            .btn-glass, .btn-primary-custom {
+                width: 100%;
+                text-align: center;
+                display: block;
+            }
+
+            .d-flex.gap-3.flex-wrap {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .navbar-collapse {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                padding: 1rem;
+                border-radius: 15px;
+                margin-top: 1rem;
+            }
+
+        }
+
+        /* Scroll Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .fade-in.aos-animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Animated Background -->
+<div class="bg-animation">
+    <div class="music-note"><i class="fas fa-music"></i></div>
+    <div class="music-note"><i class="fas fa-heart"></i></div>
+    <div class="music-note"><i class="fas fa-music"></i></div>
+    <div class="music-note"><i class="fas fa-heart"></i></div>
+    <div class="music-note"><i class="fas fa-music"></i></div>
+    <div class="music-note"><i class="fas fa-heart"></i></div>
+    <div class="music-note"><i class="fas fa-music"></i></div>
+    <div class="music-note"><i class="fas fa-heart"></i></div>
+    <div class="music-note"><i class="fas fa-music"></i></div>
+</div>
+
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg glass">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <div class="logo-icon">
+                <img th:src="@{/images/app_logo_wn.png}" alt="Connecting Note Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+            </div>
+            <span>Connecting Note</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" style="border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1);">
+            <span style="color: #fff;"><i class="fas fa-bars"></i></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-3">
+                <li class="nav-item">
+                    <a class="btn-glass" href="https://connectingnote.com/app/music/public/login">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn-primary-custom" href="https://connectingnote.com/app/music/public/signUp">Sign Up</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6" data-aos="fade-right" data-aos-duration="1000">
+                <h1 class="hero-title">
+                    Where Every Song Tells Your <span class="heart-icon"><i class="fas fa-heart"></i></span> Story
+                </h1>
+                <p class="hero-subtitle">
+                    Create music rooms, share your feelings through melodies, and confess to your crush with the perfect soundtrack. Because some words are better said through songs.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="https://connectingnote.com/app/music/public/signUp" class="btn-primary-custom btn-large">
+                        Start Your Journey <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <a href="#features" class="btn-glass btn-large">
+                        How It Works
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 mt-5 mt-lg-0" data-aos="fade-left" data-aos-duration="1000">
+                <div class="hero-image text-center">
+                    <div class="glass-card" style="max-width: 500px; margin: 0 auto; padding: 3rem 2rem;">
+                        <div style="position: relative;">
+                            <i class="fas fa-headphones" style="font-size: 8rem; color: #ff6b6b;"></i>
+                            <div class="mt-4">
+                                <i class="fas fa-music" style="font-size: 2rem; color: rgba(255,255,255,0.6); margin: 0 1rem; animation: float 3s ease-in-out infinite;"></i>
+                                <i class="fas fa-heart heartbeat" style="font-size: 3rem; color: #ff6b6b;"></i>
+                                <i class="fas fa-music" style="font-size: 2rem; color: rgba(255,255,255,0.6); margin: 0 1rem; animation: float 3s ease-in-out infinite; animation-delay: 1s;"></i>
+                            </div>
+                            <div class="mt-4 d-flex justify-content-center gap-3">
+                                <div style="background: rgba(255,107,107,0.2); padding: 1rem; border-radius: 15px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-comment-dots" style="font-size: 1.5rem; color: #ff6b6b;"></i>
+                                </div>
+                                <div style="background: rgba(255,107,107,0.3); padding: 1rem; border-radius: 15px; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite;">
+                                    <i class="fas fa-users" style="font-size: 2rem; color: #ff6b6b;"></i>
+                                </div>
+                                <div style="background: rgba(255,107,107,0.2); padding: 1rem; border-radius: 15px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-share-alt" style="font-size: 1.5rem; color: #ff6b6b;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section" id="features">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Features That Make Hearts Connect</h2>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Create Your Room</h3>
+                    <p class="feature-description text-center">
+                        Build your own intimate music space. Copy the room details and share them with your special someone to create unforgettable moments together.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Confess with Music</h3>
+                    <p class="feature-description text-center">
+                        Send your heartfelt confessions paired with their favorite songs. Let the melody speak what words cannot express.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Favorite Playlists</h3>
+                    <p class="feature-description text-center">
+                        Curate your love story's soundtrack. Heart your favorite songs and build playlists that capture every emotion.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="400">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Chat & Listen</h3>
+                    <p class="feature-description text-center">
+                        Connect deeper through conversations while your favorite tracks play. Share thoughts, feelings, and moments in perfect harmony.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="500">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Song Requests</h3>
+                    <p class="feature-description text-center">
+                        Request songs that speak to your heart. Track all your requests and watch your musical story unfold in real-time.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="600">
+                <div class="glass-card h-100">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="feature-title text-center">Personal Dashboard</h3>
+                    <p class="feature-description text-center">
+                        Monitor all your confessions, song requests, and room activities. Your complete emotional journey in one beautiful dashboard.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+<!-- Special Features Section -->
+<section class="features-section">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">What Makes Us Special</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <div class="glass-card">
+                    <h3 class="feature-title mb-4 text-center">
+                        <i class="fas fa-crown" style="color: #ff6b6b;"></i> Organizer Privileges
+                    </h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-3" style="color: rgba(255,255,255,0.9);">
+                            <i class="fas fa-check-circle" style="color: #ff6b6b; margin-right: 10px;"></i>
+                            Full control over room settings and atmosphere
+                        </li>
+                        <li class="mb-3" style="color: rgba(255,255,255,0.9);">
+                            <i class="fas fa-check-circle" style="color: #ff6b6b; margin-right: 10px;"></i>
+                            Manage playlists and song queue seamlessly
+                        </li>
+                        <li class="mb-3" style="color: rgba(255,255,255,0.9);">
+                            <i class="fas fa-check-circle" style="color: #ff6b6b; margin-right: 10px;"></i>
+                            Approve or deny song requests
+                        </li>
+                        <li class="mb-3" style="color: rgba(255,255,255,0.9);">
+                            <i class="fas fa-check-circle" style="color: #ff6b6b; margin-right: 10px;"></i>
+                            Create the perfect moment for confessions
+                        </li>
+                        <li class="mb-3" style="color: rgba(255,255,255,0.9);">
+                            <i class="fas fa-check-circle" style="color: #ff6b6b; margin-right: 10px;"></i>
+                            Copy and share room details with your loved ones
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <div class="glass-card cta-card" data-aos="zoom-in">
+            <h2 class="cta-title">
+                Ready to Express Your Heart?
+            </h2>
+            <p class="cta-text">
+                Join thousands who have found their voice through music. Your perfect confession is just one song away.
+            </p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="https://connectingnote.com/app/music/public/signUp" class="btn-primary-custom btn-large">
+                    <i class="fas fa-heart me-2"></i> Create Free Account
+                </a>
+                <a href="https://connectingnote.com/app/music/public/login" class="btn-glass btn-large">
+                    <i class="fas fa-sign-in-alt me-2"></i> Already Have Account?
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>&copy; 2026 Connecting Note(Notes). Where Music Meets Heart. All rights reserved.</p>
+        <div class="mt-3">
+            <a href="#" class="text-white mx-2"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.instagram.com/connecting_notes/?hl=en" class="text-white mx-2"><i class="fab fa-instagram"></i></a>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- AOS Animation JS -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+<script>
+    // Initialize AOS
+    AOS.init({
+        duration: 800,
+        easing: 'ease-in-out',
+        once: true,
+        offset: 100
+    });
+
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

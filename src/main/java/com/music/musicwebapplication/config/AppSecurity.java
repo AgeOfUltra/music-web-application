@@ -80,7 +80,8 @@ public class AppSecurity {
                                 "/images/**",
                                 "/css/**",
                                 "/js/**",
-                                "/public/**"
+                                "/public/**",
+                                "/app/music/home"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

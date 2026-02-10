@@ -34,7 +34,15 @@
         <form th:action="@{/app/music/public/register}" method="post" th:object="${newUser}" id="signupFormElement">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" th:field="*{username}" placeholder="Enter username">
+                <input type="text"
+                       id="username"
+                       th:field="*{username}"
+                       placeholder="Enter username"
+                       pattern="^\S+$"
+                       title="Username must be a single word with no spaces"
+                       required>
+                <span class="error-message" style="color: red; font-size: 12px; display: none;">
+        Username cannot contain spaces </span>
             </div>
 
             <div class="form-group">
@@ -69,6 +77,35 @@
 
     // Hide loader if there's a general signup error
     LoaderPlugin.hideOnError('generalError');
+
+    const usernameInput = document.getElementById('username');
+    const errorMessage = usernameInput.nextElementSibling;
+
+    // Prevent spaces from being typed
+    usernameInput.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.keyCode === 32) {
+            e.preventDefault();
+        }
+    });
+
+    // Validate on input (removes spaces if pasted)
+    usernameInput.addEventListener('input', function(e) {
+        if (this.value.includes(' ')) {
+            this.value = this.value.replace(/\s/g, '');
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 2000);
+        }
+    });
+
+    // Validate on blur
+    usernameInput.addEventListener('blur', function() {
+        if (this.value.includes(' ')) {
+            this.value = this.value.trim().replace(/\s/g, '');
+        }
+    });
+
     </script>
 </body>
 </html>

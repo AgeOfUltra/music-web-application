@@ -869,7 +869,7 @@ function clearRequestSongForm() {
 }
 
 // ============================================
-// FORM ERROR AND SUCCESS HANDLING (OPTIMIZED)
+// CONSOLIDATED DOM CONTENT LOADED
 // ============================================
 window.addEventListener('DOMContentLoaded', function() {
     // Initialize song autocomplete
@@ -878,177 +878,28 @@ window.addEventListener('DOMContentLoaded', function() {
     // Initialize Internet Speed Monitor
     new InternetSpeedMonitor();
 
-    let hasErrors = false;
-    let hasConfessErrors = false;
-    let hasRequestSongErrors = false;
-    let hasConfessSuccess = false;
-    let hasRequestSongSuccess = false;
-
-    // Get Bootstrap modal instances
-    const createModal = new bootstrap.Modal(document.getElementById('createModal'));
-    const joinModal = new bootstrap.Modal(document.getElementById('joinModal'));
-    const confessModal = new bootstrap.Modal(document.getElementById('sendConfess'));
-    const requestSongModal = new bootstrap.Modal(document.getElementById('requestSongModal'));
+    // ============================================
+    // ALPHANUMERIC VALIDATION FOR ROOM NAMES
+    // ============================================
+    addAlphanumericValidation('roomName');
+    addAlphanumericValidation('confessRoomName');
 
     // ============================================
-    // CREATE ROOM - FIELD VALIDATION ERRORS
+    // MESSAGE LENGTH VALIDATION (100 words minimum)
     // ============================================
-    const fieldErrorsContainer = document.getElementById('fieldErrors');
-    if (fieldErrorsContainer) {
-        const errorItems = fieldErrorsContainer.querySelectorAll('.error-item');
-        errorItems.forEach(item => {
-            const errorMessage = item.textContent.trim();
-            if (errorMessage) {
-                notifier.error(errorMessage);
-                hasErrors = true;
+    const confessMessage = document.getElementById('confessMessage');
+    if (confessMessage) {
+        confessMessage.addEventListener('blur', function() {
+            const wordCount = this.value.trim().split(/\s+/).filter(word => word.length > 0).length;
+            if (this.value.trim() && wordCount < 100) {
+                notifier.error(`Message must be at least 100 words. Current: ${wordCount} words`);
             }
         });
     }
 
     // ============================================
-    // CONFESS FORM - FIELD VALIDATION ERRORS
+    // JOIN ROOM - PASTE/MANUAL INPUT HANDLING
     // ============================================
-    const confessFieldErrorsContainer = document.getElementById('confessFieldErrors');
-    if (confessFieldErrorsContainer) {
-        const errorItems = confessFieldErrorsContainer.querySelectorAll('.error-item');
-        errorItems.forEach(item => {
-            const errorMessage = item.textContent.trim();
-            if (errorMessage) {
-                notifier.error(errorMessage);
-                hasConfessErrors = true;
-            }
-        });
-    }
-
-    // ============================================
-    // REQUEST SONG - FIELD VALIDATION ERRORS
-    // ============================================
-    const requestSongFieldErrorsContainer = document.getElementById('requestSongFieldErrors');
-    if (requestSongFieldErrorsContainer) {
-        const errorItems = requestSongFieldErrorsContainer.querySelectorAll('.error-item');
-        errorItems.forEach(item => {
-            const errorMessage = item.textContent.trim();
-            if (errorMessage) {
-                notifier.error(errorMessage);
-                hasRequestSongErrors = true;
-            }
-        });
-    }
-
-    // ============================================
-    // REQUEST SONG - ERROR/SUCCESS FLASH MESSAGE
-    // ============================================
-    const requestSongErrorContainer = document.getElementById('requestSongError');
-    if (requestSongErrorContainer) {
-        const requestSongError = requestSongErrorContainer.textContent.trim();
-        if (requestSongError) {
-            // Check if it's a success message
-            if (requestSongError.toLowerCase().includes('success') ||
-                requestSongError.toLowerCase().includes('submitted') ||
-                requestSongError.toLowerCase().includes('received')) {
-
-                notifier.success(requestSongError);
-                hasRequestSongSuccess = true;
-
-                // ✅ CLEAR FORM ONLY ON SUCCESS
-                clearRequestSongForm();
-            } else {
-                notifier.error(requestSongError);
-                hasRequestSongErrors = true;
-                // ❌ DO NOT CLEAR FORM ON ERROR - User needs to see their input
-            }
-        }
-    }
-
-    // ============================================
-    // CREATE ROOM - CREATION ERROR
-    // ============================================
-    const creationErrorContainer = document.getElementById('creationError');
-    if (creationErrorContainer) {
-        const creationError = creationErrorContainer.textContent.trim();
-        if (creationError) {
-            notifier.error(creationError);
-            createModal.show();
-            hasErrors = true;
-            // ❌ DO NOT CLEAR FORM - User needs to see what they entered
-        }
-    }
-
-    // ============================================
-    // JOIN ROOM - JOIN ERROR
-    // ============================================
-    const joinErrorContainer = document.getElementById('joinError');
-    if (joinErrorContainer) {
-        const joinError = joinErrorContainer.textContent.trim();
-        if (joinError) {
-            notifier.error(joinError);
-            joinModal.show();
-            hasErrors = true;
-            // ❌ DO NOT CLEAR FORM - User needs to see what they entered
-        }
-    }
-
-    // ============================================
-    // CONFESS FORM - EMAIL STATUS (SUCCESS/ERROR)
-    // ============================================
-    const emailStatusElement = document.getElementById('emailStatus');
-    if (emailStatusElement) {
-        const emailStatus = emailStatusElement.textContent.trim();
-        if (emailStatus) {
-            // Check if it's a success message
-            if (emailStatus.toLowerCase().includes('success') ||
-                emailStatus.toLowerCase().includes('sent') ||
-                emailStatus.toLowerCase().includes('submitted')) {
-
-                notifier.success(emailStatus);
-                hasConfessSuccess = true;
-
-                // ✅ CLEAR FORM ONLY ON SUCCESS
-                clearConfessForm();
-            } else {
-                notifier.error(emailStatus);
-                hasConfessErrors = true;
-                // ❌ DO NOT CLEAR FORM ON ERROR - User needs to see their input
-            }
-        }
-    }
-
-    // ============================================
-    // OPEN MODALS IF THERE ARE ERRORS (NOT SUCCESS)
-    // ============================================
-    if (hasConfessErrors && !hasConfessSuccess) {
-        confessModal.show();
-    }
-
-    if (hasRequestSongErrors && !hasRequestSongSuccess) {
-        requestSongModal.show();
-    }
-
-    // ============================================
-    // CLEAR CREATE/JOIN ROOM FIELDS ONLY ON ERROR
-    // ============================================
-    // This clears the fields so user can start fresh after seeing the error
-    if (hasErrors) {
-        const roomNameField = document.getElementById('roomName');
-        const maxCountField = document.getElementById('maxCount');
-        const joinRoomNameField = document.getElementById('joinRoomName');
-
-        if (roomNameField) roomNameField.value = '';
-        if (maxCountField) maxCountField.value = '';
-        if (joinRoomNameField) joinRoomNameField.value = '';
-    }
-
-    // Initialize Bootstrap tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-
-// ============================================
-// JOIN ROOM - PASTE/MANUAL INPUT HANDLING
-// ============================================
-document.addEventListener('DOMContentLoaded', function() {
     const pasteMethod = document.getElementById('pasteMethod');
     const manualMethod = document.getElementById('manualMethod');
     const pasteSection = document.getElementById('pasteSection');
@@ -1093,6 +944,134 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('manualPasscode')?.addEventListener('input', function() {
         document.getElementById('joinPassCode').value = this.value;
     });
+
+    // ============================================
+    // FORM ERROR AND SUCCESS HANDLING
+    // ============================================
+    let hasErrors = false;
+    let hasConfessErrors = false;
+    let hasRequestSongErrors = false;
+    let hasConfessSuccess = false;
+    let hasRequestSongSuccess = false;
+
+    // Get Bootstrap modal instances
+    const createModal = new bootstrap.Modal(document.getElementById('createModal'));
+    const joinModal = new bootstrap.Modal(document.getElementById('joinModal'));
+    const confessModal = new bootstrap.Modal(document.getElementById('sendConfess'));
+    const requestSongModal = new bootstrap.Modal(document.getElementById('requestSongModal'));
+
+    // CREATE ROOM - FIELD VALIDATION ERRORS
+    const fieldErrorsContainer = document.getElementById('fieldErrors');
+    if (fieldErrorsContainer) {
+        const errorItems = fieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasErrors = true;
+            }
+        });
+    }
+
+    // CONFESS FORM - FIELD VALIDATION ERRORS
+    const confessFieldErrorsContainer = document.getElementById('confessFieldErrors');
+    if (confessFieldErrorsContainer) {
+        const errorItems = confessFieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasConfessErrors = true;
+            }
+        });
+    }
+
+    // REQUEST SONG - FIELD VALIDATION ERRORS
+    const requestSongFieldErrorsContainer = document.getElementById('requestSongFieldErrors');
+    if (requestSongFieldErrorsContainer) {
+        const errorItems = requestSongFieldErrorsContainer.querySelectorAll('.error-item');
+        errorItems.forEach(item => {
+            const errorMessage = item.textContent.trim();
+            if (errorMessage) {
+                notifier.error(errorMessage);
+                hasRequestSongErrors = true;
+            }
+        });
+    }
+
+    // REQUEST SONG - ERROR/SUCCESS FLASH MESSAGE
+    const requestSongErrorContainer = document.getElementById('requestSongError');
+    if (requestSongErrorContainer) {
+        const requestSongError = requestSongErrorContainer.textContent.trim();
+        if (requestSongError) {
+            if (requestSongError.toLowerCase().includes('success') ||
+                requestSongError.toLowerCase().includes('submitted') ||
+                requestSongError.toLowerCase().includes('received')) {
+                notifier.success(requestSongError);
+                hasRequestSongSuccess = true;
+                clearRequestSongForm();
+            } else {
+                notifier.error(requestSongError);
+                hasRequestSongErrors = true;
+            }
+        }
+    }
+
+    // CREATE ROOM - CREATION ERROR
+    const creationErrorContainer = document.getElementById('creationError');
+    if (creationErrorContainer) {
+        const creationError = creationErrorContainer.textContent.trim();
+        if (creationError) {
+            notifier.error(creationError);
+            createModal.show();
+            hasErrors = true;
+        }
+    }
+
+    // JOIN ROOM - JOIN ERROR
+    const joinErrorContainer = document.getElementById('joinError');
+    if (joinErrorContainer) {
+        const joinError = joinErrorContainer.textContent.trim();
+        if (joinError) {
+            notifier.error(joinError);
+            joinModal.show();
+            hasErrors = true;
+        }
+    }
+
+    // CONFESS FORM - EMAIL STATUS (SUCCESS/ERROR)
+    const emailStatusElement = document.getElementById('emailStatus');
+    if (emailStatusElement) {
+        const emailStatus = emailStatusElement.textContent.trim();
+        if (emailStatus) {
+            if (emailStatus.toLowerCase().includes('success') ||
+                emailStatus.toLowerCase().includes('sent') ||
+                emailStatus.toLowerCase().includes('submitted')) {
+                notifier.success(emailStatus);
+                hasConfessSuccess = true;
+                clearConfessForm();
+            } else {
+                notifier.error(emailStatus);
+                hasConfessErrors = true;
+            }
+        }
+    }
+
+    // OPEN MODALS IF THERE ARE ERRORS (NOT SUCCESS)
+    if (hasConfessErrors && !hasConfessSuccess) {
+        confessModal.show();
+    }
+
+    if (hasRequestSongErrors && !hasRequestSongSuccess) {
+        requestSongModal.show();
+    }
+
+
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 
 // ============================================
@@ -1102,4 +1081,51 @@ function dashboardLogout() {
     // Allow navigation for logout
     window.allowNavigation = true;
     window.location.href = '/app/music/public/logout';
+}
+
+// ============================================
+// ALPHANUMERIC VALIDATION FOR ROOM NAMES
+// ============================================
+function addAlphanumericValidation(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const errorMessage = input.nextElementSibling;
+
+    // Prevent non-alphanumeric characters from being typed
+    input.addEventListener('keydown', function(e) {
+        // Allow control keys
+        const controlKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+        if (controlKeys.includes(e.key)) return;
+
+        // Block space
+        if (e.key === ' ' || e.keyCode === 32) {
+            e.preventDefault();
+            return;
+        }
+
+        // Block special characters (allow only a-z, A-Z, 0-9)
+        if (!/^[a-zA-Z0-9]$/.test(e.key)) {
+            e.preventDefault();
+        }
+    });
+
+    // Remove invalid characters if pasted
+    input.addEventListener('input', function(e) {
+        const invalidChars = /[^a-zA-Z0-9]/g;
+        if (invalidChars.test(this.value)) {
+            this.value = this.value.replace(invalidChars, '');
+            if (errorMessage) {
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 2000);
+            }
+        }
+    });
+
+    // Clean on blur
+    input.addEventListener('blur', function() {
+        this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+    });
 }

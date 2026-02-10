@@ -215,7 +215,17 @@
                         <label for="roomName" class="form-label">
                             <i class="bi bi-tag me-2"></i>Room Name
                         </label>
-                        <input type="text" class="form-control" id="roomName" th:field="*{roomName}" placeholder="Enter room name">
+                        <input type="text"
+                               class="form-control"
+                               id="roomName"
+                               th:field="*{roomName}"
+                               placeholder="Enter room name"
+                               pattern="^[a-zA-Z0-9]+$"
+                               title="Room name must contain only letters and numbers, no spaces or special characters"
+                               required>
+                        <span class="error-message" style="color: red; font-size: 12px; display: none;">
+    Room name cannot contain spaces or special characters
+</span>
                     </div>
                     <div class="mb-4">
                         <label for="maxCount" class="form-label">
@@ -339,7 +349,17 @@
                             <label for="confessRoomName" class="form-label">
                                 <i class="bi bi-tag me-2"></i>Room Name(Only alphanumeric)
                             </label>
-                            <input type="text" class="form-control" id="confessRoomName" th:field="*{roomName}" placeholder="Enter room name">
+                            <input type="text"
+                                   class="form-control"
+                                   id="confessRoomName"
+                                   th:field="*{roomName}"
+                                   placeholder="Enter room name"
+                                   pattern="^[a-zA-Z0-9]+$"
+                                   title="Only alphanumeric characters allowed"
+                                   required>
+                            <span class="error-message" style="color: red; font-size: 12px; display: none;">
+    Only alphanumeric characters allowed
+</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="receiverAlias" class="form-label">

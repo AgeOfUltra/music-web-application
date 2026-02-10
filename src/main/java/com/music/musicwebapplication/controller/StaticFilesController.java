@@ -37,4 +37,14 @@ public class StaticFilesController {
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(content);
     }
+    @GetMapping(value = "/appkey.txt", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getApiKey() throws IOException {
+        Resource resource = new ClassPathResource("static/public/app-key.txt");
+
+        String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(content);
+    }
 }
