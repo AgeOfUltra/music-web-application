@@ -223,7 +223,77 @@ input:focus {
 .toast-close:hover {
     opacity: 0.8;
 }
+/* Password toggle styles */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
 
+.password-input-wrapper input {
+    padding-right: 45px;
+    width: 100%;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: #333;
+}
+
+.password-toggle:focus {
+    outline: none;
+}
+
+.password-toggle i {
+    font-size: 1.2rem;
+}
+
+/* Password requirements styles */
+.password-requirements {
+    margin-top: 8px;
+}
+
+.password-requirements ul li {
+    transition: color 0.3s ease;
+}
+
+.password-requirements ul li.valid {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.password-requirements ul li.invalid {
+    color: #dc3545;
+}
+
+/* Error message styles */
+.error-message {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+/* Input validation states */
+input.invalid {
+    border-color: #dc3545;
+}
+
+input.valid {
+    border-color: #28a745;
+}
 @media (max-width: 576px) {
     .toast-container-custom {
         left: 10px;

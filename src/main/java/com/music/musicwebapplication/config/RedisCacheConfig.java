@@ -57,11 +57,11 @@ public class RedisCacheConfig {
         LettuceConnectionFactory factory = new LettuceConnectionFactory(serverConfig, clientConfig);
 
         // Log configuration for debugging
-        log.info("=== Redis Connection Factory Configuration ===");
+        log.debug("=== Redis Connection Factory Configuration ===");
         log.info("Host: {}", redisHost);
-        log.info("Port: {}", redisPort);
-        log.info("Database: {}", redisDatabase);
-        log.info("SSL Enabled: {}", factory.isUseSsl());
+        log.debug("Port: {}", redisPort);
+        log.debug("Database: {}", redisDatabase);
+        log.debug("SSL Enabled: {}", factory.isUseSsl());
         log.info("=============================================");
 
         return factory;

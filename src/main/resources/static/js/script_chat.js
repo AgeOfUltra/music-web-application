@@ -901,7 +901,7 @@ class InternetSpeedMonitor {
             const startTime = performance.now();
 
             // Ping test using a small resource
-            const response = await fetch('/favicon.ico?t=' + Date.now(), {
+            const response = await fetch('/public/internal/speed/test?t=' + Date.now(), {
                 method: 'GET',
                 cache: 'no-cache'
             });

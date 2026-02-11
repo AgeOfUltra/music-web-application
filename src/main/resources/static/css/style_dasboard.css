@@ -1,13 +1,17 @@
+/* ============================================
+   CSS VARIABLES
+   ============================================ */
 :root {
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    /*--card-bg: rgb(21, 138, 211); !*looks nice card constant*!*/
-    /*--card-bg: rgba(255, 255, 255, 0.1);*/
     --glass-bg: rgba(255, 255, 255, 0.1);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
 }
 
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
 body {
     font-family: "Alan Sans", sans-serif;
     background: linear-gradient(135deg, #023a6e 0%, #023d61 100%);
@@ -15,26 +19,24 @@ body {
     min-height: 100vh;
 }
 
-@keyframes gradientShift {
-    0%, 100% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
+.text-muted {
+    color: white !important;
 }
 
-/* Glass morphism navbar */
-/* Header Styling */
+/* ============================================
+   HEADER STYLES
+   ============================================ */
 .header {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(15px);
-    border: none;
-    border-bottom: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 4px 20px rgba(31, 38, 135, 0.15);
     padding: 10px 5px;
     margin: 0 5px;
     border-radius: 16px;
+    position: relative;
+    z-index: 1000;
 }
 
 .logo {
@@ -67,15 +69,19 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
-/* Enhanced cards */
+
+/* ============================================
+   CARD STYLES
+   ============================================ */
 .card {
-    background: rgba(255, 255, 255, 0.15); !important;
-    backdrop-filter: blur(15px)  !important;
-    -webkit-backdrop-filter: blur(15px)  !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
     border-radius: 24px;
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
     color: white !important;
+    transition: all 0.3s ease;
 }
 
 .card:hover {
@@ -96,6 +102,16 @@ body {
     color: white;
 }
 
+.disabled-card {
+    opacity: 0.5;
+    filter: grayscale(100%);
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
 .btn-gradient {
     background: var(--primary-gradient);
     border: none;
@@ -128,11 +144,10 @@ body {
 .btn-gradient:hover::before {
     left: 100%;
 }
-.text-muted {
-    color: white !important;
-}
 
-/* Modal styling */
+/* ============================================
+   MODAL STYLES
+   ============================================ */
 .modal-content {
     border-radius: 20px;
     border: none;
@@ -164,57 +179,33 @@ body {
     margin-bottom: 8px;
 }
 
-/* Toast styling */
-.toast {
-    border-radius: 12px;
-    border: none;
-    box-shadow: var(--shadow-lg);
+.error-message {
+    color: red;
+    font-size: 12px;
+    display: none;
 }
 
-.toast-header {
-    border-radius: 12px 12px 0 0;
-    font-weight: 600;
-}
-
-/* Badge styling */
-.badge {
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-/* Icon colors */
-.text-primary-gradient {
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.disabled-card {
-    opacity: 0.5;
-    filter: grayscale(100%);
-    pointer-events: none;
-    cursor: not-allowed;
-}
-
-
-/* Song Autocomplete Dropdown Styling */
-
-
+/* ============================================
+   SONG AUTOCOMPLETE STYLES
+   ============================================ */
 #songSuggestions {
+    position: absolute;
+    width: 100%;
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-height: 300px;
     overflow-y: auto;
     margin-top: 4px;
     display: none;
+    z-index: 1000;
 }
 
 #songSuggestions.show {
     display: block;
 }
+
 .suggestion-item {
     padding: 12px 16px;
     cursor: pointer;
@@ -224,57 +215,37 @@ body {
     font-size: 14px;
     background: white;
 }
+
 .suggestion-item:last-child {
     border-bottom: none;
 }
 
 .suggestion-item:hover {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-
     color: white;
-
     transform: translateX(4px);
 }
-
 
 .suggestion-item:active {
     background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
 }
-/* Scrollbar styling for suggestions */
+
+/* Scrollbar for suggestions */
 #songSuggestions::-webkit-scrollbar {
     width: 6px;
 }
-
 
 #songSuggestions::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 0 0.375rem 0.375rem 0;
 }
+
 #songSuggestions::-webkit-scrollbar-thumb {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 3px;
 }
 
-
-#songSuggestions::-webkit-scrollbar-thumb :hover {
-    background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
-
-}
-
-
-/* No results message */
-
-
-.no-suggestions {
-    padding: 12px 16px;
-    color: #6c757d;
-    font-style: italic;
-    text-align: center;
-    font-size: 14px;
-}
-
-/* Loading state */
-
+.no-suggestions,
 .suggestions-loading {
     padding: 12px 16px;
     color: #6c757d;
@@ -282,101 +253,185 @@ body {
     font-size: 14px;
 }
 
+.no-suggestions {
+    font-style: italic;
+}
 
 .suggestions-loading i {
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
-    from {
-        transform: rotate(0deg);
+/* ============================================
+   MOBILE HAMBURGER MENU STYLES - FIXED
+   ============================================ */
+.hamburger-btn {
+    padding: 8px 12px;
+    font-size: 1.5rem;
+    line-height: 1;
+}
 
+.hamburger-btn i {
+    transition: transform 0.3s ease;
+}
+
+.hamburger-btn:hover i {
+    transform: rotate(90deg);
+}
+
+/* Mobile menu overlay - NOW A DROPDOWN */
+.mobile-menu-overlay {
+    position: fixed;
+    top: 95px; /* Position below header */
+    right: 10px; /* Aligned to right side */
+    width: 280px;
+    max-height: 0; /* Start collapsed */
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mobile-menu-overlay.active {
+    max-height: 200px; /* Expand when active */
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Remove the backdrop */
+.mobile-menu-overlay::before {
+    display: none;
+}
+
+.mobile-menu-content {
+    padding: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+.mobile-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    margin-bottom: 15px;
+}
+
+.mobile-menu-header h5 {
+    color: #333;
+    font-weight: 700;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.btn-close-mobile {
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    color: #333;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-close-mobile:hover {
+    color: #667eea;
+    transform: rotate(90deg);
+}
+
+.mobile-menu-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.btn-logout-mobile {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-logout-mobile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-logout-mobile:active {
+    transform: translateY(0);
+}
+
+/* Remove body scroll lock when menu is open */
+body.menu-open {
+    overflow: auto; /* Changed from hidden */
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+@media (min-width: 768px) {
+    .mobile-menu-overlay {
+        display: none;
     }
-    to {
+}
 
-        transform: rotate(360deg);
-
+@media (max-width: 767px) {
+    .header {
+        padding: 10px 15px;
+        margin-bottom: 10px; /* Add spacing */
     }
 
-}
-/* Ensure the input has proper focus styling */
-#songName:focus + #songSuggestions {
-    display: block;
-}
+    .logo {
+        height: 60px;
+    }
 
-/* Make sure the parent container handles overflow properly */
-.song-input-wrapper {
-    position: relative;
-}
+    .app-title {
+        font-size: 1.1rem !important;
+    }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
     .card-icon {
         width: 50px;
         height: 50px;
         font-size: 24px;
     }
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 10px;
-        gap: 4px;
-        min-height: 75px;
-        border-radius: 0 0 12px 12px;
-        flex-wrap: nowrap;
-        overflow: hidden;
+
+    /* Adjust top position based on header height */
+    .mobile-menu-overlay {
+        top: 85px; /* Adjust if needed */
     }
+}
 
-    .header-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        min-width: 0;
-    }
-
-
-    .logo {
-        height: 50px;
-        width: auto;
-        flex-shrink: 0;
-    }
-
-
-    .app-title {
-        font-size: 10px;
-        font-weight: 600;
-        color: #fff;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        white-space: wrap;!important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-shrink: 0;
-    }
-
-
-    .header .btn-secondary,
-    .header .logout-btn {
-        font-size: 12px;
-        padding: 5px 10px;
-        min-width: 55px;
-        flex-shrink: 0;
-    }
-
-
-    .header .btn-secondary:hover,
-    .header .logout-btn:hover {
-
-        transform: translateY(-1px);
-
+/* Extra small screens */
+@media (max-width: 390px) {
+    .mobile-menu-overlay {
+        top: 80px;
+        right: 5px;
+        width: calc(100% - 10px);
+        max-width: 320px;
     }
 }

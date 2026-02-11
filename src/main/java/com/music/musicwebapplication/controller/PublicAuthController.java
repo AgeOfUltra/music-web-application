@@ -108,8 +108,8 @@ public class PublicAuthController {
         if (response.getStatusCode() == HttpStatus.OK) {
             String token = (String) responseBody.get("token");
             log.debug("JWT token generated for user: {}", loginUser.getUsername());
-
-            ResponseCookie cookie = ResponseCookie.from("jwt", token).httpOnly(true).secure(false).path("/").maxAge(60 * 62)         // 1 hour
+            int maxAge = (6 * 60 * 60) + (2 * 60);
+            ResponseCookie cookie = ResponseCookie.from("jwt", token).httpOnly(true).secure(true).path("/").maxAge(maxAge)         // 1 hour
                     .sameSite("Lax").build();
 
             responseServlet.addHeader("Set-Cookie", cookie.toString());

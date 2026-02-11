@@ -87,7 +87,7 @@ public class UserSessionService {
         session.setToken(token);
         session.setUsername(username);
         session.setRoomName(null);
-        session.setAbsoluteExpiry(now.plusHours(1)); // for testing
+        session.setAbsoluteExpiry(now.plusHours(6));
         session.setSessionExpired(false);
         try{
             saveUserSessionInDbWithRetry(session);

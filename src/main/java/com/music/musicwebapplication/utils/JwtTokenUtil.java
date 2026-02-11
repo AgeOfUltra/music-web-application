@@ -13,7 +13,7 @@ import java.util.Date;
 @Slf4j
 public class JwtTokenUtil {
 
-    private static final long EXPIRY_DATE = 1000 * 60 *60; // 1 hour
+    private static final long EXPIRY_DATE = 1000 * 60 *60 * 6; // 6 hour
 
     @Value("${jwt.security.secret-key:your-secret-key-here-min-256-bits-long}")
     private String secretString;

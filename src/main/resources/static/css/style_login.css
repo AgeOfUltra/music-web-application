@@ -189,6 +189,42 @@ input:focus {
     }
 }
 
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    padding-right: 45px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: #333;
+}
+
+.password-toggle:focus {
+    outline: none;
+}
+
+.password-toggle i {
+    font-size: 1.2rem;
+}
+
 .toast-custom.removing {
     animation: slideOut 0.3s ease-out;
 }

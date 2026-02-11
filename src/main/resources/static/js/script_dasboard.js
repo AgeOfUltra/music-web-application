@@ -1,3 +1,8 @@
+const DEBUG = false; // Set to false to disable all console.logs
+
+if (!DEBUG) {
+    console.log = function() {};
+}
 // Bootstrap Toast notification system
 class ToastNotifier {
     constructor() {
@@ -347,7 +352,7 @@ class InternetSpeedMonitor {
             const startTime = performance.now();
 
             // Ping test using a small resource
-            const response = await fetch('/favicon.ico?t=' + Date.now(), {
+            const response = await fetch('/public/internal/speed/test?ts=' + Date.now(), {
                 method: 'GET',
                 cache: 'no-cache'
             });
@@ -1129,3 +1134,58 @@ function addAlphanumericValidation(inputId) {
         this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
     });
 }
+// ============================================
+// MOBILE HAMBURGER MENU
+// ============================================
+
+(function setupMobileMenu() {
+    const hamburgerToggle = document.getElementById('hamburgerToggle');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const closeMenu = document.getElementById('closeMenu');
+
+    if (!hamburgerToggle || !mobileMenuOverlay || !closeMenu) {
+        console.log('Mobile menu elements not found');
+        return;
+    }
+
+    // Toggle menu
+    hamburgerToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mobileMenuOverlay.classList.toggle('active');
+        console.log('📱 Mobile menu toggled');
+    });
+
+    // Close menu when clicking close button
+    closeMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mobileMenuOverlay.classList.remove('active');
+        console.log('📱 Mobile menu closed');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (mobileMenuOverlay.classList.contains('active') &&
+            !mobileMenuOverlay.contains(e.target) &&
+            !hamburgerToggle.contains(e.target)) {
+            mobileMenuOverlay.classList.remove('active');
+            console.log('📱 Mobile menu closed via outside click');
+        }
+    });
+
+    // Close menu when clicking logout
+    const logoutBtn = mobileMenuOverlay.querySelector('.btn-logout-mobile');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            mobileMenuOverlay.classList.remove('active');
+        });
+    }
+
+    // Close menu on window resize if going to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 768) {
+            mobileMenuOverlay.classList.remove('active');
+        }
+    });
+
+    console.log('✅ Mobile hamburger menu initialized');
+})();

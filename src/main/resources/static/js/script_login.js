@@ -2,7 +2,7 @@
 // JWT TOKEN CLEANUP ON LOGIN PAGE
 // ============================================
 
-const DEBUG = false; // Set to false to disable all console.logs
+const DEBUG = false;
 
 if (!DEBUG) {
     console.log = function() {};
@@ -286,6 +286,38 @@ const notifier = new ToastNotifier();
     setupBeforeUnloadPrevention();
 
     console.log('✅ Login page navigation prevention active');
+})();
+
+
+// ============================================
+// PASSWORD VISIBILITY TOGGLE
+// ============================================
+
+(function setupPasswordToggle() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (togglePassword && passwordField && toggleIcon) {
+        togglePassword.addEventListener('click', function() {
+            // Toggle password visibility
+            const type = passwordField.type === 'password' ? 'text' : 'password';
+            passwordField.type = type;
+
+            // Toggle icon
+            if (type === 'password') {
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            } else {
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            }
+
+            console.log('👁️ Password visibility toggled');
+        });
+
+        console.log('✅ Password toggle initialized');
+    }
 })();
 
 // ============================================

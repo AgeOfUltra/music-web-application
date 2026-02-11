@@ -40,7 +40,7 @@ public class ConfessDto {
     private String singerName;
 
     @NotBlank(message = "Please enter singer name to identify the song")
-    @Size(min= 20,message = "Provide at-least 20 letters to express")
+    @Size(min= 650,message = "Provide at-least 100 words to express you feelings")
     private String message;
 
 
