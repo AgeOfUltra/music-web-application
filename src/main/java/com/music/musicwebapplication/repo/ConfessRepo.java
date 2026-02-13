@@ -1,6 +1,7 @@
 package com.music.musicwebapplication.repo;
 
 import com.music.musicwebapplication.entity.Confess;
+import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.enums.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,4 +26,10 @@ public interface ConfessRepo extends JpaRepository<Confess,Long> {
 
     @Query("Select c from Confess c where c.createdAt > :time and c.initiatedBy= :username")
     List<Confess> findRecordsWithIn24Hours(@Param("time") LocalDateTime time ,@Param("username") String username);
+
+//    Optional<RequestSong> getConfessByCreatedAtBefore(LocalDateTime createdAtBefore);
+
+
+    @Query("select s from Confess s where s.initiatedBy = :user and s.createdAt >= :threshold")
+    Optional<Confess> getConfessByCreatedAtAfterAndInitiatedBy(@Param("user") String user, @Param("threshold") LocalDateTime threshold);
 }

@@ -4,7 +4,9 @@ import com.music.musicwebapplication.entity.RequestSong;
 import com.music.musicwebapplication.enums.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +18,9 @@ public interface SongRequestRepo extends JpaRepository<RequestSong,Long> {
 
     @Query("Select s from RequestSong s where s.status = 'UPLOADED' or s.status = 'REJECTED'")
     Optional<List<RequestSong>> findRequestSongByUploadedAndRejected();
+
+//    Optional<RequestSong> getRequestSongByCreatedAtBefore(LocalDateTime createdAtBefore);
+
+    @Query("select s from RequestSong s where s.requestor = :user and s.createdAt >= :threshold")
+    Optional<RequestSong> getRequestSongByCreatedAtAfterAndRequestor(@Param("user")String user, @Param("threshold") LocalDateTime threshold);
 }

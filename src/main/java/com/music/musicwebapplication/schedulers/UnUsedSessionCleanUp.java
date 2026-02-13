@@ -17,10 +17,12 @@ public class UnUsedSessionCleanUp {
 
     private final UserSessionService sessionService;
     private final PublicAuthService loginService;
+    private final UtilityService service;
 
-    public UnUsedSessionCleanUp(UserSessionService sessionService, PublicAuthService loginService) {
+    public UnUsedSessionCleanUp(UserSessionService sessionService, PublicAuthService loginService, UtilityService service) {
         this.sessionService = sessionService;
         this.loginService = loginService;
+        this.service = service;
     }
 
     @Scheduled(cron = "0 */30 * * * *")
@@ -71,11 +73,25 @@ public class UnUsedSessionCleanUp {
         Optional<List<User>> users = loginService.getOlderThan5MinUsers();
         if(users.isEmpty()){
             log.debug("No records to Update");
+            return;
         }
         users.get().forEach(
                 loginService::deleteWithRetry
         );
         log.info("CleanUpDone for Expired Verifications");
+    }
+
+    @Scheduled(cron = "0 */3 * * * *")
+    public void deleteInactiveUserAfterLogin(){
+        Optional<List<UserSession>> inActiveUsers = Optional.ofNullable(service.getInactiveUsers());
+        if(inActiveUsers.isEmpty()){
+            log.info("All are active user only.");
+            return;
+        }
+
+            inActiveUsers.get().forEach(sessionService::deleteUserSessionWithRetry);
+        log.info("cleaned up done for in active users");
+
     }
 
 

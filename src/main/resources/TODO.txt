@@ -16,3 +16,12 @@ New Goal:
 UI change
 7) Need to change the logo and Color for other and header
 
+
+
+// if 24 hours exceeded and still in any of the status like reading or sent or done then we need to remove those.
+
+email for if any new request comes.
+
+stop displaying the expired confess after 48 hours.
+
+need to create another server for song serving or need to migrate to another account.

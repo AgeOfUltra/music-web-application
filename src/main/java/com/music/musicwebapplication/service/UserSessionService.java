@@ -313,6 +313,10 @@ public class UserSessionService {
         return repo.findByUsername(username).map(UserSession::getToken);
     }
 
+    @Retryable(
+            retryFor = {SocketException.class, SocketTimeoutException.class},
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     @Transactional
     public void deleteUserSession(String username) {
 //        log.info("Deleting session for user: {}", username);
@@ -412,5 +416,14 @@ public class UserSessionService {
 
         log.info("Intentional logout flag updated to {} for user: {}", newFlag, session.getUsername());
         return "SUCCESS";
+    }
+
+    @Retryable(
+            retryFor = {SocketException.class, SocketTimeoutException.class},
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    @Transactional
+    public void deleteUserSessionWithRetry(UserSession inactive){
+        repo.delete(inactive);
     }
 }

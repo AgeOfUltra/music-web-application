@@ -37,4 +37,7 @@ public interface UserSessionRepo extends JpaRepository<UserSession,Long> {
 
     @Query("SELECT s FROM UserSession s WHERE s.absoluteExpiry < :now AND s.sessionExpired = false")
     List<UserSession> findByAbsoluteExpiryBeforeAndSessionExpiredFalse(@Param("now") LocalDateTime now);
+
+    @Query("SELECT s from UserSession s where s.roomName is null and s.lastAccessedAt < :threshold")
+    List<UserSession> getUserSessionByRoomNameEmptyAndLastAccessedAt(@Param("threshold") LocalDateTime threshold);
 }

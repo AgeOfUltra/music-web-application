@@ -256,14 +256,14 @@ public class PublicAuthService {
 //            Case 1 : User not registered.
             if(currentUse.isEmpty()){
                 log.warn("Authentication failed - user not found: {}", loginUser.getUsername());
-                response.put("UserError", "Try gain After SingUp");
+                response.put("UserError", "Try again After Sign Up");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 
 //            Case 2 : User registered but not verified
             if(!currentUse.get().isVerified()){
                 log.warn("Authentication failed - user not verified: {}", loginUser.getUsername());
-                response.put("UserError", "Kindly Validate the your account");
+                response.put("UserError", "Validate the your account");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
@@ -272,7 +272,7 @@ public class PublicAuthService {
 
             if (loggedUser.isPresent()) {
                 log.warn("Authentication failed - user already logged in: {}", loginUser.getUsername());
-                response.put("UserError", "User already logged In!");
+                response.put("UserError", "User login blocked, Try after 30 mins");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // <— map, not String
             }
 
