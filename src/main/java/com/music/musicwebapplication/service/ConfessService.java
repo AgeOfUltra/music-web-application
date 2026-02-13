@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -221,7 +223,14 @@ public class ConfessService {
         log.debug("Fetching all confess requests for user: {}", initiatedBy);
         List<ConfessDto> requests = repo.findByInitiatedBy(initiatedBy)
                 .stream()
-                .map(this::toDtoConvert)
+                .filter(c -> {
+                        if(c.getStatus().equals(Status.EXPIRED)){
+                            long daysSinceModified = ChronoUnit.DAYS.between(c.getModifiedAt(), LocalDateTime.now());
+                            return daysSinceModified <= 5;
+                        }
+                        return true;
+    }
+                ).map(this::toDtoConvert)
                 .toList();
         log.info("Retrieved {} confess requests for user: {}", requests.size(), initiatedBy);
         return Optional.of(requests);

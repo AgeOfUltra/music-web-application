@@ -33,6 +33,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.InputStream;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Slf4j
@@ -338,6 +340,14 @@ public class AudioStreamService {
         log.debug("Fetching all songs for requestor: {}", requestor);
         Optional<List<RequestSongDto>> result = Optional.of(repo.findSongsByRequestor(requestor)
                 .map(songs -> songs.stream()
+                        .filter(c -> {
+                                    if(c.getStatus().equals(Status.EXPIRED)){
+                                        long daysSinceModified = ChronoUnit.DAYS.between(c.getLastAccessedAt(), LocalDateTime.now());
+                                        return daysSinceModified <= 5;
+                                    }
+                                    return true;
+                                }
+                        )
                         .map(song -> objectMapper.convertValue(song, RequestSongDto.class))
                         .toList())
                 .orElse(Collections.emptyList()));

@@ -20,11 +20,9 @@ import java.util.Optional;
 public class PublicConfessionController {
     private final ConfessService service ;
 
-    private final SongCacheService songService;
 
-    public PublicConfessionController(ConfessService service, SongCacheService songService) {
+    public PublicConfessionController(ConfessService service) {
         this.service = service;
-        this.songService = songService;
         log.debug("PublicConfessionController initialized");
     }
 
