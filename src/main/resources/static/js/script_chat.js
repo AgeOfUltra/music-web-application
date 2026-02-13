@@ -521,12 +521,15 @@ function showNavigationWarningPopup() {
         left: 50%;
         transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-        padding: 30px 40px;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        padding: 1.5rem 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 1.25rem 3.75rem rgba(0, 0, 0, 0.5);
         border: 2px solid #7c3aed;
         z-index: 99999;
-        max-width: 500px;
+        max-width: 90vw;
+        width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
         animation: slideIn 0.3s ease-out;
     `;
 
@@ -549,21 +552,108 @@ function showNavigationWarningPopup() {
                     transform: translate(-50%, -60%);
                 }
             }
+
+            #navigationWarningPopup {
+                font-size: 1rem;
+            }
+
+            #navigationWarningPopup h2 {
+                font-size: 1.375rem;
+            }
+
+            #navigationWarningPopup .warning-icon {
+                font-size: 3rem;
+            }
+
+            #navigationWarningPopup .warning-text {
+                font-size: 0.9rem;
+            }
+
+            #navigationWarningPopup button {
+                font-size: 1rem;
+            }
+
+            /* Mobile styles */
+            @media (max-width: 768px) {
+                #navigationWarningPopup {
+                    padding: 1.25rem 1.5rem;
+                    max-width: 92vw;
+                    border-radius: 0.75rem;
+                }
+
+                #navigationWarningPopup h2 {
+                    font-size: 1.125rem;
+                    margin-bottom: 0.75rem;
+                }
+
+                #navigationWarningPopup .warning-icon {
+                    font-size: 2.5rem;
+                    margin-bottom: 0.75rem;
+                }
+
+                #navigationWarningPopup .warning-content {
+                    margin-bottom: 1.25rem;
+                }
+
+                #navigationWarningPopup .warning-text {
+                    font-size: 0.85rem;
+                    line-height: 1.5;
+                }
+
+                #navigationWarningPopup .warning-text p {
+                    margin: 0.5rem 0;
+                }
+
+                #navigationWarningPopup button {
+                    padding: 0.75rem 1.5rem;
+                    font-size: 0.95rem;
+                }
+            }
+
+            /* Extra small mobile */
+            @media (max-width: 480px) {
+                #navigationWarningPopup {
+                    padding: 1rem 1.25rem;
+                    max-width: 95vw;
+                }
+
+                #navigationWarningPopup h2 {
+                    font-size: 1rem;
+                }
+
+                #navigationWarningPopup .warning-icon {
+                    font-size: 2rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                #navigationWarningPopup .warning-text {
+                    font-size: 0.8rem;
+                }
+
+                #navigationWarningPopup .warning-text strong {
+                    font-size: 0.8rem;
+                }
+
+                #navigationWarningPopup button {
+                    padding: 0.65rem 1.25rem;
+                    font-size: 0.9rem;
+                }
+            }
         </style>
         
         <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
-            <h2 style="color: #fff; margin: 0 0 15px 0; font-size: 22px; font-weight: 600;">
+            <div class="warning-icon" style="margin-bottom: 0.9375rem;">⚠️</div>
+            <h2 style="color: #fff; margin: 0 0 0.9375rem 0; font-weight: 600;">
                 Important Notice
             </h2>
-            <div style="color: #a0a0a0; line-height: 1.6; margin-bottom: 25px; text-align: left;">
-                <p style="margin: 10px 0;">
+            <div class="warning-content warning-text" style="color: #a0a0a0; line-height: 1.6; margin-bottom: 1.5625rem; text-align: left;">
+                <p style="margin: 0.625rem 0;">
                     <strong style="color: #ef4444;">⚠ Reloading this page</strong> will log you out of the room.
                 </p>
-                <p style="margin: 10px 0;">
+                <p style="margin: 0.625rem 0;">
                     <strong style="color: #ef4444;">⚠ Using browser back/forward buttons</strong> will log you out.
                 </p>
-                <p style="margin: 10px 0; color: #10b981;">
+                <p style="margin: 0.625rem 0; color: #10b981;">
                     ✓ Use the "Back to Dashboard" button instead.
                 </p>
             </div>
@@ -571,10 +661,9 @@ function showNavigationWarningPopup() {
                 background: #7c3aed;
                 color: white;
                 border: none;
-                padding: 12px 30px;
-                border-radius: 8px;
+                padding: 0.75rem 1.875rem;
+                border-radius: 0.5rem;
                 cursor: pointer;
-                font-size: 16px;
                 font-weight: 600;
                 width: 100%;
                 transition: all 0.2s;
@@ -901,7 +990,7 @@ class InternetSpeedMonitor {
             const startTime = performance.now();
 
             // Ping test using a small resource
-            const response = await fetch('/public/internal/speed/test?t=' + Date.now(), {
+            const response = await fetch('/public/internal/speed/test?ts=' + Date.now(), {
                 method: 'GET',
                 cache: 'no-cache'
             });
