@@ -78,6 +78,344 @@ let currentTabId = null;
 let isTabActive = true;
 let tabCheckInterval = null;
 let hasShownWarning = false; // Prevent warning spam
+// ==================== MOBILE PLAYLIST DRAWER JAVASCRIPT ====================
+// Add this to your existing JavaScript file
+
+(function() {
+    'use strict';
+
+    // ==================== DRAWER ELEMENTS ====================
+    const mobilePlaylistDrawer = document.getElementById('mobilePlaylistDrawer');
+    const playlistDrawerOverlay = document.getElementById('playlistDrawerOverlay');
+    const mobileOpenPlaylistBtn = document.getElementById('mobileOpenPlaylistBtn');
+    const closePlaylistDrawerBtn = document.getElementById('closePlaylistDrawer');
+
+    // Mobile controls
+    const mobilePrevBtn2 = document.getElementById('mobilePrevBtn2');
+    const mobileNextBtn2 = document.getElementById('mobileNextBtn2');
+    const mobilePrevPageBtn = document.getElementById('mobilePrevBtn');
+    const mobileNextPageBtn = document.getElementById('mobileNextBtn');
+
+    // ==================== DRAWER CONTROL FUNCTIONS ====================
+
+    /**
+     * Opens the mobile playlist drawer
+     */
+    function openPlaylistDrawer() {
+        if (!mobilePlaylistDrawer || !playlistDrawerOverlay) return;
+
+        // Sync content before opening
+        syncMobilePlaylist();
+
+        // Add open classes
+        mobilePlaylistDrawer.classList.add('open');
+        playlistDrawerOverlay.classList.add('active');
+
+        // Prevent background scroll on mobile
+        document.body.style.overflow = 'hidden';
+
+        console.log('Mobile playlist drawer opened');
+    }
+
+    /**
+     * Closes the mobile playlist drawer
+     */
+    function closePlaylistDrawer() {
+        if (!mobilePlaylistDrawer || !playlistDrawerOverlay) return;
+
+        // Remove open classes
+        mobilePlaylistDrawer.classList.remove('open');
+        playlistDrawerOverlay.classList.remove('active');
+
+        // Restore background scroll
+        document.body.style.overflow = '';
+
+        console.log('Mobile playlist drawer closed');
+    }
+
+    // ==================== EVENT LISTENERS ====================
+
+    // Open drawer button
+    if (mobileOpenPlaylistBtn) {
+        mobileOpenPlaylistBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openPlaylistDrawer();
+        });
+    }
+
+    // Close drawer button
+    if (closePlaylistDrawerBtn) {
+        closePlaylistDrawerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closePlaylistDrawer();
+        });
+    }
+
+    // Close on overlay click
+    if (playlistDrawerOverlay) {
+        playlistDrawerOverlay.addEventListener('click', (e) => {
+            e.preventDefault();
+            closePlaylistDrawer();
+        });
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobilePlaylistDrawer?.classList.contains('open')) {
+            closePlaylistDrawer();
+        }
+    });
+
+    // ==================== SWIPE TO CLOSE ====================
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
+
+    if (mobilePlaylistDrawer) {
+        // Touch start
+        mobilePlaylistDrawer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        // Touch end
+        mobilePlaylistDrawer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipeGesture();
+        }, { passive: true });
+    }
+
+    /**
+     * Handles swipe gesture to close drawer
+     */
+    function handleSwipeGesture() {
+        const swipeDistanceX = touchEndX - touchStartX;
+        const swipeDistanceY = Math.abs(touchEndY - touchStartY);
+
+        // Only close if:
+        // 1. Swiped right more than 100px
+        // 2. Horizontal swipe is greater than vertical (to avoid closing on scroll)
+        if (swipeDistanceX > 100 && Math.abs(swipeDistanceX) > swipeDistanceY) {
+            closePlaylistDrawer();
+        }
+    }
+
+    // ==================== MOBILE NAVIGATION CONTROLS ====================
+
+    /**
+     * Sync mobile prev/next buttons with desktop functionality
+     * These should call your existing playPreviousSong() and playNextSong() functions
+     */
+    if (mobilePrevBtn2) {
+        mobilePrevBtn2.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Call your existing previous song function
+            if (typeof window.playPreviousSong === 'function') {
+                window.playPreviousSong();
+            } else {
+                console.warn('playPreviousSong function not found');
+            }
+        });
+    }
+
+    if (mobileNextBtn2) {
+        mobileNextBtn2.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Call your existing next song function
+            if (typeof window.playNextSong === 'function') {
+                window.playNextSong();
+            } else {
+                console.warn('playNextSong function not found');
+            }
+        });
+    }
+
+    // ==================== MOBILE PAGINATION CONTROLS ====================
+
+    if (mobilePrevPageBtn) {
+        mobilePrevPageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Call your existing previous page function
+            if (typeof window.previousPage === 'function') {
+                window.previousPage();
+                syncMobilePlaylist();
+            } else {
+                console.warn('previousPage function not found');
+            }
+        });
+    }
+
+    if (mobileNextPageBtn) {
+        mobileNextPageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Call your existing next page function
+            if (typeof window.nextPage === 'function') {
+                window.nextPage();
+                syncMobilePlaylist();
+            } else {
+                console.warn('nextPage function not found');
+            }
+        });
+    }
+
+    // ==================== SYNC MOBILE PLAYLIST ====================
+
+    /**
+     * Syncs mobile playlist drawer content with desktop song list
+     */
+    function syncMobilePlaylist() {
+        const mobileSongList = document.getElementById('mobileSongList');
+        const desktopSongList = document.querySelector('.left-panel .song-list');
+
+        if (!mobileSongList || !desktopSongList) {
+            console.warn('Could not find song list elements for sync');
+            return;
+        }
+
+        // Clone desktop song list HTML
+        mobileSongList.innerHTML = desktopSongList.innerHTML;
+
+        // Re-attach event listeners to cloned song items
+        attachMobileSongListeners(mobileSongList);
+
+        // Sync pagination info
+        syncPaginationInfo();
+
+        console.log('Mobile playlist synced');
+    }
+
+    /**
+     * Syncs pagination information
+     */
+    function syncPaginationInfo() {
+        // Sync page info
+        const mobilePageInfo = document.getElementById('mobilePageInfo');
+        const desktopPageInfo = document.querySelector('.left-panel .pagination-info');
+
+        if (mobilePageInfo && desktopPageInfo) {
+            mobilePageInfo.textContent = desktopPageInfo.textContent;
+        }
+
+        // Sync page counter
+        const mobilePageCounter = document.getElementById('mobilePageCounter');
+        const desktopPageCounter = document.querySelector('.left-panel .page-counter');
+
+        if (mobilePageCounter && desktopPageCounter) {
+            mobilePageCounter.textContent = desktopPageCounter.textContent;
+        }
+
+        // Sync button states
+        const desktopPrevBtn = document.querySelector('.left-panel .nav-button:first-child');
+        const desktopNextBtn = document.querySelector('.left-panel .nav-button:last-child');
+
+        if (mobilePrevPageBtn && desktopPrevBtn) {
+            mobilePrevPageBtn.disabled = desktopPrevBtn.disabled;
+        }
+
+        if (mobileNextPageBtn && desktopNextBtn) {
+            mobileNextPageBtn.disabled = desktopNextBtn.disabled;
+        }
+    }
+
+    /**
+     * Attaches event listeners to mobile song list items
+     * @param {HTMLElement} container - The container element with song items
+     */
+    function attachMobileSongListeners(container) {
+        // Find all song items
+        const songItems = container.querySelectorAll('.song-item');
+
+        songItems.forEach((item) => {
+            // Song click listener
+            const songContent = item.querySelector('.song-item-content');
+            if (songContent) {
+                songContent.addEventListener('click', function() {
+                    const songItem = this.closest('.song-item');
+
+                    // ✅ Build COMPLETE song object
+                    const song = {
+                        fileName: songItem.dataset.filename,
+                        songName: songItem.dataset.songname,
+                        hero: songItem.dataset.hero || '',
+                        heroine: songItem.dataset.heroine || '',
+                        singer: songItem.dataset.singer || '',
+                        movie: songItem.dataset.movie || '',
+                        language: songItem.dataset.language || ''
+                    };
+
+                    // ✅ Call with complete object
+                    if (typeof window.playSong === 'function') {
+                        window.playSong(song);
+                    }
+                    closePlaylistDrawer();
+                });
+            }
+
+            // Favorite heart listener
+            const favoriteBtn = item.querySelector('.favorite-heart');
+            if (favoriteBtn) {
+                favoriteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    handleFavoriteToggle(this);  // ✅ ONE LINE - REUSES EXISTING FUNCTION!
+                });
+            }
+        });
+    }
+
+    // ==================== AUTO-SYNC ON CHANGES ====================
+
+    /**
+     * Observer to detect changes in desktop song list and auto-sync
+     */
+    function setupAutoSync() {
+        const desktopSongList = document.querySelector('.left-panel .song-list');
+
+        if (!desktopSongList) {
+            console.warn('Desktop song list not found for auto-sync');
+            return;
+        }
+
+        // Create a MutationObserver to watch for changes
+        const observer = new MutationObserver((mutations) => {
+            // Only sync if drawer is open
+            if (mobilePlaylistDrawer?.classList.contains('open')) {
+                syncMobilePlaylist();
+            }
+        });
+
+        // Start observing
+        observer.observe(desktopSongList, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+
+        console.log('Auto-sync observer initialized');
+    }
+
+    // Initialize auto-sync after DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupAutoSync);
+    } else {
+        setupAutoSync();
+    }
+
+    // ==================== EXPOSE FUNCTIONS GLOBALLY ====================
+
+    // Expose these functions so they can be called from other scripts
+    window.mobilePlaylistDrawer = {
+        open: openPlaylistDrawer,
+        close: closePlaylistDrawer,
+        sync: syncMobilePlaylist,
+        isOpen: () => mobilePlaylistDrawer?.classList.contains('open') || false
+    };
+
+    console.log('Mobile playlist drawer initialized');
+
+})();
 
 function generateTabId() {
     return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1096,6 +1434,11 @@ function toggleFavorite(song, heartIcon) {
         broadcastFavorites(updatedFavorites, 'ADD', favoriteItem, currentUsername);
         ToastNotification.success(`Added "${song.songName}" to room favorites`);
     }
+    if (window.mobilePlaylistDrawer && window.mobilePlaylistDrawer.isOpen()) {
+        setTimeout(() => {
+            window.mobilePlaylistDrawer.sync();
+        }, 100);
+    }
 }
 
 function sendTypingEvent(isTyping) {
@@ -1674,6 +2017,13 @@ function resetAudioPlayer() {
     currentPlaylistIndex = 0;
 }
 
+window.playPreviousSong = playPreviousSong;
+window.playNextSong = playNextSong;
+window.previousPage = previousPage;
+window.nextPage = nextPage;
+window.playSong = playSong;
+window.toggleFavorite = toggleFavorite;
+
 // ==================== PAGE INITIALIZATION ====================
 window.onload = function () {
     if (isReload()) {
@@ -1681,7 +2031,6 @@ window.onload = function () {
         window.location.href = '/app/music/public/logout';
         return;
     }
-
     initializePage();
 };
 
@@ -1895,6 +2244,9 @@ async function loadSongsForPage(pageNumber) {
 
         displaySongs(data.content || []);
         updatePaginationUI();
+        if (window.mobilePlaylistDrawer) {
+            window.mobilePlaylistDrawer.sync();
+        }
 
     } catch (error) {
         console.error('Error loading songs:', error);
@@ -2857,24 +3209,42 @@ function handleSkipCommand(message) {
 }
 
 function updatePlaybackButtons() {
+    // Desktop buttons
     const prevBtn = document.getElementById('prevSongBtn');
     const nextBtn = document.getElementById('nextSongBtn');
+
+    // Mobile buttons
+    const mobilePrevBtn = document.getElementById('mobilePrevBtn2');
+    const mobileNextBtn = document.getElementById('mobileNextBtn2');
+
 
     if (!prevBtn || !nextBtn) {
         console.warn('⚠️ Playback buttons not found');
         return;
     }
 
-    if (isOrganizer) {
-        prevBtn.disabled = false;
-        nextBtn.disabled = false;
-        prevBtn.title = 'Previous Song (Alt + ←)';
-        nextBtn.title = 'Next Song (Alt + →)';
-    } else {
-        prevBtn.disabled = true;
-        nextBtn.disabled = true;
-        prevBtn.title = 'Only organizer can skip songs';
-        nextBtn.title = 'Only organizer can skip songs';
+    // Update desktop buttons (if they exist)
+    if (prevBtn && nextBtn) {
+        if (isOrganizer) {
+            prevBtn.disabled = false;
+            nextBtn.disabled = false;
+            prevBtn.title = 'Previous Song (Alt + ←)';
+            nextBtn.title = 'Next Song (Alt + →)';
+        } else {
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            prevBtn.title = 'Only organizer can skip songs';
+            nextBtn.title = 'Only organizer can skip songs';
+        }
+    }
+    if (mobilePrevBtn && mobileNextBtn) {
+        if (isOrganizer) {
+            mobilePrevBtn.disabled = false;
+            mobileNextBtn.disabled = false;
+        } else {
+            mobilePrevBtn.disabled = true;
+            mobileNextBtn.disabled = true;
+        }
     }
 }
 
@@ -3556,6 +3926,9 @@ function displaySongs(songs) {
     });
 
     songList.scrollTop = 0;
+    if (window.mobilePlaylistDrawer) {
+        window.mobilePlaylistDrawer.sync();
+    }
 }
 
 function handleFavoriteToggle(heartButton) {
@@ -3724,6 +4097,10 @@ function displaySearchResults(songs) {
 
         searchResults.appendChild(songItem);
     });
+
+    if (window.mobilePlaylistDrawer) {
+        window.mobilePlaylistDrawer.sync();
+    }
 }
 
 function handleSearchSongClick(element) {

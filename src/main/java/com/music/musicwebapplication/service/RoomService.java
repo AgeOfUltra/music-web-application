@@ -110,7 +110,7 @@ public class RoomService {
 
         Room room = repo.findRoomByRoomName(roomName)
                 .orElseThrow(() -> {
-                    log.error("Room not found: {}", roomName);
+                    log.error("Room not found while joining: {}", roomName);
                     return new RoomNotFoundException("Room Not found with Room Name: " + roomName);
                 });
 
@@ -273,7 +273,7 @@ public class RoomService {
     public Room getRoomDetails(String roomName){
         log.debug("Fetching room details for room: {}", roomName);
         return repo.findRoomByRoomName(roomName).orElseThrow(() -> {
-            log.error("Room not found: {}", roomName);
+            log.error("Room not found while getting room data: {}", roomName);
             return new RoomNotFoundException("Room not found with Room Name: " + roomName);
         });
     }
