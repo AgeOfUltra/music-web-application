@@ -31,32 +31,47 @@
 <body>
 
 <header class="header glass">
-    <div class="container-fluid">
-        <div class="row align-items-center g-2">
-            <!-- Back Button -->
-            <div class="col-auto">
-                <button class="btn btn-glass btn-sm" type="button" onclick="handleBack()">
-                    <i class="bi bi-arrow-left"></i> Back
-                </button>
-            </div>
+    <div class="header-wrapper">
+        <!-- Back Button (Desktop Only) -->
+        <div class="header-left-section">
+            <button class="header-back-btn" type="button" onclick="handleBack()">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+        </div>
 
-            <!-- Logo and Title (Centered) -->
-            <div class="col text-center">
-                <div class="d-flex align-items-center justify-content-center gap-2">
-                    <img th:src="@{/images/app_logo_wn.png}" alt="Logo" class="logo">
-                    <div class="app-title">CONNECTING NOTE</div>
-                </div>
-            </div>
+        <!-- Logo and Title (Always Centered) -->
+        <div class="header-center-section">
+            <img th:src="@{/images/app_logo_wn.png}" alt="Logo" class="header-logo">
+            <div class="header-title">CONNECTING NOTE</div>
+        </div>
 
-            <!-- Logout Button -->
-            <div class="col-auto">
-                <button class="btn btn-glass btn-sm" type="button" onclick="logout()">
-                    Logout <i class="bi bi-box-arrow-right"></i>
-                </button>
-            </div>
+        <!-- Logout (Desktop) / Menu Icon (Mobile) -->
+        <div class="header-right-section">
+            <button class="header-logout-btn" type="button" onclick="logout()">
+                Logout <i class="bi bi-box-arrow-right"></i>
+            </button>
+
+            <button class="header-menu-icon" type="button" onclick="toggleMobileMenu(event)">
+                <i class="bi bi-list"></i>
+            </button>
         </div>
     </div>
 </header>
+
+<!-- Mobile Dropdown Menu (OUTSIDE header) -->
+<div class="mobile-dropdown-menu" id="mobileDropdownMenu">
+    <div class="mobile-menu-item" onclick="handleBack(); closeMobileMenu();">
+        <i class="bi bi-arrow-left"></i>
+        <span>Back</span>
+    </div>
+    <div class="mobile-menu-item" onclick="logout();">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Logout</span>
+    </div>
+</div>
+
+<!-- Overlay (OUTSIDE header) -->
+<div class="mobile-dropdown-overlay" id="mobileDropdownOverlay" onclick="closeMobileMenu()"></div>
 
 <!-- Success Message Container (hidden) -->
 <div id="successMessageCreate" style="display: none;" th:text="${roomCreatedSuccessful}"></div>
@@ -293,6 +308,70 @@
 </script>
 <script th:src="@{/js/script_chat.js}"></script>
 <script>
+    // Toggle mobile menu
+    function toggleMobileMenu(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const menu = document.getElementById('mobileDropdownMenu');
+        const overlay = document.getElementById('mobileDropdownOverlay');
+
+        if (!menu || !overlay) {
+            console.error('Menu elements not found');
+            return;
+        }
+
+        const isOpen = menu.classList.contains('show');
+
+        if (isOpen) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    }
+
+    // Open mobile menu
+    function openMobileMenu() {
+        const menu = document.getElementById('mobileDropdownMenu');
+        const overlay = document.getElementById('mobileDropdownOverlay');
+
+        if (menu && overlay) {
+            menu.classList.add('show');
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+    }
+
+    // Close mobile menu
+    function closeMobileMenu() {
+        const menu = document.getElementById('mobileDropdownMenu');
+        const overlay = document.getElementById('mobileDropdownOverlay');
+
+        if (menu && overlay) {
+            menu.classList.remove('show');
+            overlay.classList.remove('show');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+    }
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMobileMenu();
+        }
+    });
+
+    // Prevent menu from closing when clicking inside it
+    document.addEventListener('DOMContentLoaded', function() {
+        const menu = document.getElementById('mobileDropdownMenu');
+        if (menu) {
+            menu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+    });
     // Show keyboard hint only for organizers at page load
     window.addEventListener('load', () => {
         const hint = document.getElementById('keyboardHint');
