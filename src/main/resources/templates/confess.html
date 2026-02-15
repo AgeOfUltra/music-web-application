@@ -664,7 +664,6 @@
     const roomName = /*[[${roomName}]]*/ '';
     const roomId = /*[[${roomId}]]*/ '';
 
-
     // Elements
     const vinylRecord = document.getElementById('vinylRecord');
     const audioPlayer = document.getElementById('audioPlayer');
@@ -678,10 +677,18 @@
     const audioVisualizer = document.getElementById('audioVisualizer');
     const completionModal = document.getElementById('completionModal');
 
+    // State tracking
     let songStartTime = null;
     let messageDelayTimer = null;
     let songEnded = false;
     let messageCompleted = false;
+    let songDuration = 0;
+    let messageLength = 0;
+    let typingSpeed = 55; // Default typing speed
+    let autoplayAllowed = false;
+    let autoplayCheckComplete = false;
+    let completionTimer = null;
+    let warningShown = false;
 
     const DEBUG = false;
 
@@ -689,31 +696,396 @@
         console.log = function() {};
     }
 
-    // Initialize
-    function init() {
-        console.log('=== Initializing Confess Page ===');
-        displayGreeting();
-        loadAndPlaySong();
-        setupAudioEvents();
+    // ============================================
+    // AUTOPLAY DETECTION & PERMISSION
+    // ============================================
+
+    async function checkAutoplayPermission() {
+        console.log('Checking autoplay permission...');
+
+        // Try to create a silent audio element to test autoplay
+        const testAudio = document.createElement('audio');
+        testAudio.volume = 0;
+        testAudio.muted = true;
+
+        try {
+            const playPromise = testAudio.play();
+
+            if (playPromise !== undefined) {
+                await playPromise;
+                console.log('✅ Autoplay is allowed');
+                autoplayAllowed = true;
+                testAudio.pause();
+            }
+        } catch (error) {
+            console.log('❌ Autoplay is blocked:', error);
+            autoplayAllowed = false;
+        }
+
+        autoplayCheckComplete = true;
+        return autoplayAllowed;
     }
 
-    // Check completion
+    function showAutoplayPermissionPrompt() {
+        loadingText.textContent = '🎵 Permission Needed';
+        loadingSubtext.textContent = 'Click anywhere to start the experience';
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        `;
+
+        overlay.innerHTML = `
+            <div style="text-align: center; color: white; padding: 20px;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🎵</div>
+                <h2 style="margin-bottom: 15px;">Ready to Start?</h2>
+                <p style="margin-bottom: 30px; opacity: 0.9;">
+                    Tap anywhere to begin your musical experience
+                </p>
+                <div style="font-size: 48px; animation: pulse 2s infinite;">
+                    👆
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Add pulse animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.2); opacity: 0.7; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        return new Promise((resolve) => {
+            overlay.addEventListener('click', () => {
+                overlay.remove();
+                autoplayAllowed = true;
+                console.log('User granted permission via click');
+                resolve(true);
+            }, { once: true });
+        });
+    }
+
+    // ============================================
+    // INTELLIGENT TIMING CALCULATION
+    // ============================================
+
+    function calculateOptimalTypingSpeed() {
+        // Get song duration in milliseconds
+        const songDurationMs = songDuration * 1000;
+
+        // Calculate message length (characters)
+        messageLength = message ? message.length : 0;
+
+        // If no message or no song, use default
+        if (!messageLength || !songDuration) {
+            console.log('Using default typing speed:', 55);
+            return 55;
+        }
+
+        // Calculate time available for typing (song duration - 20 second delay)
+        const messageStartDelay = 20000; // 20 seconds
+        const availableTypingTime = songDurationMs - messageStartDelay;
+
+        // Calculate required typing speed
+        const requiredSpeed = availableTypingTime / messageLength;
+
+        console.log('Song duration:', songDuration, 'seconds');
+        console.log('Message length:', messageLength, 'characters');
+        console.log('Available typing time:', availableTypingTime, 'ms');
+        console.log('Required speed per character:', requiredSpeed, 'ms');
+
+        // Determine optimal speed based on ratio
+        let optimalSpeed;
+
+        if (songDuration > 180) { // Long song (> 3 minutes)
+            if (messageLength < 500) {
+                // Long song, short message - use slow typing
+                optimalSpeed = 80;
+            } else if (messageLength < 1000) {
+                // Long song, medium message - normal typing
+                optimalSpeed = 55;
+            } else {
+                // Long song, long message - slightly faster
+                optimalSpeed = 45;
+            }
+        } else if (songDuration > 120) { // Medium song (2-3 minutes)
+            if (messageLength < 500) {
+                // Medium song, short message - normal typing
+                optimalSpeed = 55;
+            } else if (messageLength < 1000) {
+                // Medium song, medium message - slightly faster
+                optimalSpeed = 45;
+            } else {
+                // Medium song, long message - faster
+                optimalSpeed = 35;
+            }
+        } else { // Short song (< 2 minutes)
+            if (messageLength < 300) {
+                // Short song, short message - normal typing
+                optimalSpeed = 55;
+            } else if (messageLength < 600) {
+                // Short song, medium message - faster
+                optimalSpeed = 35;
+            } else {
+                // Short song, long message - very fast
+                optimalSpeed = 25;
+            }
+        }
+
+        // Ensure speed is within reasonable bounds (25ms to 100ms)
+        optimalSpeed = Math.max(25, Math.min(100, optimalSpeed));
+
+        console.log('✅ Optimal typing speed calculated:', optimalSpeed, 'ms per character');
+        return optimalSpeed;
+    }
+
+    // ============================================
+    // COMPLETION TIMING LOGIC
+    // ============================================
+
+    function scheduleCompletion() {
+        console.log('Scheduling completion check...');
+        console.log('Song ended:', songEnded, 'Message completed:', messageCompleted);
+
+        // Clear any existing timer
+        if (completionTimer) {
+            clearTimeout(completionTimer);
+        }
+
+        // Case 1: Message finished, waiting for song + 20 seconds
+        if (messageCompleted && !songEnded) {
+            console.log('📝 Message finished, waiting for song + 20 seconds');
+
+            // Wait for song to end, then add 20 seconds
+            audioPlayer.addEventListener('ended', () => {
+                console.log('Song ended, adding 20 second delay...');
+                songEnded = true;
+
+                completionTimer = setTimeout(() => {
+                    console.log('✅ 20 seconds elapsed after song, showing completion');
+                    triggerCompletion();
+                }, 20000);
+            }, { once: true });
+
+            return;
+        }
+
+        // Case 2: Song finished, waiting for message + 40 seconds
+        if (songEnded && !messageCompleted) {
+            console.log('🎵 Song finished, waiting for message + 40 seconds');
+
+            // Wait for message to complete, then add 40 seconds
+            const checkMessageComplete = setInterval(() => {
+                if (messageCompleted) {
+                    clearInterval(checkMessageComplete);
+                    console.log('Message completed, adding 40 second delay...');
+
+                    completionTimer = setTimeout(() => {
+                        console.log('✅ 40 seconds elapsed after message, showing completion');
+                        triggerCompletion();
+                    }, 40000);
+                }
+            }, 1000);
+
+            return;
+        }
+
+        // Case 3: Both finished simultaneously (or very close)
+        if (songEnded && messageCompleted) {
+            console.log('✅ Both finished, adding 20 second delay...');
+
+            completionTimer = setTimeout(() => {
+                console.log('✅ 20 seconds elapsed, showing completion');
+                triggerCompletion();
+            }, 20000);
+        }
+    }
+
+    // ============================================
+    // 30 SECOND WARNING NOTIFICATION
+    // ============================================
+
+    function show30SecondWarning() {
+        if (warningShown) return;
+        warningShown = true;
+
+        console.log('⏰ Showing 30-second warning');
+
+        // Create warning toast
+        const warning = document.createElement('div');
+        warning.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 99998;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.5s ease, fadeOut 0.5s ease 9.5s forwards;
+            max-width: 90vw;
+            text-align: center;
+        `;
+
+        warning.innerHTML = `
+            <span style="font-size: 24px;">⏰</span>
+            <span>This room will close in 30 seconds</span>
+        `;
+
+        // Add animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateX(-50%) translateY(-100px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes fadeOut {
+                to {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-50px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.body.appendChild(warning);
+
+        // Remove after 10 seconds
+        setTimeout(() => {
+            warning.remove();
+        }, 10000);
+    }
+
+    function checkAndShow30SecondWarning() {
+        // Calculate when to show warning
+        // Warning should show 30 seconds before completion
+
+        if (messageCompleted && !songEnded) {
+            // Waiting for song + 20 seconds
+            // Show warning when 30 seconds remain (i.e., when song ends - 10 seconds)
+            audioPlayer.addEventListener('timeupdate', () => {
+                const remaining = audioPlayer.duration - audioPlayer.currentTime;
+                if (remaining <= 40 && !warningShown) {
+                    // Song will end in 40 seconds, then 20 second delay = 60 seconds total
+                    // Show warning at 30 seconds before completion = 30 seconds from now
+                    setTimeout(() => {
+                        show30SecondWarning();
+                    }, 10000); // Show in 10 seconds
+                }
+            });
+        } else if (songEnded && !messageCompleted) {
+            // Waiting for message + 40 seconds
+            // Show warning 30 seconds before the 40-second timer ends
+            // That means show warning 10 seconds after message completes
+            const checkMessage = setInterval(() => {
+                if (messageCompleted) {
+                    clearInterval(checkMessage);
+                    setTimeout(() => {
+                        show30SecondWarning();
+                    }, 10000); // Show 10 seconds after message completes
+                }
+            }, 1000);
+        } else if (songEnded && messageCompleted) {
+            // Both completed, 20 second delay
+            // Show warning immediately (20 seconds remain, but show at 30 second mark doesn't apply)
+            // Actually show it after 10 seconds (30 seconds before would be -10 seconds)
+            setTimeout(() => {
+                show30SecondWarning();
+            }, 0); // Show immediately, as we're in the final countdown
+        }
+    }
+
+    // Modified check completion function
     function checkCompletion() {
         console.log('Checking completion - Song ended:', songEnded, 'Message completed:', messageCompleted);
+
+        // Update completion flag for back button prevention
         if (songEnded && messageCompleted) {
-            console.log('Both complete! Showing modal and calling completion API...');
-
-            // Call the completion API
-            callCompletionAPI();
-
-            setTimeout(() => {
-                createCelebrationEffects();
-                completionModal.classList.add('show');
-
-                // After modal is shown, replace history to prevent going back
-                replaceHistoryToPreventBackNavigation();
-            }, 1000);
+            completionShown = true;
         }
+
+        // Schedule completion with appropriate delays
+        if (songEnded || messageCompleted) {
+            scheduleCompletion();
+
+            // Schedule 30-second warning
+            checkAndShow30SecondWarning();
+        }
+    }
+
+    function triggerCompletion() {
+        console.log('🎉 Triggering completion modal and API call');
+
+        // Call the completion API
+        callCompletionAPI();
+
+        setTimeout(() => {
+            createCelebrationEffects();
+            completionModal.classList.add('show');
+
+            // Replace history to prevent back navigation
+            replaceHistoryToPreventBackNavigation();
+        }, 1000);
+    }
+
+    // ============================================
+    // PREVENT SCREENSHOT BLOCKING (MOBILE FIX)
+    // ============================================
+
+    // Remove any screenshot prevention
+    // Ensure content is capturable
+    function enableScreenshots() {
+        // Remove any screenshot blocking CSS
+        document.documentElement.style.userSelect = 'auto';
+        document.body.style.userSelect = 'auto';
+
+        // Remove any overlay that might block screenshots
+        document.querySelectorAll('[style*="pointer-events"]').forEach(el => {
+            if (el.style.pointerEvents === 'none' && el.style.position === 'fixed') {
+                el.remove();
+            }
+        });
+
+        console.log('✅ Screenshots enabled');
+    }
+
+    // ============================================
+    // INITIALIZATION WITH AUTOPLAY CHECK
+    // ============================================
+
+    function init() {
+        enableScreenshots();
+        displayGreeting();
+        setupAudioEvents();
+        checkAutoplayPermission(); // ✅ Non-blocking
+        loadAndPlaySong(); // ✅ Starts immediately
     }
 
     // Call completion API
@@ -742,21 +1114,17 @@
             })
             .catch(error => {
                 console.error('Error calling completion API:', error);
-                // Even if API fails, still show the completion modal
             });
     }
 
     // Replace history to prevent back navigation to confess page
     function replaceHistoryToPreventBackNavigation() {
-        // Replace current history entry with a dummy state
-        // This prevents users from going back to the confess page
         window.history.replaceState(
             { page: 'completion' },
             'Completion',
             window.location.href
         );
 
-        // Push another state to create a barrier
         window.history.pushState(
             { page: 'completion-barrier' },
             'Completion',
@@ -791,36 +1159,33 @@
                 confetti.style.borderRadius = '50%';
             }
 
-            // Start from random position off-screen (somewhere between top and middle of fall)
-            const randomStartProgress = Math.random() * 50; // 0-50% of the fall distance
-            const startY = -100 + randomStartProgress; // Start between -100vh and -50vh
-            const endY = 100; // End at bottom
+            const randomStartProgress = Math.random() * 50;
+            const startY = -100 + randomStartProgress;
+            const endY = 100;
             const startRotation = Math.random() * 360;
             const endRotation = startRotation + 720;
 
             confetti.style.transform = `translateY(${startY}vh) rotate(${startRotation}deg)`;
             confetti.style.animation = `confettiFallPath${i} ${confetti.style.animationDuration} linear infinite`;
 
-            // Create unique keyframe for this confetti piece
             const style = document.createElement('style');
             style.textContent = `
-                    @keyframes confettiFallPath${i} {
-                        0% {
-                            transform: translateY(${startY}vh) rotate(${startRotation}deg);
-                        }
-                        100% {
-                            transform: translateY(${endY}vh) rotate(${endRotation}deg);
-                        }
+                @keyframes confettiFallPath${i} {
+                    0% {
+                        transform: translateY(${startY}vh) rotate(${startRotation}deg);
                     }
-                `;
+                    100% {
+                        transform: translateY(${endY}vh) rotate(${endRotation}deg);
+                    }
+                }
+            `;
             document.head.appendChild(style);
 
             completionModal.appendChild(confetti);
 
-            // Fade in gradually one by one
             setTimeout(() => {
                 confetti.classList.add('show');
-            }, i * 10); // 10ms delay between each confetti piece
+            }, i * 10);
         }
     }
 
@@ -837,36 +1202,33 @@
             emoji.style.animationDuration = (Math.random() * 5 + 5) + 's';
             emoji.style.fontSize = (Math.random() * 30 + 20) + 'px';
 
-            // Start from random position off-screen (somewhere in the middle of float path)
-            const randomStartProgress = Math.random() * 100; // 0-100% of the float distance
-            const startY = 100 - randomStartProgress; // Start between bottom (100vh) and top (-100vh)
-            const endY = -100; // End at top
+            const randomStartProgress = Math.random() * 100;
+            const startY = 100 - randomStartProgress;
+            const endY = -100;
             const startRotation = Math.random() * 360;
             const endRotation = startRotation + 360;
 
             emoji.style.transform = `translateY(${startY}vh) rotate(${startRotation}deg)`;
             emoji.style.animation = `emojiFloatPath${i} ${emoji.style.animationDuration} linear infinite`;
 
-            // Create unique keyframe for this emoji
             const style = document.createElement('style');
             style.textContent = `
-                    @keyframes emojiFloatPath${i} {
-                        0% {
-                            transform: translateY(${startY}vh) rotate(${startRotation}deg);
-                        }
-                        100% {
-                            transform: translateY(${endY}vh) rotate(${endRotation}deg);
-                        }
+                @keyframes emojiFloatPath${i} {
+                    0% {
+                        transform: translateY(${startY}vh) rotate(${startRotation}deg);
                     }
-                `;
+                    100% {
+                        transform: translateY(${endY}vh) rotate(${endRotation}deg);
+                    }
+                }
+            `;
             document.head.appendChild(style);
 
             completionModal.appendChild(emoji);
 
-            // Fade in gradually one by one
             setTimeout(() => {
                 emoji.classList.add('show');
-            }, i * 50); // 50ms delay between each emoji
+            }, i * 50);
         }
     }
 
@@ -896,6 +1258,12 @@
 
         audioPlayer.addEventListener('loadedmetadata', () => {
             console.log('Audio metadata loaded');
+            songDuration = audioPlayer.duration;
+            console.log('Song duration:', songDuration, 'seconds');
+
+            // Calculate optimal typing speed based on song length and message length
+            typingSpeed = calculateOptimalTypingSpeed();
+
             loadingText.textContent = 'Song loaded!';
             loadingSubtext.textContent = 'Starting playback...';
         });
@@ -1015,6 +1383,7 @@
             loadingOverlay.classList.add('hidden');
             messageContent.innerHTML = '<div class="text-white-50 fst-italic text-center">No song available. Displaying message now...</div>';
             songEnded = true;
+            songDuration = 0; // No song
 
             setTimeout(() => {
                 displayTypingMessage();
@@ -1044,15 +1413,15 @@
             return;
         }
 
-        console.log('Starting typing animation');
+        console.log('Starting typing animation with speed:', typingSpeed, 'ms');
 
         messageContent.innerHTML = `
-                <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            `;
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
 
         setTimeout(() => {
             messageContent.textContent = '';
@@ -1060,9 +1429,7 @@
             const paragraphs = message.split(/\n\n+|\n/).filter(p => p.trim() !== '');
             let currentParagraphIndex = 0;
             let currentCharIndex = 0;
-            const typingSpeed = 55; // Changed from 50ms to 55ms
 
-            // Auto-scroll function - smooth scroll to bottom
             function scrollToBottom() {
                 messageContent.scrollTo({
                     top: messageContent.scrollHeight,
@@ -1074,13 +1441,12 @@
                 const loadingDiv = document.createElement('div');
                 loadingDiv.className = 'typing-indicator mt-3';
                 loadingDiv.innerHTML = `
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    `;
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                `;
                 messageContent.appendChild(loadingDiv);
 
-                // Scroll after adding loading indicator
                 scrollToBottom();
 
                 setTimeout(() => {
@@ -1098,16 +1464,14 @@
                         messageContent.textContent += char;
                         currentCharIndex++;
 
-                        // Auto-scroll smoothly as each character appears
                         scrollToBottom();
 
                         setTimeout(typeCharacter, typingSpeed);
                     } else {
-                        messageContent.textContent += '\n\n';
+                        messageContent.textContent += '\n';
                         currentParagraphIndex++;
                         currentCharIndex = 0;
 
-                        // Auto-scroll after each paragraph
                         scrollToBottom();
 
                         if (currentParagraphIndex < paragraphs.length) {
@@ -1142,54 +1506,33 @@
     // PREVENT BROWSER BACK BUTTON NAVIGATION
     // ============================================
 
-    // Track if completion modal has been shown
     let completionShown = false;
 
-    // Method 1: History manipulation (works in all modern browsers)
     (function preventBackButton() {
-        // Push a dummy state to history
         window.history.pushState(null, document.title, window.location.href);
 
-        // Listen for popstate event (triggered when back button is clicked)
         window.addEventListener('popstate', function(event) {
             if (completionShown) {
-                // If completion modal was shown, prevent all back navigation
                 window.history.pushState(null, document.title, window.location.href);
                 alert('You cannot go back to the confess page. Please close this tab or click "Login to Your Account".');
             } else {
-                // During playback, prevent going back
                 window.history.pushState(null, document.title, window.location.href);
                 alert('Navigation to previous page is disabled. Please wait for the song and message to complete.');
             }
         });
     })();
 
-    // Update completionShown flag when modal appears
-    const originalCheckCompletion = checkCompletion;
-    checkCompletion = function() {
-        originalCheckCompletion();
-        if (songEnded && messageCompleted) {
-            completionShown = true;
-        }
-    };
-
-    // Method 2: Prevent navigation using beforeunload (backup method)
-    // This shows a confirmation dialog when user tries to leave the page
     let allowNavigation = false;
 
     window.addEventListener('beforeunload', function(e) {
-        // Only prevent if song is still playing or message is being displayed
-        // Allow navigation after completion modal is shown
         if (!allowNavigation && !completionShown && (!songEnded || !messageCompleted)) {
             e.preventDefault();
-            e.returnValue = ''; // Chrome requires returnValue to be set
-            return ''; // For older browsers
+            e.returnValue = '';
+            return '';
         }
     });
 
-    // Method 3: Disable back button using keyboard shortcut
     document.addEventListener('keydown', function(e) {
-        // Prevent Alt+Left Arrow (back) and Backspace (back in some browsers)
         if ((e.altKey && e.key === 'ArrowLeft') ||
             (e.key === 'Backspace' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) {
             e.preventDefault();
@@ -1197,19 +1540,12 @@
         }
     });
 
-    // Allow navigation when user clicks "Login to Your Account" button
-    // This ensures they can navigate away to login page
     document.addEventListener('click', function(e) {
-        // Check if clicked element is the login link/button
         if (e.target.closest('a[href*="/login"]') || e.target.closest('.btn-custom')) {
             allowNavigation = true;
             console.log('Navigation allowed - user clicked login or close button');
         }
     });
-
-    // ============================================
-    // END PREVENT BACK BUTTON
-    // ============================================
 
     // Start the app
     if (document.readyState === 'loading') {

@@ -5,8 +5,9 @@ import com.music.musicwebapplication.entity.Confess;
 import com.music.musicwebapplication.exception.ConfessRoomException;
 import com.music.musicwebapplication.service.ConfessService;
 import com.music.musicwebapplication.enums.Status;
-import com.music.musicwebapplication.service.SongCacheService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -122,7 +123,7 @@ public class PublicConfessionController {
     }
 
     @PostMapping("/confess/complete")
-    public void completeConfession(@RequestParam String roomId) {
+    public ResponseEntity<Void> completeConfession(@RequestParam String roomId) {
         log.info("Complete confession request received for roomId: {}", roomId);
 
         if(roomId.isBlank()){
@@ -142,7 +143,7 @@ public class PublicConfessionController {
             log.info("Status updated successfully from READING to DONE for roomId: {}", roomId);
         }
 
-
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
 }
