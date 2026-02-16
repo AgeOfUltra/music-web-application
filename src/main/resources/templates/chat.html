@@ -92,7 +92,7 @@
 
             <!-- NEW: Combined audio player and controls in one row -->
             <div class="audio-controls-container">
-                <button class="playback-btn-inline"  id="prevSongBtn">
+                <button class="playback-btn-inline"  id="prevSongBtn"  onclick="playPreviousSong()">
                     <i class="bi bi-skip-start-fill"></i>
                 </button>
 
@@ -100,7 +100,7 @@
                     <audio id="audioPlayer" controls controlsList="nodownload noplaybackrate"></audio>
                 </div>
 
-                <button class="playback-btn-inline">
+                <button class="playback-btn-inline" id="nextSongBtn" onclick="playNextSong()">
                     <i class="bi bi-skip-end-fill"></i>
                 </button>
             </div>

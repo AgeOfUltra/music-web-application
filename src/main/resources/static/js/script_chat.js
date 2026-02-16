@@ -65,7 +65,7 @@ let lastSuccessfulConnection = null;
 let sessionExpired = false;
 //  =========================== Debug
 
-const DEBUG = false; // Set to false to disable all console.logs
+const DEBUG = true; // Set to false to disable all console.logs
 
 if (!DEBUG) {
     console.log = function() {};
