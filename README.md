@@ -1,6 +1,6 @@
 # 🎵 Music Room — Social Music Chat Web Application
 
-A web-based social platform where users can chat and listen to music together in real time. Users create private listening rooms, invite friends, control music playback collaboratively, and even send anonymous confessions with music in the background.
+A web-based social platform where users can chat and listen to music together in real time. Users create private listening rooms, invite friends, control music playback collaboratively, and even send anonymous confessions with music in the background through email.
 
 ---
 
